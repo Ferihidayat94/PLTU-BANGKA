@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # Page Config
-st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
+st.set_page_config(page_title="First Line Maintenance", layout="wide")
 
 # Responsive Styling
 st.markdown(
