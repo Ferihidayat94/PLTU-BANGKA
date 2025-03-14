@@ -116,7 +116,10 @@ if st.session_state.role == "admin" and submit_button:
 
 # Show data
 st.markdown("### Data Monitoring")
-st.dataframe(st.session_state.data, height=400)
+if st.session_state.role == "admin":
+    st.dataframe(st.session_state.data, height=400)
+else:
+    st.dataframe(st.session_state.data.style.set_properties(**{'pointer-events': 'none'}), height=400)
 
 # Export to CSV
 st.markdown("### Export Data")
