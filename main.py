@@ -2,45 +2,31 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# Page Config
-st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
-
-# Logo and Title
-st.image("logo.png", width=150)
-
+# Title
 st.markdown(
     """
     <h1 style='text-align: center; font-family: Arial, sans-serif; color: #4CAF50;'>
-    First Line Maintenance Produksi A
+    FLM (First Line Maintenance) Produksi A
     </h1>
-    <hr style='border: 1px solid #4CAF50;'>
     """,
     unsafe_allow_html=True
 )
 
-st.sidebar.markdown("## Navigasi")
-st.sidebar.info("Gunakan menu ini untuk navigasi cepat.")
-
 # Input Form
-st.markdown("### Input Data Maintenance")
 with st.form("monitoring_form"):
-    col1, col2 = st.columns(2)
-    with col1:
-        tanggal = st.date_input("Tanggal", datetime.today())
-        area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
-        nomor_sr = st.text_input("Nomor SR")
+    tanggal = st.date_input("TANGGAL", datetime.today())
+    area = st.selectbox("AREA", ["Boiler", "Turbine", "CHCB", "WTP"])
+    keterangan = st.text_area("KETERANGAN")
+    nomor_sr = st.text_input("NOMOR SR")
+    evidance = st.file_uploader("UPLOAD EVIDANCE")
+    nama_pelaksana = st.selectbox("NAMA PELAKSANA", [
+        "Winner PT Daspin Sitanggang", "Devri Candra Kardios", "Rendy Eka Priansyah", "Selamat", 
+        "M Yanuardi", "Hendra", "Gilang", "Kamil", "M Soleh Alqodri", "M Soleh", "Debby", 
+        "Dandi", "Aminudin", "Hasan", "Budi", "Sarmidun", "Reno", "Rafi", "Akbar", 
+        "Sunir", "Eka", "Hanafi", "Diki"
+    ])
     
-    with col2:
-        nama_pelaksana = st.selectbox("Nama Pelaksana", [
-            "Winner PT Daspin Sitanggang", "Devri Candra Kardios", "Rendy Eka Priansyah", "Selamat", 
-            "M Yanuardi", "Hendra", "Gilang", "Kamil", "M Soleh Alqodri", "M Soleh", "Debby", 
-            "Dandi", "Aminudin", "Hasan", "Budi", "Sarmidun", "Reno", "Rafi", "Akbar", 
-            "Sunir", "Eka", "Hanafi", "Diki"
-        ])
-        evidance = st.file_uploader("Upload Evidance")
-        
-    keterangan = st.text_area("Keterangan")
-    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
+    submit_button = st.form_submit_button("SUBMIT")
 
 # Data Storage
 if "data" not in st.session_state:
@@ -60,23 +46,10 @@ if submit_button:
     st.success("Data berhasil disimpan!")
 
 # Show data
-st.markdown("### Data Monitoring")
-st.dataframe(st.session_state.data, height=400)
+st.dataframe(st.session_state.data)
 
 # Export to CSV
-st.markdown("### Export Data")
 csv = st.session_state.data.to_csv(index=False)
 st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
 
 st.info("File CSV ini bisa langsung dihubungkan ke Power BI untuk visualisasi real-time.")
-
-# Footer
-st.markdown(
-    """
-    <hr>
-    <p style='text-align: center;'>
-    Dibuat oleh Tim Operasi - PLTU Bangka 🛠️
-    </p>
-    """,
-    unsafe_allow_html=True
-)
