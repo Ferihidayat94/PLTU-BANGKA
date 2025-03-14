@@ -26,8 +26,8 @@ st.markdown(
 )
 
 # Logo and Title
-<hr>
-st.image("logo.png", width=150)
+
+st.image("logo.png", width=200)
 
 st.markdown(
     """
