@@ -25,35 +25,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Login System
-st.sidebar.markdown("## Login")
-username = st.sidebar.text_input("Username")
-password = st.sidebar.text_input("Password", type="password")
-login_button = st.sidebar.button("Login")
-
-# Hardcoded admin and user credentials
-credentials = {
-    "admin": {"password": "admin123", "role": "admin"},
-    "user": {"password": "user123", "role": "user"}
-}
-
-# Role-based access control
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.role = None
-
-if login_button:
-    if username in credentials and password == credentials[username]["password"]:
-        st.session_state.logged_in = True
-        st.session_state.role = credentials[username]["role"]
-        st.sidebar.success(f"Selamat datang, {username}!")
-    else:
-        st.sidebar.error("Username atau password salah.")
-
-if not st.session_state.logged_in:
-    st.warning("Silakan login untuk mengakses aplikasi.")
-    st.stop()
-
 # Logo and Title
 st.image("logo.png", width=150)
 
@@ -70,39 +41,32 @@ st.markdown(
 # Input Form
 st.markdown("### Input Data Maintenance")
 
-if st.session_state.get("wide_screen", True):
-    col1, col2 = st.columns(2)
-else:
-    col1, col2 = st.columns([1])
+col1, col2 = st.columns(2)
 
-if st.session_state.role == "admin":
-    with st.form("monitoring_form"):
-        with col1:
-            tanggal = st.date_input("Tanggal", datetime.today())
-            area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
-            nomor_sr = st.text_input("Nomor SR")
-        
-        with col2:
-            nama_pelaksana = st.selectbox("Nama Pelaksana", [
-                "Winner PT Daspin Sitanggang", "Devri Candra Kardios", "Rendy Eka Priansyah", "Selamat", 
-                "M Yanuardi", "Hendra", "Gilang", "Kamil", "M Soleh Alqodri", "M Soleh", "Debby", 
-                "Dandi", "Aminudin", "Hasan", "Budi", "Sarmidun", "Reno", "Rafi", "Akbar", 
-                "Sunir", "Eka", "Hanafi", "Diki"
-            ])
-            evidance = st.file_uploader("Upload Evidance")
-        
-        keterangan = st.text_area("Keterangan")
-        submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
-
-elif st.session_state.role == "user":
-    st.info("Anda masuk sebagai pengguna biasa. Data hanya bisa dilihat, tidak bisa diedit.")
+with st.form("monitoring_form"):
+    with col1:
+        tanggal = st.date_input("Tanggal", datetime.today())
+        area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
+        nomor_sr = st.text_input("Nomor SR")
+    
+    with col2:
+        nama_pelaksana = st.selectbox("Nama Pelaksana", [
+            "Winner PT Daspin Sitanggang", "Devri Candra Kardios", "Rendy Eka Priansyah", "Selamat", 
+            "M Yanuardi", "Hendra", "Gilang", "Kamil", "M Soleh Alqodri", "M Soleh", "Debby", 
+            "Dandi", "Aminudin", "Hasan", "Budi", "Sarmidun", "Reno", "Rafi", "Akbar", 
+            "Sunir", "Eka", "Hanafi", "Diki"
+        ])
+        evidance = st.file_uploader("Upload Evidance")
+    
+    keterangan = st.text_area("Keterangan")
+    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
 
 # Data Storage
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame(columns=["Tanggal", "Area", "Keterangan", "Nomor SR", "Evidance", "Nama Pelaksana"])
 
 # Add new data
-if st.session_state.role == "admin" and submit_button:
+if submit_button:
     new_data = pd.DataFrame({
         "Tanggal": [tanggal],
         "Area": [area],
@@ -116,10 +80,7 @@ if st.session_state.role == "admin" and submit_button:
 
 # Show data
 st.markdown("### Data Monitoring")
-if st.session_state.role == "admin":
-    st.dataframe(st.session_state.data, height=400)
-else:
-    st.dataframe(st.session_state.data.style.set_properties(**{'pointer-events': 'none'}), height=400)
+st.dataframe(st.session_state.data, height=400)
 
 # Export to CSV
 st.markdown("### Export Data")
