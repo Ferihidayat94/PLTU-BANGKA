@@ -31,18 +31,21 @@ username = st.sidebar.text_input("Username")
 password = st.sidebar.text_input("Password", type="password")
 login_button = st.sidebar.button("Login")
 
-# Hardcoded admin credentials
-admin_credentials = {"admin": "admin123"}
+# Hardcoded admin and user credentials
+credentials = {
+    "admin": {"password": "admin123", "role": "admin"},
+    "user": {"password": "user123", "role": "user"}
+}
 
 # Role-based access control
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-    st.session_state.is_admin = False
+    st.session_state.role = None
 
 if login_button:
-    if username in admin_credentials and password == admin_credentials[username]:
+    if username in credentials and password == credentials[username]["password"]:
         st.session_state.logged_in = True
-        st.session_state.is_admin = True
+        st.session_state.role = credentials[username]["role"]
         st.sidebar.success(f"Selamat datang, {username}!")
     else:
         st.sidebar.error("Username atau password salah.")
@@ -72,7 +75,7 @@ if st.session_state.get("wide_screen", True):
 else:
     col1, col2 = st.columns([1])
 
-if st.session_state.is_admin:
+if st.session_state.role == "admin":
     with st.form("monitoring_form"):
         with col1:
             tanggal = st.date_input("Tanggal", datetime.today())
@@ -90,15 +93,16 @@ if st.session_state.is_admin:
         
         keterangan = st.text_area("Keterangan")
         submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
-else:
-    st.info("Anda masuk sebagai pengguna biasa. Hanya admin yang dapat menginput data.")
+
+elif st.session_state.role == "user":
+    st.info("Anda masuk sebagai pengguna biasa. Data hanya bisa dilihat, tidak bisa diedit.")
 
 # Data Storage
 if "data" not in st.session_state:
     st.session_state.data = pd.DataFrame(columns=["Tanggal", "Area", "Keterangan", "Nomor SR", "Evidance", "Nama Pelaksana"])
 
 # Add new data
-if st.session_state.is_admin and submit_button:
+if st.session_state.role == "admin" and submit_button:
     new_data = pd.DataFrame({
         "Tanggal": [tanggal],
         "Area": [area],
