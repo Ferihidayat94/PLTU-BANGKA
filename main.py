@@ -5,12 +5,32 @@ from datetime import datetime
 # Page Config
 st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
 
+# Responsive Styling
+st.markdown(
+    """
+    <style>
+    @media screen and (max-width: 768px) {
+        .block-container {
+            padding: 1rem;
+        }
+        h1 {
+            font-size: 1.5rem;
+        }
+        .stDataFrame {
+            overflow-x: auto;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Logo and Title
 st.image("logo.png", width=150)
 
 st.markdown(
     """
-    <h1 style='text-align: center; font-family: Arial, sans-serif; color: #4CAF50;'>
+    <h1 style='text-align: center; font-family: "Orbitron", sans-serif; color: #4CAF50;'>
     First Line Maintenance Produksi A
     </h1>
     <hr style='border: 1px solid #4CAF50;'>
@@ -18,13 +38,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Sidebar
 st.sidebar.markdown("## Navigasi")
 st.sidebar.info("Gunakan menu ini untuk navigasi cepat.")
 
 # Input Form
 st.markdown("### Input Data Maintenance")
-with st.form("monitoring_form"):
+
+if st.session_state.get("wide_screen", True):
     col1, col2 = st.columns(2)
+else:
+    col1, col2 = st.columns([1])
+
+with st.form("monitoring_form"):
     with col1:
         tanggal = st.date_input("Tanggal", datetime.today())
         area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
@@ -38,7 +64,7 @@ with st.form("monitoring_form"):
             "Sunir", "Eka", "Hanafi", "Diki"
         ])
         evidance = st.file_uploader("Upload Evidance")
-        
+    
     keterangan = st.text_area("Keterangan")
     submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
 
@@ -68,14 +94,14 @@ st.markdown("### Export Data")
 csv = st.session_state.data.to_csv(index=False)
 st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
 
-st.info("visualisasi real-time.")
+st.info("File CSV ini bisa langsung dihubungkan ke Power BI untuk visualisasi real-time.")
 
 # Footer
 st.markdown(
     """
     <hr>
     <p style='text-align: center;'>
-    Dibuat oleh Tim Operasi Produksi A- PLTU Bangka 🛠️
+    Dibuat oleh Tim Operasi - PLTU Bangka 🛠️
     </p>
     """,
     unsafe_allow_html=True
