@@ -26,6 +26,7 @@ st.markdown(
 )
 
 # Logo and Title
+<hr>
 st.image("logo.png", width=150)
 
 st.markdown(
@@ -87,7 +88,7 @@ st.markdown("### Export Data")
 csv = st.session_state.data.to_csv(index=False)
 st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
 
-st.info("File CSV ini bisa langsung dihubungkan ke Power BI untuk visualisasi real-time.")
+st.info("untuk visualisasi real-time.")
 
 # Footer
 st.markdown(
