@@ -13,7 +13,6 @@ hide_streamlit_style = """
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .st-emotion-cache-16txtl3 {display: none;} /* Menghilangkan tombol Fork */
-    .stButton>button {background-color: green !important; color: white !important;} /* Mengubah warna tombol */
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
