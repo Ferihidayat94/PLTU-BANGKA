@@ -77,10 +77,9 @@ if not st.session_state.logged_in:
     st.stop()
 
 # Main Page
-st.markdown("### Input Data")
-
-# Logout Button
 col1, col2 = st.columns([9, 1])
+with col1:
+    st.markdown("### Input Data")
 with col2:
     if st.button("Logout", key="logout", help="Klik untuk keluar", use_container_width=True):
         logout()
@@ -118,16 +117,17 @@ if submit_button:
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     st.success("Data berhasil disimpan!")
 
-# Show data
-st.markdown("### Data Monitoring")
-st.dataframe(st.session_state.data, height=400)
+# Show data only if available
+if not st.session_state.data.empty:
+    st.markdown("### Data Monitoring")
+    st.dataframe(st.session_state.data, height=400)
 
-# Export to CSV
-st.markdown("### Export Data")
-csv = st.session_state.data.to_csv(index=False)
-st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
-
-st.info("File CSV ini bisa langsung dihubungkan ke Power BI untuk visualisasi real-time.")
+    # Export to CSV
+    st.markdown("### Export Data")
+    csv = st.session_state.data.to_csv(index=False)
+    st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
+    
+    st.info("File CSV ini bisa langsung dihubungkan ke Power BI untuk visualisasi real-time.")
 
 # Footer
 st.markdown(
