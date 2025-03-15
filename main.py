@@ -22,6 +22,12 @@ hide_streamlit_style = """
         padding: 8px;
         text-align: left;
     }
+    .delete-button {
+        visibility: hidden;
+    }
+    tr:hover .delete-button {
+        visibility: visible;
+    }
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -87,9 +93,15 @@ if submit_button:
 
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
-    st.table(st.session_state.data)
     for i in range(len(st.session_state.data)):
-        if st.button(f"❌ Hapus", key=f"delete_{i}"):
+        cols = st.columns(7)
+        cols[0].write(st.session_state.data.at[i, "Tanggal"])
+        cols[1].write(st.session_state.data.at[i, "Area"])
+        cols[2].write(st.session_state.data.at[i, "Keterangan"])
+        cols[3].write(st.session_state.data.at[i, "Nomor SR"])
+        cols[4].write(st.session_state.data.at[i, "Evidance"])
+        cols[5].write(st.session_state.data.at[i, "Nama Pelaksana"])
+        if cols[6].button("❌", key=f"delete_{i}", help="Hapus data ini"):
             st.session_state.data.drop(i, inplace=True)
             st.session_state.data.reset_index(drop=True, inplace=True)
             st.rerun()
