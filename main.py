@@ -107,9 +107,11 @@ if submit_button:
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     st.dataframe(st.session_state.data)
-    for index, row in st.session_state.data.iterrows():
-        if st.button(f"Hapus", key=f"delete_{index}"):
-            delete_data(index)
+    
+    nomor_hapus = st.number_input("Masukkan nomor data yang ingin dihapus", min_value=0, max_value=len(st.session_state.data)-1, step=1)
+    if st.button("Hapus Data", key="delete_data"):
+        delete_data(nomor_hapus)
+    
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
     
