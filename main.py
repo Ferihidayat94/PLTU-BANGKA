@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from fpdf import FPDF
+from pdf import PDF
 
 # Page Config
 st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
