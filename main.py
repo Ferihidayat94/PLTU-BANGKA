@@ -136,9 +136,11 @@ if submit_button:
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     for i, row in st.session_state.data.iterrows():
-        with st.expander(f"{row['Tanggal']} - {row['Nomor SR']}"):
-            st.write(row.dropna())
-            if st.button(f"Hapus Data {i}", key=f"delete_{i}"):
+        col1, col2 = st.columns([9, 1])
+        with col1:
+            st.write(f"{row['Tanggal']} | {row['Area']} | {row['Nomor SR']} | {row['Keterangan']} | {row['Evidance']} | {row['Nama Pelaksana']}")
+        with col2:
+            if st.button(f"❌", key=f"delete_{i}"):
                 st.session_state.data.drop(i, inplace=True)
                 st.session_state.data.reset_index(drop=True, inplace=True)
                 st.rerun()
