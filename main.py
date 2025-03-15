@@ -16,7 +16,6 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-
 # Responsive Styling
 st.markdown(
     """
@@ -42,6 +41,10 @@ st.markdown(
         border-radius: 5px;
         border: none;
         cursor: pointer;
+    }
+    .stButton>button {
+        background-color: #4CAF50 !important;
+        color: white !important;
     }
     </style>
     """,
@@ -132,8 +135,14 @@ if submit_button:
 # Show data only if available
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
-    st.dataframe(st.session_state.data.dropna(how='all', axis=1), height=400)
-
+    for i, row in st.session_state.data.iterrows():
+        with st.expander(f"{row['Tanggal']} - {row['Nomor SR']}"):
+            st.write(row.dropna())
+            if st.button(f"Hapus Data {i}", key=f"delete_{i}"):
+                st.session_state.data.drop(i, inplace=True)
+                st.session_state.data.reset_index(drop=True, inplace=True)
+                st.rerun()
+    
     # Export to CSV
     st.markdown("### Export Data")
     csv = st.session_state.data.to_csv(index=False)
