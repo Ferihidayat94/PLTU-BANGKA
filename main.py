@@ -52,7 +52,8 @@ if not st.session_state.logged_in:
     if login_button:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
             st.session_state.logged_in = True
-            st.experimental_rerun()
+            st.rerun()
+
         else:
             st.error("Username atau password salah.")
     
