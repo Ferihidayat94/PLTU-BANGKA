@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 # Page Config
-st.set_page_config(page_title="First Line Maintenance", layout="wide")
+st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
 
 # Responsive Styling
 st.markdown(
@@ -25,10 +25,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Logo and Title
-
-st.image("logo.png", width=200)
-
+# Login System
+st.image("logo.png", width=150)
 st.markdown(
     """
     <h1 style='text-align: center; font-family: "Orbitron", sans-serif; color: #4CAF50;'>
@@ -39,8 +37,29 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+st.markdown("## Silakan Login")
+username = st.text_input("Username")
+password = st.text_input("Password", type="password")
+login_button = st.button("Login")
+
+# Hardcoded admin credentials
+ADMIN_CREDENTIALS = {"admin": "admin123"}
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if login_button:
+    if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
+        st.session_state.logged_in = True
+        st.success("Login berhasil! Mengalihkan ke halaman utama...")
+    else:
+        st.error("Username atau password salah.")
+
+if not st.session_state.logged_in:
+    st.stop()
+
 # Input Form
-st.markdown("### Input Data Maintenance")
+st.markdown("### Input Data")
 
 col1, col2 = st.columns(2)
 
@@ -88,7 +107,7 @@ st.markdown("### Export Data")
 csv = st.session_state.data.to_csv(index=False)
 st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
 
-st.info("untuk visualisasi real-time.")
+st.info("File CSV ini bisa langsung dihubungkan ke Power BI untuk visualisasi real-time.")
 
 # Footer
 st.markdown(
