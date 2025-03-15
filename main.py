@@ -6,7 +6,7 @@ from datetime import datetime
 st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
 
 # Hapus Fork dan Git dari tampilan Streamlit
-hide_streamlit_style = """
+hide_streamlit_style = 
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -51,7 +51,7 @@ hide_streamlit_style = """
         font-size: 14px !important;
     }
     </style>
-"""
+
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # Login System
