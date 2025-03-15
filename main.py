@@ -29,6 +29,10 @@ st.markdown(
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
+def logout():
+    st.session_state.logged_in = False
+    st.rerun()
+
 if not st.session_state.logged_in:
     st.image("logo.png", width=150)
     st.markdown(
@@ -53,7 +57,6 @@ if not st.session_state.logged_in:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
             st.session_state.logged_in = True
             st.rerun()
-
         else:
             st.error("Username atau password salah.")
     
@@ -61,6 +64,8 @@ if not st.session_state.logged_in:
 
 # Main Page
 st.markdown("### Input Data")
+
+st.button("Logout", on_click=logout)
 
 col1, col2 = st.columns(2)
 
