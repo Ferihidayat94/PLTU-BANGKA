@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from fpdf import FPDF
 
 # Page Config
 st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
@@ -120,32 +121,25 @@ if submit_button:
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     st.success("Data berhasil disimpan!")
 
+def export_pdf():
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, "Data Monitoring", ln=True, align='C')
+    pdf.ln(10)
+    for i, row in st.session_state.data.iterrows():
+        pdf.cell(200, 10, f"{row['Tanggal']} - {row['Area']} - {row['Keterangan']} - {row['Nomor SR']} - {row['Nama Pelaksana']}", ln=True)
+    return pdf.output(dest="S").encode("latin1")
+
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
-    for i in range(len(st.session_state.data)):
-        col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
-        with col1:
-            st.write(st.session_state.data.at[i, 'Tanggal'])
-        with col2:
-            st.write(st.session_state.data.at[i, 'Area'])
-        with col3:
-            st.write(st.session_state.data.at[i, 'Keterangan'])
-        with col4:
-            st.write(st.session_state.data.at[i, 'Nomor SR'])
-        with col5:
-            st.write(st.session_state.data.at[i, 'Evidance'])
-        with col6:
-            st.write(st.session_state.data.at[i, 'Nama Pelaksana'])
-        with col7:
-            if st.button("❌", key=f"delete_{i}", help="Hapus data ini"):
-                st.session_state.data.drop(i, inplace=True)
-                st.session_state.data.reset_index(drop=True, inplace=True)
-                st.rerun()
-    
     csv = st.session_state.data.to_csv(index=False)
+    pdf = export_pdf()
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
+    st.download_button("Download Data PDF", data=pdf, file_name="monitoring_kinerja.pdf", mime="application/pdf")
     
-st.info("PLTU BANGKA 2X30 MW.")
+st.info("PLTU BANGKA 2X30 MW")
 
 # Footer
 st.markdown(
