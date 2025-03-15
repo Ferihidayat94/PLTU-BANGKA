@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
 
 # Page Config
 st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
@@ -54,11 +55,24 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
+# Path untuk menyimpan data CSV
+DATA_FILE = "monitoring_data.csv"
+
+# Fungsi untuk memuat data dari CSV
+def load_data():
+    if os.path.exists(DATA_FILE):
+        return pd.read_csv(DATA_FILE)
+    return pd.DataFrame(columns=["Tanggal", "Area", "Keterangan", "Nomor SR", "Evidance", "Nama Pelaksana"])
+
+# Fungsi untuk menyimpan data ke CSV
+def save_data(df):
+    df.to_csv(DATA_FILE, index=False)
+
 # Login System
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "data" not in st.session_state:
-    st.session_state.data = pd.DataFrame(columns=["Tanggal", "Area", "Keterangan", "Nomor SR", "Evidance", "Nama Pelaksana"])
+    st.session_state.data = load_data()
 
 def logout():
     st.session_state.logged_in = False
@@ -118,10 +132,13 @@ if submit_button:
         "Nama Pelaksana": [", ".join(nama_pelaksana)]
     })
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
+    save_data(st.session_state.data)  # Simpan data ke file CSV
     st.success("Data berhasil disimpan!")
+    st.rerun()
 
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
+    st.write(st.session_state.data)
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
     
