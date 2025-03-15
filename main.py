@@ -93,7 +93,7 @@ with st.form("monitoring_form"):
         nomor_sr = st.text_input("Nomor SR")
     
     with col2:
-        nama_pelaksana = st.selectbox("Nama Pelaksana", [
+        nama_pelaksana = st.multiselect("Nama Pelaksana", [
             "Winner PT Daspin Sitanggang", "Devri Candra Kardios", "Rendy Eka Priansyah", "Selamat", 
             "M Yanuardi", "Hendra", "Gilang", "Kamil", "M Soleh Alqodri", "M Soleh", "Debby", 
             "Dandi", "Aminudin", "Hasan", "Budi", "Sarmidun", "Reno", "Rafi", "Akbar", 
@@ -112,7 +112,7 @@ if submit_button:
         "Keterangan": [keterangan],
         "Nomor SR": [nomor_sr],
         "Evidance": [evidance.name if evidance else ""],
-        "Nama Pelaksana": [nama_pelaksana]
+        "Nama Pelaksana": [", ".join(nama_pelaksana)]
     })
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     st.success("Data berhasil disimpan!")
@@ -120,7 +120,7 @@ if submit_button:
 # Show data only if available
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
-    st.dataframe(st.session_state.data, height=400)
+    st.dataframe(st.session_state.data.dropna(how='all', axis=1), height=400)
 
     # Export to CSV
     st.markdown("### Export Data")
