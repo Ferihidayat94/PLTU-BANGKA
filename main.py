@@ -28,28 +28,8 @@ hide_streamlit_style = """
         background-color: #444;
     }
     .delete-button {
-        visibility: hidden;
         cursor: pointer;
-    }
-    tr:hover .delete-button {
-        visibility: visible;
-    }
-    .logout-button {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background-color: red;
-        color: white;
-        padding: 8px 16px;
-        border-radius: 5px;
-        border: none;
-        cursor: pointer;
-    }
-    .green-button {
-        background-color: #4CAF50 !important;
-        color: white !important;
-        padding: 5px 10px !important;
-        font-size: 14px !important;
+        color: red;
     }
     </style>
 """
@@ -67,6 +47,12 @@ def load_data():
 # Fungsi untuk menyimpan data ke CSV
 def save_data(df):
     df.to_csv(DATA_FILE, index=False)
+
+# Fungsi untuk menghapus data
+def delete_data(index):
+    st.session_state.data = st.session_state.data.drop(index).reset_index(drop=True)
+    save_data(st.session_state.data)
+    st.rerun()
 
 # Login System
 if "logged_in" not in st.session_state:
@@ -120,7 +106,7 @@ with st.form("monitoring_form"):
             "Sunir", "Eka", "Hanafi", "Diki"])
     evidance = st.file_uploader("Upload Evidance")
     keterangan = st.text_area("Keterangan")
-    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data", use_container_width=False, args=("green-button",))
+    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data", use_container_width=False)
 
 if submit_button:
     new_data = pd.DataFrame({
@@ -138,7 +124,10 @@ if submit_button:
 
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
-    st.write(st.session_state.data)
+    for index, row in st.session_state.data.iterrows():
+        st.write(row.to_dict())
+        if st.button(f"Hapus Data {index}", key=f"delete_{index}"):
+            delete_data(index)
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
     
