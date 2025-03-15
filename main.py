@@ -26,39 +26,39 @@ st.markdown(
 )
 
 # Login System
-st.image("logo.png", width=150)
-st.markdown(
-    """
-    <h1 style='text-align: center; font-family: "Orbitron", sans-serif; color: #4CAF50;'>
-    First Line Maintenance Produksi A
-    </h1>
-    <hr style='border: 1px solid #4CAF50;'>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown("## Silakan Login")
-username = st.text_input("Username")
-password = st.text_input("Password", type="password")
-login_button = st.button("Login")
-
-# Hardcoded admin credentials
-ADMIN_CREDENTIALS = {"admin": "admin123"}
-
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-if login_button:
-    if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
-        st.session_state.logged_in = True
-        st.success("Login berhasil! Mengalihkan ke halaman utama...")
-    else:
-        st.error("Username atau password salah.")
-
 if not st.session_state.logged_in:
+    st.image("logo.png", width=150)
+    st.markdown(
+        """
+        <h1 style='text-align: center; font-family: "Orbitron", sans-serif; color: #4CAF50;'>
+        First Line Maintenance Produksi A
+        </h1>
+        <hr style='border: 1px solid #4CAF50;'>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    st.markdown("## Silakan Login")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    login_button = st.button("Login")
+    
+    # Hardcoded admin credentials
+    ADMIN_CREDENTIALS = {"admin": "admin123"}
+    
+    if login_button:
+        if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
+            st.session_state.logged_in = True
+            st.experimental_rerun()
+        else:
+            st.error("Username atau password salah.")
+    
     st.stop()
 
-# Input Form
+# Main Page
 st.markdown("### Input Data")
 
 col1, col2 = st.columns(2)
