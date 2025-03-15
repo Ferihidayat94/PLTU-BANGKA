@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from pdf import PDF
+from fpdf import FPDF
 
 # Page Config
 st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
@@ -139,7 +139,7 @@ if not st.session_state.data.empty:
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
     st.download_button("Download Data PDF", data=pdf, file_name="monitoring_kinerja.pdf", mime="application/pdf")
     
-st.info("PLTU BANGKA 2X30 MW")
+st.info("PLTU BANGKA 2X30 MW.")
 
 # Footer
 st.markdown(
