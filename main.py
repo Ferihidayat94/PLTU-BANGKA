@@ -15,10 +15,10 @@ hide_streamlit_style = """
     table {
         border-collapse: collapse;
         width: 100%;
-        border: 1px solid #ddd;
+        border: 1px solid #ccc;
     }
     th, td {
-        border: 1px solid #ddd;
+        border: 1px solid #ccc;
         padding: 8px;
         text-align: left;
         color: white;
@@ -28,6 +28,7 @@ hide_streamlit_style = """
     }
     .delete-button {
         visibility: hidden;
+        cursor: pointer;
     }
     tr:hover .delete-button {
         visibility: visible;
@@ -42,6 +43,12 @@ hide_streamlit_style = """
         border-radius: 5px;
         border: none;
         cursor: pointer;
+    }
+    .green-button {
+        background-color: #4CAF50 !important;
+        color: white !important;
+        padding: 5px 10px !important;
+        font-size: 14px !important;
     }
     </style>
 """
@@ -63,7 +70,7 @@ if not st.session_state.logged_in:
     st.markdown("## Login")
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=True)
+    login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=False)
 
     ADMIN_CREDENTIALS = {"admin": "admin123"}
     
@@ -81,7 +88,7 @@ col1, col2 = st.columns([9, 1])
 with col1:
     st.markdown("### INPUT DATA")
 with col2:
-    if st.button("Logout", key="logout", help="Klik untuk keluar", use_container_width=True):
+    if st.button("Logout", key="logout", help="Klik untuk keluar", use_container_width=False):
         logout()
 
 with st.form("monitoring_form"):
@@ -100,7 +107,7 @@ with st.form("monitoring_form"):
             "Sunir", "Eka", "Hanafi", "Diki"])
     evidance = st.file_uploader("Upload Evidance")
     keterangan = st.text_area("Keterangan")
-    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data", use_container_width=True)
+    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data", use_container_width=False, args=("green-button",))
 
 if submit_button:
     new_data = pd.DataFrame({
@@ -116,37 +123,25 @@ if submit_button:
 
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
-    st.markdown("""
-        <table>
-        <tr>
-            <th>Tanggal</th>
-            <th>Area</th>
-            <th>Keterangan</th>
-            <th>Nomor SR</th>
-            <th>Evidance</th>
-            <th>Nama Pelaksana</th>
-            <th>Aksi</th>
-        </tr>
-    """, unsafe_allow_html=True)
-    
     for i in range(len(st.session_state.data)):
-        st.markdown(f"""
-            <tr>
-                <td>{st.session_state.data.at[i, 'Tanggal']}</td>
-                <td>{st.session_state.data.at[i, 'Area']}</td>
-                <td>{st.session_state.data.at[i, 'Keterangan']}</td>
-                <td>{st.session_state.data.at[i, 'Nomor SR']}</td>
-                <td>{st.session_state.data.at[i, 'Evidance']}</td>
-                <td>{st.session_state.data.at[i, 'Nama Pelaksana']}</td>
-                <td><button onclick="deleteRow({i})">❌</button></td>
-            </tr>
-        """, unsafe_allow_html=True)
-        if st.button("❌", key=f"delete_{i}", help="Hapus data ini"):
-            st.session_state.data.drop(i, inplace=True)
-            st.session_state.data.reset_index(drop=True, inplace=True)
-            st.rerun()
-    
-    st.markdown("</table>", unsafe_allow_html=True)
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(7)
+        with col1:
+            st.write(st.session_state.data.at[i, 'Tanggal'])
+        with col2:
+            st.write(st.session_state.data.at[i, 'Area'])
+        with col3:
+            st.write(st.session_state.data.at[i, 'Keterangan'])
+        with col4:
+            st.write(st.session_state.data.at[i, 'Nomor SR'])
+        with col5:
+            st.write(st.session_state.data.at[i, 'Evidance'])
+        with col6:
+            st.write(st.session_state.data.at[i, 'Nama Pelaksana'])
+        with col7:
+            if st.button("❌", key=f"delete_{i}", help="Hapus data ini"):
+                st.session_state.data.drop(i, inplace=True)
+                st.session_state.data.reset_index(drop=True, inplace=True)
+                st.rerun()
     
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
@@ -161,5 +156,4 @@ st.markdown(
     Dibuat oleh Tim Operasi - PLTU Bangka 🛠️
     </p>
     """,
-    unsafe_allow_html=True
-)
+    unsafe_allow_html=True)
