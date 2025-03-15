@@ -15,10 +15,10 @@ hide_streamlit_style = """
     table {
         border-collapse: collapse;
         width: 100%;
-        border: 1px solid black;
+        border: 1px solid #ccc;
     }
     th, td {
-        border: 1px solid black;
+        border: 1px solid #ccc;
         padding: 8px;
         text-align: left;
     }
@@ -59,7 +59,7 @@ if not st.session_state.logged_in:
     st.markdown("## Login")
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    login_button = st.button("Login", key="login_button")
+    login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=True)
 
     ADMIN_CREDENTIALS = {"admin": "admin123"}
     
@@ -77,7 +77,7 @@ col1, col2 = st.columns([9, 1])
 with col1:
     st.markdown("### INPUT DATA")
 with col2:
-    if st.button("Logout", key="logout", help="Klik untuk keluar"):
+    if st.button("Logout", key="logout", help="Klik untuk keluar", use_container_width=True):
         logout()
 
 with st.form("monitoring_form"):
@@ -96,7 +96,7 @@ with st.form("monitoring_form"):
             "Sunir", "Eka", "Hanafi", "Diki"])
     evidance = st.file_uploader("Upload Evidance")
     keterangan = st.text_area("Keterangan")
-    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
+    submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data", use_container_width=True)
 
 if submit_button:
     new_data = pd.DataFrame({
