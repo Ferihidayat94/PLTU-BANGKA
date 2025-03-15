@@ -21,11 +21,15 @@ st.markdown(
         }
     }
     .logout-button {
-        position: absolute;
+        position: fixed;
         top: 10px;
         right: 10px;
         background-color: red !important;
         color: white !important;
+        padding: 8px 16px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
     }
     </style>
     """,
@@ -75,7 +79,11 @@ if not st.session_state.logged_in:
 # Main Page
 st.markdown("### Input Data")
 
-st.markdown("<button class='logout-button' onclick='window.location.reload();'>Logout</button>", unsafe_allow_html=True)
+# Logout Button
+col1, col2 = st.columns([9, 1])
+with col2:
+    if st.button("Logout", key="logout", help="Klik untuk keluar", use_container_width=True):
+        logout()
 
 col1, col2 = st.columns(2)
 
