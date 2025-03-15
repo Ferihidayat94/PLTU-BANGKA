@@ -15,12 +15,16 @@ hide_streamlit_style = """
     table {
         border-collapse: collapse;
         width: 100%;
-        border: 1px solid #ccc;
+        border: 1px solid #ddd;
     }
     th, td {
-        border: 1px solid #ccc;
+        border: 1px solid #ddd;
         padding: 8px;
         text-align: left;
+        color: white;
+    }
+    th {
+        background-color: #444;
     }
     .delete-button {
         visibility: hidden;
@@ -112,20 +116,49 @@ if submit_button:
 
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
+    st.markdown("""
+        <table>
+        <tr>
+            <th>Tanggal</th>
+            <th>Area</th>
+            <th>Keterangan</th>
+            <th>Nomor SR</th>
+            <th>Evidance</th>
+            <th>Nama Pelaksana</th>
+            <th>Aksi</th>
+        </tr>
+    """, unsafe_allow_html=True)
+    
     for i in range(len(st.session_state.data)):
-        cols = st.columns([2, 2, 3, 2, 3, 3, 1])
-        cols[0].write(st.session_state.data.at[i, "Tanggal"])
-        cols[1].write(st.session_state.data.at[i, "Area"])
-        cols[2].write(st.session_state.data.at[i, "Keterangan"])
-        cols[3].write(st.session_state.data.at[i, "Nomor SR"])
-        cols[4].write(st.session_state.data.at[i, "Evidance"])
-        cols[5].write(st.session_state.data.at[i, "Nama Pelaksana"])
-        if cols[6].button("❌", key=f"delete_{i}", help="Hapus data ini"):
+        st.markdown(f"""
+            <tr>
+                <td>{st.session_state.data.at[i, 'Tanggal']}</td>
+                <td>{st.session_state.data.at[i, 'Area']}</td>
+                <td>{st.session_state.data.at[i, 'Keterangan']}</td>
+                <td>{st.session_state.data.at[i, 'Nomor SR']}</td>
+                <td>{st.session_state.data.at[i, 'Evidance']}</td>
+                <td>{st.session_state.data.at[i, 'Nama Pelaksana']}</td>
+                <td><button onclick="deleteRow({i})">❌</button></td>
+            </tr>
+        """, unsafe_allow_html=True)
+        if st.button("❌", key=f"delete_{i}", help="Hapus data ini"):
             st.session_state.data.drop(i, inplace=True)
             st.session_state.data.reset_index(drop=True, inplace=True)
             st.rerun()
+    
+    st.markdown("</table>", unsafe_allow_html=True)
     
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
     
 st.info("PLTU BANGKA 2X30 MW.")
+
+# Footer
+st.markdown(
+    """
+    <hr>
+    <p style='text-align: center;'>
+    Dibuat oleh Tim Operasi - PLTU Bangka 🛠️
+    </p>
+    """,
+    unsafe_allow_html=True
