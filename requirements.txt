@@ -1,0 +1,4 @@
+streamlit
+git init
+pandas
+fpdf
