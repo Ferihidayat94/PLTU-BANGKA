@@ -20,6 +20,13 @@ st.markdown(
             overflow-x: auto;
         }
     }
+    .logout-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: red !important;
+        color: white !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
@@ -28,6 +35,9 @@ st.markdown(
 # Login System
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+
+if "data" not in st.session_state:
+    st.session_state.data = pd.DataFrame(columns=["Tanggal", "Area", "Keterangan", "Nomor SR", "Evidance", "Nama Pelaksana"])
 
 def logout():
     st.session_state.logged_in = False
@@ -65,7 +75,7 @@ if not st.session_state.logged_in:
 # Main Page
 st.markdown("### Input Data")
 
-st.button("Logout", on_click=logout)
+st.markdown("<button class='logout-button' onclick='window.location.reload();'>Logout</button>", unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 
@@ -86,10 +96,6 @@ with st.form("monitoring_form"):
     
     keterangan = st.text_area("Keterangan")
     submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
-
-# Data Storage
-if "data" not in st.session_state:
-    st.session_state.data = pd.DataFrame(columns=["Tanggal", "Area", "Keterangan", "Nomor SR", "Evidance", "Nama Pelaksana"])
 
 # Add new data
 if submit_button:
