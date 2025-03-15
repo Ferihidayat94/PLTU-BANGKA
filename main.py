@@ -28,6 +28,17 @@ hide_streamlit_style = """
     tr:hover .delete-button {
         visibility: visible;
     }
+    .logout-button {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: red;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+    }
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -62,19 +73,27 @@ if not st.session_state.logged_in:
     st.stop()
 
 # Main Page
-st.markdown("### INPUT DATA")
-if st.button("Logout", key="logout", help="Klik untuk keluar"):
-    logout()
+col1, col2 = st.columns([9, 1])
+with col1:
+    st.markdown("### INPUT DATA")
+with col2:
+    if st.button("Logout", key="logout", help="Klik untuk keluar"):
+        logout()
 
 with st.form("monitoring_form"):
-    tanggal = st.date_input("Tanggal", datetime.today())
-    area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
-    nomor_sr = st.text_input("Nomor SR")
-    nama_pelaksana = st.multiselect("Nama Pelaksana", [
-        "Winner PT Daspin Sitanggang", "Devri Candra Kardios", "Rendy Eka Priansyah", "Selamat", 
-        "M Yanuardi", "Hendra", "Gilang", "Kamil", "M Soleh Alqodri", "M Soleh", "Debby", 
-        "Dandi", "Aminudin", "Hasan", "Budi", "Sarmidun", "Reno", "Rafi", "Akbar", 
-        "Sunir", "Eka", "Hanafi", "Diki"])
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        tanggal = st.date_input("Tanggal", datetime.today())
+    with col2:
+        area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
+    with col3:
+        nomor_sr = st.text_input("Nomor SR")
+    with col4:
+        nama_pelaksana = st.multiselect("Nama Pelaksana", [
+            "Winner PT Daspin Sitanggang", "Devri Candra Kardios", "Rendy Eka Priansyah", "Selamat", 
+            "M Yanuardi", "Hendra", "Gilang", "Kamil", "M Soleh Alqodri", "M Soleh", "Debby", 
+            "Dandi", "Aminudin", "Hasan", "Budi", "Sarmidun", "Reno", "Rafi", "Akbar", 
+            "Sunir", "Eka", "Hanafi", "Diki"])
     evidance = st.file_uploader("Upload Evidance")
     keterangan = st.text_area("Keterangan")
     submit_button = st.form_submit_button("Submit", help="Klik untuk menyimpan data")
@@ -94,7 +113,7 @@ if submit_button:
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     for i in range(len(st.session_state.data)):
-        cols = st.columns(7)
+        cols = st.columns([2, 2, 3, 2, 3, 3, 1])
         cols[0].write(st.session_state.data.at[i, "Tanggal"])
         cols[1].write(st.session_state.data.at[i, "Area"])
         cols[2].write(st.session_state.data.at[i, "Keterangan"])
