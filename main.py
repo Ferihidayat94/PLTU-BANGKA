@@ -5,6 +5,18 @@ from datetime import datetime
 # Page Config
 st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
 
+# Hapus Fork dan Git dari tampilan Streamlit
+hide_streamlit_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .st-emotion-cache-16txtl3 {display: none;} /* Menghilangkan tombol Fork */
+    </style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+
 # Responsive Styling
 st.markdown(
     """
