@@ -59,7 +59,7 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True
     )
     
-    st.markdown("## Silakan Login")
+    st.markdown("## Login")
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     login_button = st.button("Login")
@@ -79,7 +79,7 @@ if not st.session_state.logged_in:
 # Main Page
 col1, col2 = st.columns([9, 1])
 with col1:
-    st.markdown("### Input Data")
+    st.markdown("### INPUT DATA")
 with col2:
     if st.button("Logout", key="logout", help="Klik untuk keluar", use_container_width=True):
         logout()
@@ -127,7 +127,7 @@ if not st.session_state.data.empty:
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
     
-    st.info("File CSV ini bisa langsung dihubungkan ke Power BI untuk visualisasi real-time.")
+    st.info("PLTU BANGKA 2X30 MW.")
 
 # Footer
 st.markdown(
