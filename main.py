@@ -13,24 +13,6 @@ hide_streamlit_style = """
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .st-emotion-cache-16txtl3 {display: none;} /* Menghilangkan tombol Fork */
-    table {
-        border-collapse: collapse;
-        width: 100%;
-        border: 1px solid #ccc;
-    }
-    th, td {
-        border: 1px solid #ccc;
-        padding: 8px;
-        text-align: left;
-        color: white;
-    }
-    th {
-        background-color: #444;
-    }
-    .delete-button {
-        cursor: pointer;
-        color: red;
-    }
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -124,9 +106,9 @@ if submit_button:
 
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
+    st.dataframe(st.session_state.data)
     for index, row in st.session_state.data.iterrows():
-        st.write(row.to_dict())
-        if st.button(f"Hapus Data {index}", key=f"delete_{index}"):
+        if st.button(f"Hapus", key=f"delete_{index}"):
             delete_data(index)
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
