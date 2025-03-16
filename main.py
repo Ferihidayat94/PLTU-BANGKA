@@ -71,7 +71,7 @@ if not st.session_state.logged_in:
     password = st.text_input("Password", type="password")
     login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=False)
 
-    ADMIN_CREDENTIALS = {"admin": "admin123"}
+    ADMIN_CREDENTIALS = {"admin": "pltubangka"}
     
     if login_button:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
