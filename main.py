@@ -4,6 +4,7 @@ import os
 import hashlib
 from datetime import datetime
 from fpdf import FPDF
+from PIL import Image
 
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
@@ -90,7 +91,7 @@ def export_pdf(data):
     pdf_file = "monitoring_flm.pdf"
     pdf.output(pdf_file)
     return pdf_file
-    
+
 # ========== Tampilan Login ==========
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
