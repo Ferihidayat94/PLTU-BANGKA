@@ -79,7 +79,7 @@ ADMIN_CREDENTIALS = {
 }
 
 if not st.session_state.logged_in:
-    st.image("logo.png", width=300)
+    st.image("logo.png", width=250)
     st.markdown("## Login ")
     
     username = st.text_input("Username")
@@ -111,7 +111,7 @@ with st.form("monitoring_form"):
         tanggal = st.date_input("Tanggal", datetime.today())
         area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
     with col2:
-        nomor_flm = st.text_input("Nomor FLM")
+        nomor_flm = st.text_input("Nomor SR")
         nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"])
     with col3:
         evidance = st.file_uploader("Upload Evidance")
