@@ -81,12 +81,16 @@ def export_pdf(data):
         pdf.cell(200, 10, f"Nomor SR: {row['Nomor SR']}", ln=True)
         pdf.cell(200, 10, f"Nama Pelaksana: {row['Nama Pelaksana']}", ln=True)
         pdf.multi_cell(0, 10, f"Keterangan: {row['Keterangan']}")
-        pdf.ln(5)
+        
+        if row['Evidance'] and os.path.exists(row['Evidance']):
+            pdf.image(row['Evidance'], x=10, w=100)
+        
+        pdf.ln(10)
     
     pdf_file = "monitoring_flm.pdf"
     pdf.output(pdf_file)
     return pdf_file
-
+    
 # ========== Tampilan Login ==========
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -212,7 +216,6 @@ if not st.session_state.data.empty:
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_data.csv", mime="text/csv")
 
-# Tombol Export PDF
 if st.button("Export ke PDF"):
     pdf_file = export_pdf(st.session_state.data)
     with open(pdf_file, "rb") as f:
