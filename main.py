@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime
 import os
 
+# Page Config
+st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
 # Paksa tema gelap dengan CSS
 st.markdown(
@@ -18,8 +20,7 @@ st.markdown(
 )
 
 
-# Page Config
-st.set_page_config(page_title="FLM Produksi A", layout="wide")
+
 
 # Hapus Fork dan Git dari tampilan Streamlit
 hide_streamlit_style = """
