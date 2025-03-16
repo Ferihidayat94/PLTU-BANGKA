@@ -132,7 +132,6 @@ with st.form("monitoring_form"):
     submit_button = st.form_submit_button("Submit")
 
 if submit_button:
-    # Buat ID dengan format FLM-001, FLM-002, dst.
     if not st.session_state.data.empty:
         last_id_number = (
             st.session_state.data["ID"]
@@ -146,9 +145,8 @@ if submit_button:
     else:
         new_id_number = 1
     
-    unique_id = f"FLM-{new_id_number:03d}"  # Format ID menjadi FLM-001, FLM-002, dst.
+    unique_id = f"FLM-{new_id_number:03d}"
 
-    # Simpan file evidence
     evidence_path = ""
     if evidance is not None:
         evidence_path = os.path.join(UPLOAD_FOLDER, evidance.name)
@@ -170,23 +168,16 @@ if submit_button:
     st.success("Data berhasil disimpan!")
     st.rerun()
 
-# ========== Tampilan Data ==========
-if not st.session_state.data.empty:
-    st.markdown("### Data Monitoring")
-    st.dataframe(st.session_state.data)
-
 # ========== Preview Evidence dengan Expander ==========
 st.markdown("### Preview Evidence")
 
 if not st.session_state.data.empty:
     id_pilih = st.selectbox("Pilih ID untuk melihat evidence", st.session_state.data["ID"])
-    
-    # Ambil data berdasarkan ID yang dipilih
     selected_row = st.session_state.data[st.session_state.data["ID"] == id_pilih]
     if not selected_row.empty:
         evidence_path = selected_row["Evidance"].values[0]
-        
-        if evidence_path and os.path.exists(evidence_path):
+        st.write(f"DEBUG: Evidence Path -> {evidence_path}")
+        if isinstance(evidence_path, str) and evidence_path.strip() and os.path.exists(evidence_path):
             with st.expander(f"Evidence untuk {id_pilih}", expanded=False):
                 st.image(evidence_path, caption=f"Evidence untuk {id_pilih}", use_column_width=True)
         else:
