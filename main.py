@@ -163,7 +163,7 @@ if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     st.dataframe(st.session_state.data)
 
-# ========== Preview Evidence ==========
+# ========== Preview Evidence dengan Expander ==========
 st.markdown("### Preview Evidence")
 
 if not st.session_state.data.empty:
@@ -175,8 +175,8 @@ if not st.session_state.data.empty:
         evidence_path = selected_row["Evidance"].values[0]
         
         if evidence_path and os.path.exists(evidence_path):
-             with st.expander(f"Evidence untuk {id_pilih}", expanded=False):
-            st.image(evidence_path, caption=f"Evidence untuk {id_pilih}")
+            with st.expander(f"Evidence untuk {id_pilih}", expanded=False):
+                st.image(evidence_path, caption=f"Evidence untuk {id_pilih}", use_column_width=True)
         else:
             st.warning("Evidence tidak ditemukan atau belum diupload.")
     else:
