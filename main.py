@@ -25,10 +25,12 @@ st.markdown(
         padding: 10px;
     }
 
-    /* Dropdown */
-    .stSelectbox {
+    /* Dropdown (Selectbox) */
+    div[data-baseweb="select"] > div {
         background-color: #2c2f33 !important;
         color: white !important;
+        border-radius: 10px;
+        border: 1px solid #555;
     }
 
     /* Tombol lebih modern */
@@ -37,8 +39,15 @@ st.markdown(
         color: white !important;
         border-radius: 10px;
         padding: 10px 20px;
+        border: none;
+        transition: 0.3s;
     }
-    
+
+    .stButton > button:hover {
+        background-color: #0056b3 !important;
+        transform: scale(1.05);
+    }
+
     /* Box container */
     .stBox {
         background-color: #2c2f33;
@@ -46,6 +55,12 @@ st.markdown(
         border-radius: 10px;
         border: 1px solid #555;
         box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Perbaikan warna teks di input saat fokus */
+    input:focus, textarea:focus {
+        border-color: #00bfff !important;
+        box-shadow: 0 0 5px rgba(0, 191, 255, 0.5);
     }
 
     </style>
