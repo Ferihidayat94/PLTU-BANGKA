@@ -98,8 +98,10 @@ def export_pdf(data):
         pdf.cell(col_widths[5], 10, str(row['Keterangan']), border=1, align='C')
         
         # Tambahkan gambar evidence jika ada
-        if isinstance(row['Evidance'], str) and os.path.exists(os.path.join(UPLOAD_FOLDER, row['Evidance'])):
-            pdf.image(os.path.join(UPLOAD_FOLDER, row['Evidance']), x=pdf.get_x(), y=pdf.get_y(), w=25, h=15)
+        img_path = os.path.join(UPLOAD_FOLDER, row['Evidance'])
+        if isinstance(row['Evidance'], str) and os.path.exists(img_path):
+            pdf.image(img_path, x=pdf.get_x(), y=pdf.get_y(), w=30, h=20)
+            pdf.cell(col_widths[6], 10, "", border=1, align='C')
         else:
             pdf.cell(col_widths[6], 10, "Tidak Ada Gambar", border=1, align='C')
         pdf.ln()
