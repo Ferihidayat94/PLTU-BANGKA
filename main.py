@@ -2,32 +2,10 @@ import streamlit as st
 import pandas as pd
 import os
 import hashlib
-import uuid
 from datetime import datetime
 
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
-
-# Tambahkan CSS untuk background dark blue dan font modern
-st.markdown(
-    """
-    <style>
-        body {
-            background-color: #0A192F;
-            color: white;
-            font-family: 'Arial', sans-serif;
-        }
-        .stTextInput, .stSelectbox, .stMultiSelect, .stTextArea, .stButton {
-            font-size: 16px;
-        }
-        .stDataFrame {
-            background-color: #112240;
-            border-radius: 10px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 
 # Folder penyimpanan file evidence
 UPLOAD_FOLDER = "uploads/"
@@ -51,7 +29,7 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
+    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor FLM", "Nama Pelaksana", "Keterangan", "Evidance"])
 
 # ========== Simpan Data ==========
 def save_users(df):
@@ -74,6 +52,7 @@ if "data" not in st.session_state:
 
 users = load_users()
 
+# Tambahkan daftar user dan password
 ADMIN_CREDENTIALS = {
     "admin": "pltubangka",
     "operator": "op123",
@@ -82,10 +61,10 @@ ADMIN_CREDENTIALS = {
 if not st.session_state.logged_in:
     st.image("logo.png", width=300)
     st.markdown("## Login ")
-
+    
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    login_button = st.button("Login", key="login_button")
+    login_button = st.button("Login")
 
     if login_button:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
@@ -103,7 +82,7 @@ col1, col2 = st.columns([9, 1])
 with col1:
     st.markdown("### INPUT DATA")
 with col2:
-    if st.button("Logout", key="logout"):
+    if st.button("Logout"):
         logout()
 
 with st.form("monitoring_form"):
@@ -112,17 +91,30 @@ with st.form("monitoring_form"):
         tanggal = st.date_input("Tanggal", datetime.today())
         area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
     with col2:
-        nomor_flm = f"FLM-{len(st.session_state.data) + 1:03d}"
-        st.text(f"Nomor FLM: {nomor_flm}")
-        nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat"])
+        nomor_flm = st.text_input("Nomor FLM")
+        nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"])
     with col3:
         evidance = st.file_uploader("Upload Evidance")
         keterangan = st.text_area("Keterangan")
-
+    
     submit_button = st.form_submit_button("Submit")
 
 if submit_button:
-    unique_id = str(uuid.uuid4())
+    # Buat ID dengan format FLM-001, FLM-002, dst.
+    if not st.session_state.data.empty:
+        last_id_number = (
+            st.session_state.data["ID"]
+            .str.extract(r"FLM-(\d+)")
+            .dropna()
+            .astype(int)
+            .max()
+            .values
+        )
+        new_id_number = last_id_number[0] + 1 if last_id_number.size > 0 else 1
+    else:
+        new_id_number = 1
+    
+    unique_id = f"FLM-{new_id_number:03d}"  # Format ID menjadi FLM-001, FLM-002, dst.
 
     # Simpan file evidence
     evidence_path = ""
@@ -130,20 +122,19 @@ if submit_button:
         evidence_path = os.path.join(UPLOAD_FOLDER, evidance.name)
         with open(evidence_path, "wb") as f:
             f.write(evidance.getbuffer())
-
+    
     new_data = pd.DataFrame({
         "ID": [unique_id],
         "Tanggal": [tanggal],
         "Area": [area],
-        "Nomor FLM": [nomor_flm],
+        "Nomor SR": [nomor_flm],
         "Nama Pelaksana": [", ".join(nama_pelaksana)],
         "Keterangan": [keterangan],
         "Evidance": [evidence_path]
     })
-
+    
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     save_data(st.session_state.data)
-
     st.success("Data berhasil disimpan!")
     st.rerun()
 
