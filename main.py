@@ -12,7 +12,7 @@ st.markdown(
     """
     <style>
         body {
-            background-color: #0A192F;
+            background-color: (to right, #141e30, #243b55); /* Gradient Dark Blue */
             color: white;
             font-family: 'Arial', sans-serif;
         }
