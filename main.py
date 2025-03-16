@@ -91,11 +91,7 @@ users = load_users()
 
 # Login Form
 if not st.session_state.logged_in:
-        query_params = st.experimental_get_query_params()
-if "user" in query_params:
-    st.session_state.logged_in = True
-    st.session_state.username = query_params["user"][0]  # Ambil username dari URL
-    st.session_state.logged_in = False
+
 
     st.image("logo.png", width=300)
     st.markdown("## Login ")
