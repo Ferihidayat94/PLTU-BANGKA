@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 
 # Page Config
-st.set_page_config(page_title="First Line Maintenance Produksi A", layout="wide")
+st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
 # Hapus Fork dan Git dari tampilan Streamlit
 hide_streamlit_style = """
@@ -50,7 +50,35 @@ def logout():
 
 if not st.session_state.logged_in:
     st.image("logo.png", width=150)
-    st.markdown("## Login")
+    st.markdown(
+    """
+    <style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 60vh;
+        flex-direction: column;
+    }
+    .login-box {
+        background-color: #1e1e1e; /* Warna gelap */
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.2);
+        width: 300px;
+        text-align: center;
+    }
+    .stTextInput, .stButton>button {
+        width: 100% !important;
+    }
+    </style>
+    <div class='login-container'>
+        <div class='login-box'>
+            <h2 style='color: white;'>Login</h2>
+    </div>
+    """, 
+    unsafe_allow_html=True)
+    
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=False)
