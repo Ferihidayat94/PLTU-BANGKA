@@ -7,17 +7,32 @@ import os
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
 # Paksa tema gelap dengan CSS
+import streamlit as st
+
+# Tambahkan custom CSS untuk background
 st.markdown(
     """
     <style>
-    html, body, [class*="st-"] {
-        background-color: #0e1117;
+    body {
+        background: linear-gradient(to right, #141e30, #243b55); /* Gradient Dark Blue */
         color: white;
+    }
+    .stApp {
+        background: linear-gradient(to right, #141e30, #243b55);
+    }
+    .stButton > button {
+        background-color: #007BFF;
+        color: white;
+        border-radius: 10px;
+        padding: 10px 20px;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
+
+st.title("FLM Produksi A")  # Contoh konten
+st.write("Tampilan UI modern dengan background gradient!")
 
 
 
