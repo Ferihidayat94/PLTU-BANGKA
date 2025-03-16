@@ -34,7 +34,7 @@ st.markdown(
     }
 
    div[data-testid="stButton"] > button {
-    background-color: #28a745 !important; /* Hijau */
+    background-color: #dc3545 !important; /* Merah */
     color: black !important; /* Teks hitam */
     font-weight: bold;
     font-size: 16px;
@@ -46,9 +46,10 @@ st.markdown(
 
 /* Hover Effect */
 div[data-testid="stButton"] > button:hover {
-    background-color: #218838 !important; /* Hijau lebih gelap saat hover */
+    background-color: #c82333 !important; /* Merah lebih gelap saat hover */
     transform: scale(1.05);
 }
+
 
     /* Box container */
     .stBox {
