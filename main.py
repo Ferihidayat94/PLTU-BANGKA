@@ -76,13 +76,13 @@ def export_pdf(data):
     # Tambahkan Logo
     if os.path.exists("logo.png"):
         pdf.image("logo.png", x=10, y=5, w=30)
-    pdf.cell(200, 10, "Laporan FLM", ln=True, align='C')
+    pdf.cell(270, 10, "Laporan FLM", ln=True, align='C')
     pdf.ln(10)
     
     # Header Tabel
     pdf.set_font("Arial", style='B', size=10)
-    col_widths = [25, 35, 25, 35, 50, 50, 50]  # Lebar masing-masing kolom
     headers = ["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"]
+    col_widths = [20, 30, 25, 30, 40, 60, 65]
     for i, header in enumerate(headers):
         pdf.cell(col_widths[i], 10, header, border=1, align='C')
     pdf.ln()
@@ -99,10 +99,9 @@ def export_pdf(data):
         
         # Tambahkan gambar evidence jika ada
         if isinstance(row['Evidance'], str) and os.path.exists(os.path.join(UPLOAD_FOLDER, row['Evidance'])):
-            pdf.image(os.path.join(UPLOAD_FOLDER, row['Evidance']), x=pdf.get_x(), y=pdf.get_y(), w=30)
-            pdf.ln(15)  # Tambahkan spasi setelah gambar
+            pdf.image(os.path.join(UPLOAD_FOLDER, row['Evidance']), x=pdf.get_x(), y=pdf.get_y(), w=25, h=15)
         else:
-            pdf.cell(col_widths[6], 10, "-", border=1, align='C')
+            pdf.cell(col_widths[6], 10, "Tidak Ada Gambar", border=1, align='C')
         pdf.ln()
     
     pdf_file = "monitoring_flm.pdf"
