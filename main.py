@@ -144,12 +144,18 @@ with st.form("monitoring_form"):
         nomor_flm = st.text_input("Nomor SR")
         nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"])
     with col3:
-        evidance = st.file_uploader("Upload Evidance")
+        evidance_file = st.file_uploader("Upload Evidance", type=["png", "jpg", "jpeg"])
         keterangan = st.text_area("Keterangan")
     
     submit_button = st.form_submit_button("Submit")
 
 if submit_button:
+    evidance_path = ""
+    if evidance_file:
+        evidance_path = os.path.join(UPLOAD_FOLDER, evidance_file.name)
+        with open(evidance_path, "wb") as f:
+            f.write(evidance_file.getbuffer())
+    
     new_data = pd.DataFrame({
         "ID": [f"FLM-{len(st.session_state.data) + 1:03d}"],
         "Tanggal": [tanggal],
@@ -157,7 +163,7 @@ if submit_button:
         "Nomor SR": [nomor_flm],
         "Nama Pelaksana": [", ".join(nama_pelaksana)],
         "Keterangan": [keterangan],
-        "Evidance": [""]
+        "Evidance": [evidance_path]
     })
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     save_data(st.session_state.data)
