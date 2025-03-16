@@ -106,17 +106,16 @@ if not st.session_state.logged_in:
             st.error("Username atau password salah.")
     st.stop()
 
-# ========== Sidebar Logout ==========
-st.sidebar.title("Menu")
-st.sidebar.write(f"Logged in as: {st.session_state.username}")
-if st.sidebar.button("Logout"):
-    logout()
-
 # ========== Tampilan Input Data ==========
 st.title("MONITORING FIRST LINE MAINTENANCE")
 st.write("Produksi A PLTU Bangka")
 
-st.markdown("### INPUT DATA")
+col1, col2 = st.columns([9, 1])
+with col1:
+    st.markdown("### INPUT DATA")
+with col2:
+    if st.button("Logout"):
+        logout()
 
 with st.form("monitoring_form"):
     col1, col2, col3 = st.columns(3)
@@ -170,6 +169,43 @@ if submit_button:
     save_data(st.session_state.data)
     st.success("Data berhasil disimpan!")
     st.rerun()
+
+# ========== Tampilan Data ==========
+if not st.session_state.data.empty:
+    st.markdown("### Data Monitoring")
+    st.dataframe(st.session_state.data)
+
+# ========== Preview Evidence dengan Expander ==========
+st.markdown("### Preview Evidence")
+
+if not st.session_state.data.empty:
+    id_pilih = st.selectbox("Pilih ID untuk melihat evidence", st.session_state.data["ID"])
+    
+    # Ambil data berdasarkan ID yang dipilih
+    selected_row = st.session_state.data[st.session_state.data["ID"] == id_pilih]
+    if not selected_row.empty:
+        evidence_path = selected_row["Evidance"].values[0]
+        
+        if evidence_path and os.path.exists(evidence_path):
+            with st.expander(f"Evidence untuk {id_pilih}", expanded=False):
+                st.image(evidence_path, caption=f"Evidence untuk {id_pilih}", use_column_width=True)
+        else:
+            st.warning("Evidence tidak ditemukan atau belum diupload.")
+    else:
+        st.warning("Pilih ID yang memiliki evidence.")
+
+    
+    # Pilih ID untuk hapus
+    id_hapus = st.selectbox("Pilih ID untuk hapus", st.session_state.data["ID"])
+    if st.button("Hapus Data"):
+        st.session_state.data = st.session_state.data[st.session_state.data["ID"] != id_hapus]
+        save_data(st.session_state.data)
+        st.success("Data berhasil dihapus!")
+        st.rerun()
+
+    # Download CSV
+    csv = st.session_state.data.to_csv(index=False)
+    st.download_button("Download Data CSV", data=csv, file_name="monitoring_data.csv", mime="text/csv")
 
 st.info("PLTU BANGKA 2X30 MW - Sistem Monitoring")
 
