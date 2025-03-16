@@ -66,7 +66,7 @@ def logout():
     st.session_state.page = "login"
     st.rerun()
 
-# ========== Fungsi Export PDF dengan Evidence Gambar ==========
+# ========== Fungsi Export PDF ==========
 def export_pdf(data):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -97,13 +97,19 @@ def export_pdf(data):
         pdf.cell(col_widths[4], 10, str(row['Nama Pelaksana']), border=1, align='C')
         pdf.cell(col_widths[5], 10, str(row['Keterangan']), border=1, align='C')
 
-        # Tambahkan gambar evidence jika ada
+        # Periksa apakah file image ada
         img_path = os.path.join(UPLOAD_FOLDER, str(row['Evidance']).strip())
+
         if os.path.exists(img_path) and os.path.isfile(img_path):
-            pdf.image(img_path, x=pdf.get_x(), y=pdf.get_y(), w=30, h=20)
-            pdf.cell(col_widths[6], 20, "", border=1, align='C')
+            try:
+                pdf.image(img_path, x=pdf.get_x(), y=pdf.get_y(), w=30, h=20)
+                pdf.cell(col_widths[6], 20, "", border=1, align='C')
+            except Exception as e:
+                pdf.cell(col_widths[6], 10, "Error Load Img", border=1, align='C')
+                print(f"Error loading image {img_path}: {e}")  # Debugging
         else:
             pdf.cell(col_widths[6], 10, "No Image", border=1, align='C')
+
         pdf.ln()
     
     pdf_file = "monitoring_flm.pdf"
