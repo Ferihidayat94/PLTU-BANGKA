@@ -68,25 +68,41 @@ def logout():
 
 # ========== Fungsi Export PDF ==========
 def export_pdf(data):
-    pdf = FPDF()
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Arial", size=12)
+    
+    # Tambahkan Logo
+    if os.path.exists("logo.png"):
+        pdf.image("logo.png", x=10, y=5, w=30)
     pdf.cell(200, 10, "Laporan FLM", ln=True, align='C')
     pdf.ln(10)
     
-    for index, row in data.iterrows():
-        pdf.cell(200, 10, f"ID: {row['ID']}", ln=True)
-        pdf.cell(200, 10, f"Tanggal: {row['Tanggal']}", ln=True)
-        pdf.cell(200, 10, f"Area: {row['Area']}", ln=True)
-        pdf.cell(200, 10, f"Nomor SR: {row['Nomor SR']}", ln=True)
-        pdf.cell(200, 10, f"Nama Pelaksana: {row['Nama Pelaksana']}", ln=True)
-        pdf.multi_cell(0, 10, f"Keterangan: {row['Keterangan']}")
+    # Header Tabel
+    pdf.set_font("Arial", style='B', size=10)
+    col_widths = [25, 35, 25, 35, 50, 50, 50]  # Lebar masing-masing kolom
+    headers = ["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"]
+    for i, header in enumerate(headers):
+        pdf.cell(col_widths[i], 10, header, border=1, align='C')
+    pdf.ln()
+    
+    # Isi Data
+    pdf.set_font("Arial", size=10)
+    for _, row in data.iterrows():
+        pdf.cell(col_widths[0], 10, str(row['ID']), border=1, align='C')
+        pdf.cell(col_widths[1], 10, str(row['Tanggal']), border=1, align='C')
+        pdf.cell(col_widths[2], 10, str(row['Area']), border=1, align='C')
+        pdf.cell(col_widths[3], 10, str(row['Nomor SR']), border=1, align='C')
+        pdf.cell(col_widths[4], 10, str(row['Nama Pelaksana']), border=1, align='C')
+        pdf.cell(col_widths[5], 10, str(row['Keterangan']), border=1, align='C')
         
+        # Jika ada gambar evidence, tambahkan nama file
         if row['Evidance'] and os.path.exists(row['Evidance']):
-            pdf.image(row['Evidance'], x=10, w=100)
-        
-        pdf.ln(10)
+            pdf.cell(col_widths[6], 10, "[Gambar]", border=1, align='C')
+        else:
+            pdf.cell(col_widths[6], 10, "-", border=1, align='C')
+        pdf.ln()
     
     pdf_file = "monitoring_flm.pdf"
     pdf.output(pdf_file)
