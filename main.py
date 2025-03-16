@@ -80,19 +80,15 @@ ADMIN_CREDENTIALS = {
 
 # Cek apakah user sudah login sebelumnya
 if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
 if "username" not in st.session_state:
     st.session_state.username = ""
-
-
-
 
 users = load_users()
 
 # Login Form
 if not st.session_state.logged_in:
-
-
     st.image("logo.png", width=300)
     st.markdown("## Login ")
 
@@ -101,14 +97,13 @@ if not st.session_state.logged_in:
     login_button = st.button("Login")
 
     if login_button:
-    if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
-        st.session_state.logged_in = True
-        st.session_state.username = username  # Simpan username agar tidak hilang saat refresh
-        st.experimental_set_query_params(user=username)  # Simpan di URL untuk tracking
-        st.rerun()
-    else:
-        st.error("Username atau password salah.")
-
+        if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
+            st.session_state.logged_in = True
+            st.session_state.username = username  # Simpan username agar tidak hilang saat refresh
+            st.experimental_set_query_params(user=username)  # Simpan di URL untuk tracking
+            st.rerun()
+        else:
+            st.error("Username atau password salah.")
     st.stop()
 
 # ========== Tampilan Input Data ==========
