@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import os
 import hashlib
-import uuid
 from datetime import datetime
 
 # ========== Konfigurasi Streamlit ==========
@@ -30,7 +29,7 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
+    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor FLM", "Nama Pelaksana", "Keterangan", "Evidance"])
 
 # ========== Simpan Data ==========
 def save_users(df):
@@ -56,18 +55,16 @@ users = load_users()
 # Tambahkan daftar user dan password
 ADMIN_CREDENTIALS = {
     "admin": "pltubangka",
-    
     "operator": "op123",
-    
 }
 
 if not st.session_state.logged_in:
     st.image("logo.png", width=300)
     st.markdown("## Login ")
-
+    
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=False)
+    login_button = st.button("Login")
 
     if login_button:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
@@ -75,9 +72,7 @@ if not st.session_state.logged_in:
             st.rerun()
         else:
             st.error("Username atau password salah.")
-
     st.stop()
-
 
 # ========== Tampilan Input Data ==========
 st.title("MONITORING FIRST LINE MAINTENANCE")
@@ -87,7 +82,7 @@ col1, col2 = st.columns([9, 1])
 with col1:
     st.markdown("### INPUT DATA")
 with col2:
-    if st.button("Logout", key="logout"):
+    if st.button("Logout"):
         logout()
 
 with st.form("monitoring_form"):
@@ -96,16 +91,30 @@ with st.form("monitoring_form"):
         tanggal = st.date_input("Tanggal", datetime.today())
         area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
     with col2:
-        nomor_sr = st.text_input("Nomor SR")
-        nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat"])
+        nomor_flm = st.text_input("Nomor FLM")
+        nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"])
     with col3:
         evidance = st.file_uploader("Upload Evidance")
         keterangan = st.text_area("Keterangan")
-
+    
     submit_button = st.form_submit_button("Submit")
 
 if submit_button:
-    unique_id = str(uuid.uuid4())  # Generate UUID unik untuk setiap entri
+    # Buat ID dengan format FLM-001, FLM-002, dst.
+    if not st.session_state.data.empty:
+        last_id_number = (
+            st.session_state.data["ID"]
+            .str.extract(r"FLM-(\d+)")
+            .dropna()
+            .astype(int)
+            .max()
+            .values
+        )
+        new_id_number = last_id_number[0] + 1 if last_id_number.size > 0 else 1
+    else:
+        new_id_number = 1
+    
+    unique_id = f"FLM-{new_id_number:03d}"  # Format ID menjadi FLM-001, FLM-002, dst.
 
     # Simpan file evidence
     evidence_path = ""
@@ -113,22 +122,20 @@ if submit_button:
         evidence_path = os.path.join(UPLOAD_FOLDER, evidance.name)
         with open(evidence_path, "wb") as f:
             f.write(evidance.getbuffer())
-
+    
     new_data = pd.DataFrame({
         "ID": [unique_id],
         "Tanggal": [tanggal],
         "Area": [area],
-        "Nomor SR": [nomor_sr],
+        "Nomor FLM": [nomor_flm],
         "Nama Pelaksana": [", ".join(nama_pelaksana)],
         "Keterangan": [keterangan],
         "Evidance": [evidence_path]
     })
-
+    
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     save_data(st.session_state.data)
-
     st.success("Data berhasil disimpan!")
-
     st.rerun()
 
 # ========== Tampilan Data ==========
