@@ -59,11 +59,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Contoh input box abu-abu
-st.text_input("Masukkan Username")
-st.text_area("Deskripsi")
-st.selectbox("Pilih Opsi", ["A", "B", "C"])
-st.button("Submit")
 
 
 st.title("Digitalisasi Monitoring FIRST LINE MAINTENANCE")  # Contoh konten
@@ -115,7 +110,7 @@ def logout():
     st.rerun()
 
 if not st.session_state.logged_in:
-    st.image("logo.png", width=150)
+    st.image("logo.png", width=300)
     st.markdown("## Login ")
     
     username = st.text_input("Username")
