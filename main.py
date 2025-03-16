@@ -6,13 +6,6 @@ import os
 # Page Config
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
-# Paksa tema gelap dengan CSS
-import streamlit as st
-
-# Tambahkan custom CSS untuk background
-import streamlit as st
-
-# Tambahkan custom CSS ke dalam aplikasi Streamlit
 st.markdown(
     """
     <style>
@@ -31,10 +24,11 @@ st.markdown(
         padding: 10px;
     }
 
-    /* Dropdown */
-    .stSelectbox {
+    /* Dropdown styling */
+    div[data-baseweb="select"] > div {
         background-color: #2c2f33 !important;
         color: white !important;
+        border-radius: 10px !important;
     }
 
     /* Tombol lebih modern */
@@ -43,15 +37,27 @@ st.markdown(
         color: white !important;
         border-radius: 10px;
         padding: 10px 20px;
+        font-weight: bold;
+        border: none;
+        transition: all 0.3s ease-in-out;
     }
-    
-    /* Box container */
-    .stBox {
-        background-color: #2c2f33;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #555;
-        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+
+    /* Efek hover tombol */
+    .stButton > button:hover {
+        background-color: #0056b3 !important;
+    }
+
+    /* Pusatkan input login */
+    .stTextInput, .stPassword {
+        width: 50% !important;
+        margin: auto;
+    }
+
+    /* Perbesar logo */
+    img {
+        width: 200px !important; /* Ubah ukuran logo */
+        display: block;
+        margin: auto;
     }
 
     </style>
