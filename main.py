@@ -3,6 +3,21 @@ import pandas as pd
 from datetime import datetime
 import os
 
+
+# Paksa tema gelap dengan CSS
+st.markdown(
+    """
+    <style>
+    html, body, [class*="st-"] {
+        background-color: #0e1117;
+        color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+
 # Page Config
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
