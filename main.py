@@ -6,6 +6,7 @@ import os
 # Page Config
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
+# Tambahkan custom CSS ke dalam aplikasi Streamlit
 st.markdown(
     """
     <style>
@@ -13,12 +14,6 @@ st.markdown(
     .stApp {
         background: linear-gradient(to right, #141e30, #243b55); /* Gradient Dark Blue */
         color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-        flex-direction: column;
-        text-align: center;
     }
 
     /* Ubah box input jadi abu-abu */
@@ -30,11 +25,10 @@ st.markdown(
         padding: 10px;
     }
 
-    /* Dropdown styling */
-    div[data-baseweb="select"] > div {
+    /* Dropdown */
+    .stSelectbox {
         background-color: #2c2f33 !important;
         color: white !important;
-        border-radius: 10px !important;
     }
 
     /* Tombol lebih modern */
@@ -43,36 +37,21 @@ st.markdown(
         color: white !important;
         border-radius: 10px;
         padding: 10px 20px;
-        font-weight: bold;
-        border: none;
-        transition: all 0.3s ease-in-out;
     }
-
-    /* Efek hover tombol */
-    .stButton > button:hover {
-        background-color: #0056b3 !important;
-    }
-
-    /* Pusatkan input login */
-    .stTextInput, .stPassword {
-        width: 40% !important;
-        margin: auto;
-        text-align: center;
-    }
-
-    /* Perbesar logo */
-    img {
-        width: 250px !important; /* Ubah ukuran logo */
-        display: block;
-        margin: auto;
+    
+    /* Box container */
+    .stBox {
+        background-color: #2c2f33;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #555;
+        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
     }
 
     </style>
     """,
     unsafe_allow_html=True
 )
-
-
 
 st.title("Digitalisasi Monitoring FIRST LINE MAINTENANCE")  # Contoh konten
 st.write("Produksi A PLTU Bangka")
