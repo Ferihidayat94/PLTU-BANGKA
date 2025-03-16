@@ -163,6 +163,25 @@ if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     st.dataframe(st.session_state.data)
 
+# ========== Preview Evidence ==========
+st.markdown("### Preview Evidence")
+
+if not st.session_state.data.empty:
+    id_pilih = st.selectbox("Pilih ID untuk melihat evidence", st.session_state.data["ID"])
+    
+    # Ambil data berdasarkan ID yang dipilih
+    selected_row = st.session_state.data[st.session_state.data["ID"] == id_pilih]
+    if not selected_row.empty:
+        evidence_path = selected_row["Evidance"].values[0]
+        
+        if evidence_path and os.path.exists(evidence_path):
+            st.image(evidence_path, caption=f"Evidence untuk {id_pilih}")
+        else:
+            st.warning("Evidence tidak ditemukan atau belum diupload.")
+    else:
+        st.warning("Pilih ID yang memiliki evidence.")
+
+    
     # Pilih ID untuk hapus
     id_hapus = st.selectbox("Pilih ID untuk hapus", st.session_state.data["ID"])
     if st.button("Hapus Data"):
