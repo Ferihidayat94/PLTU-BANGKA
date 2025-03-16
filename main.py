@@ -61,15 +61,11 @@ def save_data(df):
 # ========== Fungsi Logout ==========
 def logout():
     st.session_state.logged_in = False
-    st.session_state.page = "login"
     st.rerun()
 
 # ========== Tampilan Login ==========
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
-if "page" not in st.session_state:
-    st.session_state.page = "login"
 
 if "data" not in st.session_state:
     st.session_state.data = load_data()
@@ -82,8 +78,18 @@ ADMIN_CREDENTIALS = {
     "operator": "op123",
 }
 
-if not st.session_state.logged_in and st.session_state.page == "login":
-    st.image("logo.png", width=300)
+# Cek apakah user sudah login sebelumnya
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if "username" not in st.session_state:
+    st.session_state.username = ""
+
+users = load_users()
+
+# Login Form
+if not st.session_state.logged_in:
+    st.image("logo.png", width=200)
     st.markdown("## Login ")
 
     username = st.text_input("Username")
@@ -93,15 +99,14 @@ if not st.session_state.logged_in and st.session_state.page == "login":
     if login_button:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
             st.session_state.logged_in = True
-            st.session_state.username = username
-            st.session_state.page = "dashboard"
-            st.experimental_set_query_params(user=username)
+            st.session_state.username = username  # Simpan username agar tidak hilang saat refresh
+            st.experimental_set_query_params(user=username)  # Simpan di URL untuk tracking
             st.rerun()
         else:
             st.error("Username atau password salah.")
     st.stop()
 
-# ========== Tampilan Dashboard ==========
+# ========== Tampilan Input Data ==========
 st.title("MONITORING FIRST LINE MAINTENANCE")
 st.write("Produksi A PLTU Bangka")
 
@@ -161,7 +166,6 @@ if submit_button:
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     save_data(st.session_state.data)
     st.success("Data berhasil disimpan!")
-    st.session_state.page = "dashboard"
     st.rerun()
 
 # ========== Preview Evidence dengan Expander ==========
