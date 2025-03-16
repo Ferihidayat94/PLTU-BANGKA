@@ -36,7 +36,7 @@ st.markdown(
    /* Style untuk tombol login */
 .stButton > button {
     background-color: #007BFF !important; /* Biru */
-    color: white !important; /* Pastikan teks terlihat */
+    color: black !important; /* Pastikan teks terlihat */
     font-weight: bold; /* Biar lebih jelas */
     border-radius: 10px;
     padding: 10px 20px;
