@@ -53,7 +53,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("Digitalisasi Monitoring FIRST LINE MAINTENANCE")  # Contoh konten
+st.title("MONITORING FIRST LINE MAINTENANCE")  # Contoh konten
 st.write("Produksi A PLTU Bangka")
 
 
