@@ -33,11 +33,11 @@ st.markdown(
         border: 1px solid #555;
     }
 
-   /* Style untuk tombol login */
-.stButton > button {
-    background-color: #007BFF !important; /* Biru */
-    color: black !important; /* Pastikan teks terlihat */
-    font-weight: bold; /* Biar lebih jelas */
+   div[data-testid="stButton"] > button {
+    background-color: #28a745 !important; /* Hijau */
+    color: black !important; /* Teks hitam */
+    font-weight: bold;
+    font-size: 16px;
     border-radius: 10px;
     padding: 10px 20px;
     border: none;
@@ -45,8 +45,8 @@ st.markdown(
 }
 
 /* Hover Effect */
-.stButton > button:hover {
-    background-color: #0056b3 !important; /* Biru lebih gelap saat hover */
+div[data-testid="stButton"] > button:hover {
+    background-color: #218838 !important; /* Hijau lebih gelap saat hover */
     transform: scale(1.05);
 }
 
