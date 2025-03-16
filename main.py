@@ -171,13 +171,6 @@ if submit_button:
     st.session_state.page = "dashboard"
     st.rerun()
 
-# Tombol Export PDF
-if st.button("Export ke PDF"):
-    pdf_file = export_pdf(st.session_state.data)
-    with open(pdf_file, "rb") as f:
-        st.download_button("Unduh PDF", f, file_name=pdf_file)
-
-
 
 
 
@@ -219,6 +212,12 @@ if not st.session_state.data.empty:
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_data.csv", mime="text/csv")
 
+# Tombol Export PDF
+if st.button("Export ke PDF"):
+    pdf_file = export_pdf(st.session_state.data)
+    with open(pdf_file, "rb") as f:
+        st.download_button("Unduh PDF", f, file_name=pdf_file)
+
 st.info("PLTU BANGKA 2X30 MW - Sistem Monitoring")
 
 # ========== Footer ==========
@@ -229,4 +228,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
