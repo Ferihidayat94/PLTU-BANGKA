@@ -13,6 +13,8 @@ hide_streamlit_style = """
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .st-emotion-cache-16txtl3 {display: none;} /* Menghilangkan tombol Fork */
+    .st-emotion-cache-1r0zrug {display: none;} /* Menghilangkan icon profil Streamlit */
+    .viewerBadge_container__1QSob {display: none;} /* Menghilangkan ikon Streamlit di footer */
     </style>
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -115,7 +117,7 @@ if not st.session_state.data.empty:
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_kinerja.csv", mime="text/csv")
     
-st.info("PLTU BANGKA 2X30 MW.")
+st.info("PLTU BANGKA 2X30 MW")
 
 # Footer
 st.markdown(
