@@ -53,26 +53,31 @@ if "data" not in st.session_state:
 
 users = load_users()
 
+# Tambahkan daftar user dan password
+ADMIN_CREDENTIALS = {
+    "admin": "pltubangka",
+    
+    "operator": "op123",
+    
+}
+
 if not st.session_state.logged_in:
     st.image("logo.png", width=300)
     st.markdown("## Login ")
 
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
-    login_button = st.button("Login")
+    login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=False)
 
     if login_button:
-        if username in users["Username"].values:
-            hashed_password = hash_password(password)
-            if users[users["Username"] == username]["Password"].values[0] == hashed_password:
-                st.session_state.logged_in = True
-                st.rerun()
-            else:
-                st.error("Password salah!")
+        if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
+            st.session_state.logged_in = True
+            st.rerun()
         else:
-            st.error("Username tidak ditemukan!")
+            st.error("Username atau password salah.")
 
     st.stop()
+
 
 # ========== Tampilan Input Data ==========
 st.title("MONITORING FIRST LINE MAINTENANCE")
