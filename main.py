@@ -25,13 +25,31 @@ st.markdown(
         padding: 10px;
     }
 
-    /* Dropdown (Selectbox) */
-    div[data-baseweb="select"] > div {
-        background-color: #2c2f33 !important;
-        color: white !important;
-        border-radius: 10px;
-        border: 1px solid #555;
-    }
+/* Dropdown (Selectbox) */
+div[data-baseweb="select"] {
+    background-color: #2c2f33 !important;
+    color: white !important;
+    border-radius: 10px;
+    border: 1px solid #555;
+    padding: 5px;
+}
+
+/* Warna teks di dalam dropdown */
+div[data-baseweb="select"] * {
+    color: white !important;
+}
+
+/* Hover Effect */
+div[data-baseweb="select"]:hover {
+    border-color: #888;
+}
+
+/* Saat dropdown aktif atau dipilih */
+div[data-baseweb="select"]:focus-within {
+    border-color: #00bfff; /* Warna biru terang */
+    box-shadow: 0 0 5px rgba(0, 191, 255, 0.5);
+}
+
 
    div[data-testid="stButton"] > button {
     background-color: #dc3545 !important; /* Merah */
