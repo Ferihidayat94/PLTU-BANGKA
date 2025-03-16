@@ -33,20 +33,22 @@ st.markdown(
         border: 1px solid #555;
     }
 
-    /* Tombol lebih modern */
-    .stButton > button {
-        background-color: #007BFF !important;
-        color: white !important;
-        border-radius: 10px;
-        padding: 10px 20px;
-        border: none;
-        transition: 0.3s;
-    }
+   /* Style untuk tombol login */
+.stButton > button {
+    background-color: #007BFF !important; /* Biru */
+    color: white !important; /* Pastikan teks terlihat */
+    font-weight: bold; /* Biar lebih jelas */
+    border-radius: 10px;
+    padding: 10px 20px;
+    border: none;
+    transition: 0.3s;
+}
 
-    .stButton > button:hover {
-        background-color: #0056b3 !important;
-        transform: scale(1.05);
-    }
+/* Hover Effect */
+.stButton > button:hover {
+    background-color: #0056b3 !important; /* Biru lebih gelap saat hover */
+    transform: scale(1.05);
+}
 
     /* Box container */
     .stBox {
