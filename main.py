@@ -44,11 +44,6 @@ div[data-baseweb="select"]:hover {
     border-color: #888;
 }
 
-/* Saat dropdown aktif atau dipilih */
-div[data-baseweb="select"]:focus-within {
-    border-color: #00bfff; /* Warna biru terang */
-    box-shadow: 0 0 5px rgba(0, 191, 255, 0.5);
-}
 
 
    div[data-testid="stButton"] > button {
