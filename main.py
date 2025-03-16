@@ -165,8 +165,7 @@ if submit_button:
     st.session_state.page = "dashboard"
     st.rerun()
 
-st.write("### Data Monitoring")
-st.dataframe(st.session_state.data)
+
 
 
 
