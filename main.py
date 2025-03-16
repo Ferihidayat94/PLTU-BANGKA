@@ -10,29 +10,64 @@ st.set_page_config(page_title="FLM Produksi A", layout="wide")
 import streamlit as st
 
 # Tambahkan custom CSS untuk background
+import streamlit as st
+
+# Tambahkan custom CSS ke dalam aplikasi Streamlit
 st.markdown(
     """
     <style>
-    body {
+    /* Ubah warna background aplikasi */
+    .stApp {
         background: linear-gradient(to right, #141e30, #243b55); /* Gradient Dark Blue */
         color: white;
     }
-    .stApp {
-        background: linear-gradient(to right, #141e30, #243b55);
+
+    /* Ubah box input jadi abu-abu */
+    input, textarea {
+        background-color: #2c2f33 !important; /* Abu-abu gelap */
+        color: white !important;
+        border-radius: 10px;
+        border: 1px solid #555;
+        padding: 10px;
     }
+
+    /* Dropdown */
+    .stSelectbox {
+        background-color: #2c2f33 !important;
+        color: white !important;
+    }
+
+    /* Tombol lebih modern */
     .stButton > button {
-        background-color: #007BFF;
-        color: white;
+        background-color: #007BFF !important;
+        color: white !important;
         border-radius: 10px;
         padding: 10px 20px;
     }
+    
+    /* Box container */
+    .stBox {
+        background-color: #2c2f33;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #555;
+        box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
     </style>
     """,
     unsafe_allow_html=True
 )
 
-st.title("FLM Produksi A")  # Contoh konten
-st.write("Tampilan UI modern dengan background gradient!")
+# Contoh input box abu-abu
+st.text_input("Masukkan Username")
+st.text_area("Deskripsi")
+st.selectbox("Pilih Opsi", ["A", "B", "C"])
+st.button("Submit")
+
+
+st.title("Digitalisasi Monitoring FIRST LINE MAINTENANCE")  # Contoh konten
+st.write("Produksi A PLTU Bangka")
 
 
 
