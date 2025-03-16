@@ -48,50 +48,21 @@ def logout():
     st.session_state.logged_in = False
     st.rerun()
 
-# Tambahkan CSS agar login center
-st.markdown(
-    """
-    <style>
-    .login-container {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        text-align: center;
-        background-color: #1e1e1e;
-        padding: 30px;
-        border-radius: 10px;
-        box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.2);
-        width: 350px;
-    }
-    .stTextInput>div>div>input {
-        text-align: center;
-        width: 90%;
-    }
-    .stButton>button {
-        width: 100%;
-        background-color: #007bff;
-        color: white;
-    }
-    </style>
-    <div class='login-container'>
-        <h2 style='color: white;'>Login</h2>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+if not st.session_state.logged_in:
+    st.image("logo.png", width=150)
+    st.markdown("## Login")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    login_button = st.button("Login", key="login_button", help="Klik untuk masuk", use_container_width=False)
 
-# Input login
-username = st.text_input("Username")
-password = st.text_input("Password", type="password")
-login_button = st.button("Login")
-
-# Cek Login
-if login_button:
-    if username == "admin" and password == "admin123":
-        st.success("Login berhasil!")
-    else:
-        st.error("Username atau password salah.")
+    ADMIN_CREDENTIALS = {"admin": "admin123"}
+    
+    if login_button:
+        if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("Username atau password salah.")
   
     st.stop()
 
