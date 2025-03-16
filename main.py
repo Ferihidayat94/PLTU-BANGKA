@@ -13,6 +13,12 @@ st.markdown(
     .stApp {
         background: linear-gradient(to right, #141e30, #243b55); /* Gradient Dark Blue */
         color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        flex-direction: column;
+        text-align: center;
     }
 
     /* Ubah box input jadi abu-abu */
@@ -49,13 +55,14 @@ st.markdown(
 
     /* Pusatkan input login */
     .stTextInput, .stPassword {
-        width: 50% !important;
+        width: 40% !important;
         margin: auto;
+        text-align: center;
     }
 
     /* Perbesar logo */
     img {
-        width: 200px !important; /* Ubah ukuran logo */
+        width: 250px !important; /* Ubah ukuran logo */
         display: block;
         margin: auto;
     }
