@@ -66,7 +66,7 @@ def logout():
     st.session_state.page = "login"
     st.rerun()
 
-# ========== Fungsi Export PDF ==========
+# ========== Fungsi Export PDF dengan Evidence Gambar ==========
 def export_pdf(data):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
@@ -82,7 +82,7 @@ def export_pdf(data):
     # Header Tabel
     pdf.set_font("Arial", style='B', size=10)
     headers = ["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"]
-    col_widths = [20, 30, 25, 30, 40, 60, 65]
+    col_widths = [20, 30, 25, 30, 40, 60, 50]
     for i, header in enumerate(headers):
         pdf.cell(col_widths[i], 10, header, border=1, align='C')
     pdf.ln()
@@ -96,14 +96,14 @@ def export_pdf(data):
         pdf.cell(col_widths[3], 10, str(row['Nomor SR']), border=1, align='C')
         pdf.cell(col_widths[4], 10, str(row['Nama Pelaksana']), border=1, align='C')
         pdf.cell(col_widths[5], 10, str(row['Keterangan']), border=1, align='C')
-        
+
         # Tambahkan gambar evidence jika ada
-        img_path = os.path.join(UPLOAD_FOLDER, row['Evidance'])
-        if isinstance(row['Evidance'], str) and os.path.exists(img_path):
+        img_path = os.path.join(UPLOAD_FOLDER, str(row['Evidance']).strip())
+        if os.path.exists(img_path) and os.path.isfile(img_path):
             pdf.image(img_path, x=pdf.get_x(), y=pdf.get_y(), w=30, h=20)
-            pdf.cell(col_widths[6], 10, "", border=1, align='C')
+            pdf.cell(col_widths[6], 20, "", border=1, align='C')
         else:
-            pdf.cell(col_widths[6], 10, "Tidak Ada Gambar", border=1, align='C')
+            pdf.cell(col_widths[6], 10, "No Image", border=1, align='C')
         pdf.ln()
     
     pdf_file = "monitoring_flm.pdf"
