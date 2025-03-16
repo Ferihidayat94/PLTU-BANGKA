@@ -97,9 +97,10 @@ def export_pdf(data):
         pdf.cell(col_widths[4], 10, str(row['Nama Pelaksana']), border=1, align='C')
         pdf.cell(col_widths[5], 10, str(row['Keterangan']), border=1, align='C')
         
-        # Jika ada gambar evidence, tambahkan nama file
-        if row['Evidance'] and os.path.exists(row['Evidance']):
-            pdf.cell(col_widths[6], 10, "[Gambar]", border=1, align='C')
+        # Tambahkan gambar evidence jika ada
+        if isinstance(row['Evidance'], str) and os.path.exists(os.path.join(UPLOAD_FOLDER, row['Evidance'])):
+            pdf.image(os.path.join(UPLOAD_FOLDER, row['Evidance']), x=pdf.get_x(), y=pdf.get_y(), w=30)
+            pdf.ln(15)  # Tambahkan spasi setelah gambar
         else:
             pdf.cell(col_widths[6], 10, "-", border=1, align='C')
         pdf.ln()
