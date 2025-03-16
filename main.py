@@ -25,20 +25,11 @@ st.markdown(
         padding: 10px;
     }
 
-/* Dropdown (Selectbox) */
-div[data-baseweb="select"] {
-    background-color: #2c2f33 !important;
-    color: white !important;
-    border-radius: 10px;
-    border: 1px solid #555;
-    padding: 5px;
-}
-
-/* Warna teks di dalam dropdown */
-div[data-baseweb="select"] * {
-    color: white !important;
-}
-
+    /* Dropdown */
+    .stSelectbox {
+        background-color: #2c2f33 !important;
+        color: white !important;
+    }
 /* Hover Effect */
 div[data-baseweb="select"]:hover {
     border-color: #888;
