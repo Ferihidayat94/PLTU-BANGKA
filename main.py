@@ -175,6 +175,7 @@ if not st.session_state.data.empty:
         evidence_path = selected_row["Evidance"].values[0]
         
         if evidence_path and os.path.exists(evidence_path):
+             with st.expander(f"Evidence untuk {id_pilih}", expanded=False):
             st.image(evidence_path, caption=f"Evidence untuk {id_pilih}")
         else:
             st.warning("Evidence tidak ditemukan atau belum diupload.")
