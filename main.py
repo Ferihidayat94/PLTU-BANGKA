@@ -7,14 +7,21 @@ from datetime import datetime
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
+# Tambahkan CSS untuk background dan font
 st.markdown(
     """
     <style>
-    /* Ubah warna background aplikasi */
-    .stApp {
-        background: linear-gradient(to right, #141e30, #243b55); /* Gradient Dark Blue */
-        color: white;
-    }
+        body {
+            background-color: #0A192F;
+            color: white;
+            font-family: 'Arial', sans-serif;
+        }
+        .stApp {
+            background-color: #0A192F;
+        }
+        .stTextInput, .stSelectbox, .stMultiselect, .stFileUploader, .stTextArea {
+            color: black;
+        }
     </style>
     """,
     unsafe_allow_html=True
