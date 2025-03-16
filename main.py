@@ -7,6 +7,19 @@ from datetime import datetime
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    /* Ubah warna background aplikasi */
+    .stApp {
+        background: linear-gradient(to right, #141e30, #243b55); /* Gradient Dark Blue */
+        color: white;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # Folder penyimpanan file evidence
 UPLOAD_FOLDER = "uploads/"
 if not os.path.exists(UPLOAD_FOLDER):
@@ -29,7 +42,7 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor FLM", "Nama Pelaksana", "Keterangan", "Evidance"])
+    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
 
 # ========== Simpan Data ==========
 def save_users(df):
