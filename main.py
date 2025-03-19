@@ -2,104 +2,113 @@ import streamlit as st
 import pandas as pd
 import os
 import hashlib
+import sqlite3
 from datetime import datetime
 from fpdf import FPDF
 from PIL import Image
+from sqlalchemy import create_engine
 
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM Produksi A", layout="wide")
-
-# Tambahkan CSS untuk background dan font
-st.markdown(
-    """
-    <style>
-        body {
-            background-color: (to right, #141e30, #243b55); /* Gradient Dark Blue */
-            color: white;
-            font-family: 'Arial', sans-serif;
-        }
-        .stApp {
-            background-color: #0A192F;
-        }
-        .stTextInput, .stSelectbox, .stMultiselect, .stFileUploader, .stTextArea {
-            color: black;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # Folder penyimpanan file evidence
 UPLOAD_FOLDER = "uploads/"
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# File database user
-USER_FILE = "users.csv"
-DATA_FILE = "monitoring_data.csv"
+# Database SQLite
+DB_FILE = "monitoring.db"
+engine = create_engine(f"sqlite:///{DB_FILE}")
 
-# ========== Fungsi Hashing Password ==========
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
+def init_db():
+    with engine.connect() as conn:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS monitoring (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tanggal TEXT,
+                area TEXT,
+                nomor_sr TEXT,
+                nama_pelaksana TEXT,
+                keterangan TEXT,
+                evidance TEXT
+            )
+        ''')
+init_db()
 
-# ========== Load Data ==========
-def load_users():
-    if os.path.exists(USER_FILE):
-        return pd.read_csv(USER_FILE)
-    return pd.DataFrame(columns=["Username", "Password"])
+# ========== Fungsi Simpan & Load Data ==========
+def save_data(tanggal, area, nomor_sr, nama_pelaksana, keterangan, evidance):
+    with engine.connect() as conn:
+        conn.execute(
+            "INSERT INTO monitoring (tanggal, area, nomor_sr, nama_pelaksana, keterangan, evidance) VALUES (?, ?, ?, ?, ?, ?)",
+            (tanggal, area, nomor_sr, nama_pelaksana, keterangan, evidance)
+        )
 
 def load_data():
-    if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
+    with engine.connect() as conn:
+        return pd.read_sql("SELECT * FROM monitoring", conn)
 
-# ========== Simpan Data ==========
-def save_users(df):
-    df.to_csv(USER_FILE, index=False)
+# ========== Tampilan Login ==========
+st.title("MONITORING FIRST LINE MAINTENANCE")
+st.write("Produksi A PLTU Bangka")
 
-def save_data(df):
-    df.to_csv(DATA_FILE, index=False)
+if "data" not in st.session_state:
+    st.session_state.data = load_data()
 
-# ========== Fungsi Logout ==========
-def logout():
-    st.session_state.logged_in = False
-    st.session_state.page = "login"
+with st.form("monitoring_form"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        tanggal = st.date_input("Tanggal", datetime.today())
+        area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
+    with col2:
+        nomor_flm = st.text_input("Nomor SR")
+        nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi"])
+    with col3:
+        evidance_file = st.file_uploader("Upload Evidance", type=["png", "jpg", "jpeg"])
+        keterangan = st.text_area("Keterangan")
+    submit_button = st.form_submit_button("Submit")
+
+if submit_button:
+    evidance_path = ""
+    if evidance_file:
+        evidance_path = os.path.join(UPLOAD_FOLDER, evidance_file.name)
+        with open(evidance_path, "wb") as f:
+            f.write(evidance_file.getbuffer())
+    save_data(tanggal, area, nomor_flm, ", ".join(nama_pelaksana), keterangan, evidance_path)
+    st.session_state.data = load_data()
+    st.success("Data berhasil disimpan!")
     st.rerun()
 
-# ========== Fungsi Export PDF dengan Evidence Gambar ==========
+# ========== Tampilan Data ==========
+st.markdown("### Data Monitoring")
+st.dataframe(st.session_state.data)
+
+# ========== Export PDF ==========
 def export_pdf(data):
     pdf = FPDF(orientation='L', unit='mm', format='A4')
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Arial", size=12)
     
-    # Tambahkan Logo
     if os.path.exists("logo.png"):
         pdf.image("logo.png", x=10, y=5, w=30)
-    pdf.cell(270, 10, "Laporan FLM", ln=True, align='C')
+    pdf.cell(270, 10, "Monitoring Pelaksanaan FLM", ln=True, align='C')
     pdf.ln(10)
     
-    # Header Tabel
-    pdf.set_font("Arial", style='B', size=10)
     headers = ["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"]
     col_widths = [20, 30, 25, 30, 40, 60, 50]
     for i, header in enumerate(headers):
         pdf.cell(col_widths[i], 10, header, border=1, align='C')
     pdf.ln()
     
-    # Isi Data
-    pdf.set_font("Arial", size=10)
     for _, row in data.iterrows():
-        pdf.cell(col_widths[0], 10, str(row['ID']), border=1, align='C')
-        pdf.cell(col_widths[1], 10, str(row['Tanggal']), border=1, align='C')
-        pdf.cell(col_widths[2], 10, str(row['Area']), border=1, align='C')
-        pdf.cell(col_widths[3], 10, str(row['Nomor SR']), border=1, align='C')
-        pdf.cell(col_widths[4], 10, str(row['Nama Pelaksana']), border=1, align='C')
-        pdf.cell(col_widths[5], 10, str(row['Keterangan']), border=1, align='C')
-
-        # Tambahkan gambar evidence jika ada
-        img_path = os.path.join(UPLOAD_FOLDER, str(row['Evidance']).strip())
-        if os.path.exists(img_path) and os.path.isfile(img_path):
+        pdf.cell(col_widths[0], 10, str(row['id']), border=1, align='C')
+        pdf.cell(col_widths[1], 10, str(row['tanggal']), border=1, align='C')
+        pdf.cell(col_widths[2], 10, str(row['area']), border=1, align='C')
+        pdf.cell(col_widths[3], 10, str(row['nomor_sr']), border=1, align='C')
+        pdf.cell(col_widths[4], 10, str(row['nama_pelaksana']), border=1, align='C')
+        pdf.cell(col_widths[5], 10, str(row['keterangan']), border=1, align='C')
+        img_path = str(row['evidance']).strip()
+        if os.path.exists(img_path):
             pdf.image(img_path, x=pdf.get_x(), y=pdf.get_y(), w=30, h=20)
             pdf.cell(col_widths[6], 20, "", border=1, align='C')
         else:
@@ -109,6 +118,9 @@ def export_pdf(data):
     pdf_file = "monitoring_flm.pdf"
     pdf.output(pdf_file)
     return pdf_file
+
+
+
 
 # ========== Tampilan Login ==========
 if "logged_in" not in st.session_state:
