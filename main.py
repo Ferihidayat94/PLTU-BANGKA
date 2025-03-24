@@ -7,7 +7,7 @@ from fpdf import FPDF
 from PIL import Image
 
 # ========== Konfigurasi Streamlit ==========
-st.set_page_config(page_title="FLM Produksi A", layout="wide")
+st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # Tambahkan CSS untuk background dan font
 st.markdown(
@@ -51,7 +51,7 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
+    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
 
 # ========== Simpan Data ==========
 def save_users(df):
@@ -66,51 +66,7 @@ def logout():
     st.session_state.page = "login"
     st.rerun()
 
-# ========== Fungsi Export PDF dengan Evidence Gambar ==========
-def export_pdf(data):
-    pdf = FPDF(orientation='L', unit='mm', format='A4')
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    
-    # Tambahkan Logo
-    if os.path.exists("logo.png"):
-        pdf.image("logo.png", x=10, y=5, w=30)
-    pdf.cell(270, 10, "Laporan FLM", ln=True, align='C')
-    pdf.ln(10)
-    
-    # Header Tabel
-    pdf.set_font("Arial", style='B', size=10)
-    headers = ["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"]
-    col_widths = [20, 30, 25, 30, 40, 60, 50]
-    for i, header in enumerate(headers):
-        pdf.cell(col_widths[i], 10, header, border=1, align='C')
-    pdf.ln()
-    
-    # Isi Data
-    pdf.set_font("Arial", size=10)
-    for _, row in data.iterrows():
-        pdf.cell(col_widths[0], 10, str(row['ID']), border=1, align='C')
-        pdf.cell(col_widths[1], 10, str(row['Tanggal']), border=1, align='C')
-        pdf.cell(col_widths[2], 10, str(row['Area']), border=1, align='C')
-        pdf.cell(col_widths[3], 10, str(row['Nomor SR']), border=1, align='C')
-        pdf.cell(col_widths[4], 10, str(row['Nama Pelaksana']), border=1, align='C')
-        pdf.cell(col_widths[5], 10, str(row['Keterangan']), border=1, align='C')
-
-        # Tambahkan gambar evidence jika ada
-        img_path = os.path.join(UPLOAD_FOLDER, str(row['Evidance']).strip())
-        if os.path.exists(img_path) and os.path.isfile(img_path):
-            pdf.image(img_path, x=pdf.get_x(), y=pdf.get_y(), w=30, h=20)
-            pdf.cell(col_widths[6], 30, "", border=1, align='C')
-        else:
-            pdf.cell(col_widths[6], 10, "No Image", border=1, align='C')
-        pdf.ln()
-    
-    pdf_file = "monitoring_flm.pdf"
-    pdf.output(pdf_file)
-    return pdf_file
-
-# ========== Tampilan Login ==========
+# ========== Sistem Login ==========
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
@@ -120,9 +76,6 @@ if "page" not in st.session_state:
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
-users = load_users()
-
-# Tambahkan daftar user dan password
 ADMIN_CREDENTIALS = {
     "admin": "pltubangka",
     "operator": "op123",
@@ -130,16 +83,15 @@ ADMIN_CREDENTIALS = {
 
 if not st.session_state.logged_in and st.session_state.page == "login":
     st.image("logo.png", width=200)
-    st.markdown("## Login ")
-
+    st.markdown("## Login")
+    
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     login_button = st.button("Login")
-
+    
     if login_button:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
             st.session_state.logged_in = True
-            st.session_state.username = username
             st.session_state.page = "dashboard"
             st.experimental_set_query_params(user=username)
             st.rerun()
@@ -148,7 +100,7 @@ if not st.session_state.logged_in and st.session_state.page == "login":
     st.stop()
 
 # ========== Tampilan Dashboard ==========
-st.title("MONITORING FLM DAN CORECTIVE MAINTENANCE")
+st.title("MONITORING FLM & CORRECTIVE MAINTENANCE")
 st.write("Produksi A PLTU Bangka")
 
 col1, col2 = st.columns([9, 1])
@@ -162,10 +114,14 @@ with st.form("monitoring_form"):
     col1, col2, col3 = st.columns(3)
     with col1:
         tanggal = st.date_input("Tanggal", datetime.today())
+        jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"])
         area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
     with col2:
         nomor_flm = st.text_input("Nomor SR")
-        nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"])
+        if jenis == "FLM":
+            nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"])
+        else:
+            nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"])
     with col3:
         evidance_file = st.file_uploader("Upload Evidance", type=["png", "jpg", "jpeg"])
         keterangan = st.text_area("Keterangan")
@@ -182,6 +138,7 @@ if submit_button:
     new_data = pd.DataFrame({
         "ID": [f"FLM-{len(st.session_state.data) + 1:03d}"],
         "Tanggal": [tanggal],
+        "Jenis": [jenis],
         "Area": [area],
         "Nomor SR": [nomor_flm],
         "Nama Pelaksana": [", ".join(nama_pelaksana)],
@@ -193,10 +150,6 @@ if submit_button:
     st.success("Data berhasil disimpan!")
     st.session_state.page = "dashboard"
     st.rerun()
-
-
-
-
 
 # ========== Tampilan Data ==========
 if not st.session_state.data.empty:
