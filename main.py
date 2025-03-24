@@ -111,14 +111,14 @@ with st.form("monitoring_form"):
     col1, col2, col3 = st.columns(3)
     with col1:
         tanggal = st.date_input("Tanggal", datetime.today())
-        jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"])
+        jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"], key="jenis")
         area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
     with col2:
         nomor_flm = st.text_input("Nomor SR")
         if jenis == "FLM":
-            nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"])
+            nama_pelaksana = st.multiselect("Nama Pelaksana", ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"], key="nama_pelaksana_flm")
         else:
-            nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"])
+            nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"], key="nama_pelaksana_cm")
     with col3:
         evidance_file = st.file_uploader("Upload Evidence", type=["png", "jpg", "jpeg"])
         keterangan = st.text_area("Keterangan")
@@ -148,6 +148,7 @@ if submit_button:
     st.success("Data berhasil disimpan!")
     st.session_state.page = "dashboard"
     st.rerun()
+
 
 
 # ========== Tampilan Data ==========
