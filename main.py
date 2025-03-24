@@ -83,7 +83,7 @@ def export_pdf(data):
     
     # Header laporan: Logo di kiri, judul di bawahnya
     if os.path.exists("logo.png"):
-        logo_img = RLImage("logo.png", width=1.5*inch, height=1*inch)
+        logo_img = RLImage("logo.png", width=1.5*inch, height=0.5*inch)
         story.append(logo_img)
     story.append(Spacer(1, 6))
     title = Paragraph("<b>Laporan Monitoring FLM & Corrective Maintenance</b>", styles["Title"])
