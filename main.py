@@ -76,25 +76,25 @@ def export_pdf(data):
     for index, row in data.iterrows():
         if count % records_per_page == 0:
             pdf.add_page()
-            # Tambahkan logo pada pojok kiri atas
+            # Tambahkan logo pada pojok kiri atas dengan ukuran yang lebih besar (w=50)
             if os.path.exists("logo.png"):
-                pdf.image("logo.png", x=10, y=8, w=30)
-            # Atur posisi judul agar tidak sejajar dengan logo
-            pdf.set_xy(0, 40)
+                pdf.image("logo.png", x=10, y=8, w=50)
+            # Atur posisi judul agar tidak terlalu jauh dari logo
+            pdf.set_xy(0, 35)
             pdf.set_font("Arial", "B", 18)
             pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
             pdf.ln(5)
         
         label_width = 40  # Lebar label untuk format "Label : Value"
         
-        # ID
+        # Tampilkan ID
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "ID", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["ID"]), 0, 1)
         
-        # Tanggal (format tanpa jam)
+        # Tampilkan Tanggal dengan format tanpa jam
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Tanggal", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
@@ -102,49 +102,49 @@ def export_pdf(data):
         tanggal_str = pd.to_datetime(row["Tanggal"]).strftime("%Y-%m-%d")
         pdf.cell(0, 10, tanggal_str, 0, 1)
         
-        # Jenis
+        # Tampilkan Jenis
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Jenis", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Jenis"]), 0, 1)
         
-        # Area
+        # Tampilkan Area
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Area", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Area"]), 0, 1)
         
-        # Nomor SR
+        # Tampilkan Nomor SR
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Nomor SR", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Nomor SR"]), 0, 1)
         
-        # Nama Pelaksana
+        # Tampilkan Nama Pelaksana
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Nama Pelaksana", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]))
         
-        # Keterangan
+        # Tampilkan Keterangan
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Keterangan", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.multi_cell(0, 10, str(row["Keterangan"]))
         
-        # Status
+        # Tampilkan Status
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Status", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Status"]), 0, 1)
         
-        # Evidence
+        # Tampilkan evidence image jika ada
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             pdf.set_font("Arial", "B", 12)
             pdf.cell(label_width, 10, "Evidence", 0, 0)
