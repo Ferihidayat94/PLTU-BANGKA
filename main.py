@@ -19,7 +19,9 @@ st.markdown(
             font-family: 'Arial', sans-serif;
         }
         .stApp {
-            background-color: #0A192F;
+            background: linear-gradient(to right, #141e30, #243b55);
+            color: white;
+            font-family: 'Arial', sans-serif;
         }
         .stTextInput, .stSelectbox, .stMultiselect, .stFileUploader, .stTextArea {
             color: black;
