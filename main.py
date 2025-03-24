@@ -13,7 +13,7 @@ from reportlab.lib.units import inch
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# Tambahkan CSS untuk background dan font
+# CSS untuk tampilan Streamlit
 st.markdown(
     """
     <style>
@@ -31,7 +31,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Tampilan logo halaman (untuk tampilan Streamlit)
+# Tampilan logo halaman (untuk Streamlit)
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 
@@ -74,30 +74,32 @@ def logout():
 
 # ========== Fungsi Export PDF (menggunakan ReportLab) ==========
 def export_pdf(data):
-    # File output PDF
     pdf_filename = "monitoring_report.pdf"
     doc = SimpleDocTemplate(pdf_filename, pagesize=A4,
-                            rightMargin=30,leftMargin=30,
-                            topMargin=30,bottomMargin=18)
+                            rightMargin=30, leftMargin=30,
+                            topMargin=30, bottomMargin=18)
     styles = getSampleStyleSheet()
     story = []
     
-    # Judul laporan
+    # Header laporan: Logo dan Judul
+    if os.path.exists("logo.png"):
+        logo_img = RLImage("logo.png", width=1.5*inch, height=0.8*inch)
+        story.append(logo_img)
+    story.append(Spacer(1, 12))
     title = Paragraph("<b>Laporan Monitoring FLM & Corrective Maintenance</b>", styles["Title"])
     story.append(title)
     story.append(Spacer(1, 12))
     
-    # Untuk setiap record, buat tabel data dan evidence
+    # Untuk setiap record, buat tabel data dua kolom
     for idx, row in data.iterrows():
-        # Buat data tabel dalam dua kolom
         # Kolom kiri: ID, Tanggal, Jenis, Area
-        # Kolom kanan: Nomor SR, Nama Pelaksana, Keterangan, Status
         left_data = [
             ["ID", f": {row['ID']}"],
             ["Tanggal", f": {pd.to_datetime(row['Tanggal']).strftime('%Y-%m-%d')}"],
             ["Jenis", f": {row['Jenis']}"],
             ["Area", f": {row['Area']}"]
         ]
+        # Kolom kanan: Nomor SR, Nama Pelaksana, Keterangan, Status
         right_data = [
             ["Nomor SR", f": {row['Nomor SR']}"],
             ["Nama Pelaksana", f": {row['Nama Pelaksana']}"],
@@ -105,14 +107,12 @@ def export_pdf(data):
             ["Status", f": {row['Status']}"]
         ]
         
-        # Gabungkan kedua tabel menjadi satu baris dengan dua kolom
-        # Masing-masing kolom akan berisi tabel kecil
         left_table = Table(left_data, colWidths=[80, 150])
         left_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 2),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         right_table = Table(right_data, colWidths=[80, 150])
@@ -120,19 +120,21 @@ def export_pdf(data):
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 2),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         
-        # Gabungkan dua tabel tersebut secara horizontal
-        data_table = Table([[left_table, right_table]], colWidths=[doc.width/2.0, doc.width/2.0])
-        data_table.setStyle(TableStyle([
+        # Gabungkan dua tabel secara horizontal
+        combined_table = Table([[left_table, right_table]], colWidths=[doc.width/2.0, doc.width/2.0])
+        combined_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.black),
+            ('INNERGRID', (0,0), (-1,-1), 0.25, colors.black)
         ]))
-        story.append(data_table)
+        story.append(combined_table)
         story.append(Spacer(1, 12))
         
-        # Evidence: Buat tabel dua kolom untuk evidence Before dan After
+        # Evidence: Buat tabel dua kolom untuk Evidence Before & After
         evidence_data = []
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
@@ -143,7 +145,8 @@ def export_pdf(data):
         else:
             evidence_after = Paragraph("Tidak ada Evidence After", styles["Normal"])
         
-        evidence_data.append([Paragraph("<b>Evidence Before</b>", styles["Normal"]), Paragraph("<b>Evidence After</b>", styles["Normal"])])
+        evidence_data.append([Paragraph("<b>Evidence Before</b>", styles["Normal"]),
+                              Paragraph("<b>Evidence After</b>", styles["Normal"])])
         evidence_data.append([evidence_before, evidence_after])
         evidence_table = Table(evidence_data, colWidths=[doc.width/2.0, doc.width/2.0])
         evidence_table.setStyle(TableStyle([
@@ -155,7 +158,7 @@ def export_pdf(data):
         story.append(evidence_table)
         story.append(Spacer(1, 20))
         
-        # Garis pembatas antar record
+        # Garis pemisah antar record
         story.append(Spacer(1, 12))
         story.append(Paragraph("<hr/>", styles["Normal"]))
         story.append(Spacer(1, 12))
