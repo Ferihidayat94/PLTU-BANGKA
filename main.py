@@ -23,6 +23,10 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# Tambahkan Logo
+logo = Image.open("logo.png")
+st.image(logo, width=150)
+
 # Folder penyimpanan file evidence
 UPLOAD_FOLDER = "uploads/"
 if not os.path.exists(UPLOAD_FOLDER):
@@ -144,6 +148,7 @@ if submit_button:
     st.success("Data berhasil disimpan!")
     st.session_state.page = "dashboard"
     st.rerun()
+
 
 # ========== Tampilan Data ==========
 if not st.session_state.data.empty:
