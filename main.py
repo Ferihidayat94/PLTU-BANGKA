@@ -2,13 +2,22 @@ import streamlit as st
 import pandas as pd
 import os
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+
+# ========== HIDE STREAMLIT MENU & FOOTER ==========
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
@@ -32,8 +41,11 @@ st.markdown(
 )
 
 # Tampilan logo di halaman Streamlit
-logo = Image.open("logo.png")
-st.image(logo, width=150)
+try:
+    logo = Image.open("logo.png")
+    st.image(logo, width=150)
+except Exception as e:
+    st.error("Logo tidak ditemukan. Pastikan file logo.png tersedia.")
 
 # Folder penyimpanan file evidence
 UPLOAD_FOLDER = "uploads/"
@@ -72,7 +84,13 @@ def logout():
     st.session_state.page = "login"
     st.rerun()
 
-# ========== Fungsi Export PDF (menggunakan ReportLab) ==========
+# ================== Timeout Login (30 menit) ==================
+if "last_activity" in st.session_state:
+    if datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
+        logout()
+st.session_state.last_activity = datetime.now()
+
+# ========== Fungsi Export PDF (ReportLab) ==========
 def export_pdf(data):
     pdf_filename = "monitoring_report.pdf"
     doc = SimpleDocTemplate(pdf_filename, pagesize=A4,
@@ -81,9 +99,9 @@ def export_pdf(data):
     styles = getSampleStyleSheet()
     story = []
     
-    # Header laporan: Logo di kiri dan judul laporan (terpusat)
+    # Header laporan: Logo di kiri dan Judul laporan (terpusat)
     if os.path.exists("logo.png"):
-        logo_img = RLImage("logo.png", width=1.5*inch, height=1*inch)
+        logo_img = RLImage("logo.png", width=1.5*inch, height=0.5*inch)
         story.append(logo_img)
     story.append(Spacer(1, 6))
     title = Paragraph("<b>Laporan Monitoring FLM & Corrective Maintenance</b>", styles["Title"])
@@ -93,19 +111,16 @@ def export_pdf(data):
     # Setiap halaman akan memuat 2 record
     records_per_page = 2
     for idx, row in data.iterrows():
-        # Tambahkan PageBreak setiap 2 record (kecuali record pertama)
         if idx > 0 and idx % records_per_page == 0:
             story.append(PageBreak())
         
-        # Data utama dalam dua kolom:
-        # Kolom kiri: ID, Tanggal, Jenis, Area
+        # Tabel data utama dalam dua kolom
         left_data = [
             ["ID", f": {row['ID']}"],
             ["Tanggal", f": {pd.to_datetime(row['Tanggal']).strftime('%Y-%m-%d')}"],
             ["Jenis", f": {row['Jenis']}"],
             ["Area", f": {row['Area']}"]
         ]
-        # Kolom kanan: Nomor SR, Nama Pelaksana, Keterangan, Status
         right_data = [
             ["Nomor SR", f": {row['Nomor SR']}"],
             ["Nama Pelaksana", f": {row['Nama Pelaksana']}"],
@@ -129,15 +144,15 @@ def export_pdf(data):
         combined_table = Table([[left_table, right_table]], colWidths=[doc.width/2.0, doc.width/2.0])
         combined_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('BOX', (0,0), (-1,-1), 0.5, colors.black),
-            ('INNERGRID', (0,0), (-1,-1), 0.25, colors.black)
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
+            ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black)
         ]))
         story.append(combined_table)
         story.append(Spacer(1, 12))
         
-        # Evidence: untuk record FLM hanya satu evidence, untuk Corrective tampilkan Before & After
+        # Evidence: Untuk record FLM hanya satu evidence, sedangkan untuk Corrective Maintenance tampilkan Before & After
         if row["Jenis"] == "FLM":
-            if row["Evidance"] and os.path.exists(row["Evidance"]):
+            if isinstance(row["Evidance"], str) and os.path.exists(row["Evidance"]):
                 evidence = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
             else:
                 evidence = Paragraph("Evidence tidak ditemukan", styles["Normal"])
@@ -152,11 +167,11 @@ def export_pdf(data):
             story.append(evidence_table)
         else:
             evidence_data = []
-            if row["Evidance"] and os.path.exists(row["Evidance"]):
+            if isinstance(row["Evidance"], str) and os.path.exists(row["Evidance"]):
                 evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
             else:
                 evidence_before = Paragraph("Evidence Before tidak ditemukan", styles["Normal"])
-            if row.get("Evidance After") and pd.notna(row["Evidance After"]) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
+            if isinstance(row.get("Evidance After"), str) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
                 evidence_after = RLImage(row["Evidance After"], width=2.5*inch, height=2*inch)
             else:
                 evidence_after = Paragraph("Tidak ada Evidence After", styles["Normal"])
@@ -179,7 +194,7 @@ def export_pdf(data):
     doc.build(story)
     return pdf_filename
 
-# ========== Sistem Login & Data ==========
+# ================== Sistem Login & Data ==================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "page" not in st.session_state:
@@ -207,7 +222,7 @@ if not st.session_state.logged_in and st.session_state.page == "login":
             st.error("Username atau password salah.")
     st.stop()
 
-# ========== Tampilan Dashboard ==========
+# ================== Tampilan Dashboard ==================
 st.title("MONITORING FLM & Corrective Maintenance")
 st.write("Produksi A PLTU Bangka")
 
@@ -218,7 +233,7 @@ with col2:
     if st.button("Logout"):
         logout()
 
-# Container Input Data
+# Container untuk input data agar tampilan lebih terstruktur
 with st.container():
     st.markdown("<div class='input-container'>", unsafe_allow_html=True)
     tanggal = st.date_input("Tanggal", datetime.today())
@@ -264,7 +279,7 @@ if submit_button:
     st.success("Data berhasil disimpan!")
     st.rerun()
 
-# ========== Edit Status Corrective Maintenance ==========
+# ================== Edit Status Corrective Maintenance ==================
 st.markdown("### Edit Status Corrective Maintenance")
 editable_records = st.session_state.data[
     (st.session_state.data["Jenis"] == "Corrective Maintenance") & 
@@ -292,12 +307,12 @@ if not editable_records.empty:
 else:
     st.info("Tidak ada record Corrective Maintenance dengan status 'Belum' untuk diupdate.")
 
-# ========== Tampilan Data ==========
+# ================== Tampilan Data ==================
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     st.dataframe(st.session_state.data)
 
-# ========== Opsi Export PDF ==========
+# ================== Opsi Export PDF ==================
 st.markdown("### Export PDF Options")
 export_start_date = st.date_input("Export Start Date", datetime.today(), key="export_start_date")
 export_end_date = st.date_input("Export End Date", datetime.today(), key="export_end_date")
@@ -324,7 +339,7 @@ if st.button("Export ke PDF"):
         with open(pdf_file, "rb") as f:
             st.download_button("Unduh PDF", f, file_name=pdf_file)
 
-# ========== Preview Evidence dengan Expander ==========
+# ================== Preview Evidence dengan Expander ==================
 st.markdown("### Preview Evidence")
 if not st.session_state.data.empty:
     id_pilih = st.selectbox("Pilih ID untuk melihat evidence", st.session_state.data["ID"])
@@ -357,7 +372,7 @@ if not st.session_state.data.empty:
 
 st.info("PLTU Bangka 2X30 MW - Sistem Monitoring")
 
-# ========== Footer ==========
+# ================== Footer ==================
 st.markdown(
     """
     <hr>
