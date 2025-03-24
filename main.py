@@ -53,7 +53,7 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
+    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
 
 # ========== Simpan Data ==========
 def save_users(df):
@@ -83,8 +83,8 @@ def export_pdf(data):
     
     # Header Tabel
     pdf.set_font("Arial", style='B', size=10)
-    headers = ["ID", "Tanggal", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"]
-    col_widths = [20, 30, 25, 30, 40, 60, 50]
+    headers = ["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"]
+    col_widths = [20, 30, 20, 25, 25, 35, 50, 50]
     for i, header in enumerate(headers):
         pdf.cell(col_widths[i], 10, header, border=1, align='C')
     pdf.ln()
