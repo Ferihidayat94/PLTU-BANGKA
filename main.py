@@ -81,11 +81,12 @@ def export_pdf(data):
     styles = getSampleStyleSheet()
     story = []
     
-    # Header laporan: Logo dan Judul
+    # Header laporan: Logo di kiri dan judul laporan di bawahnya (terpusat)
     if os.path.exists("logo.png"):
-        logo_img = RLImage("logo.png", width=1.5*inch, height=0.8*inch)
+        # Tempatkan logo di kiri dengan ukuran yang disesuaikan
+        logo_img = RLImage("logo.png", width=1.5*inch, height=1*inch)
         story.append(logo_img)
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 6))
     title = Paragraph("<b>Laporan Monitoring FLM & Corrective Maintenance</b>", styles["Title"])
     story.append(title)
     story.append(Spacer(1, 12))
@@ -111,7 +112,6 @@ def export_pdf(data):
         left_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
@@ -119,12 +119,10 @@ def export_pdf(data):
         right_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         
-        # Gabungkan dua tabel secara horizontal
         combined_table = Table([[left_table, right_table]], colWidths=[doc.width/2.0, doc.width/2.0])
         combined_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -134,7 +132,7 @@ def export_pdf(data):
         story.append(combined_table)
         story.append(Spacer(1, 12))
         
-        # Evidence: Buat tabel dua kolom untuk Evidence Before & After
+        # Evidence: Tampilkan dalam tabel dua kolom
         evidence_data = []
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
@@ -144,9 +142,7 @@ def export_pdf(data):
             evidence_after = RLImage(row["Evidance After"], width=2.5*inch, height=2*inch)
         else:
             evidence_after = Paragraph("Tidak ada Evidence After", styles["Normal"])
-        
-        evidence_data.append([Paragraph("<b>Evidence Before</b>", styles["Normal"]),
-                              Paragraph("<b>Evidence After</b>", styles["Normal"])])
+        evidence_data.append([Paragraph("<b>Evidence Before</b>", styles["Normal"]), Paragraph("<b>Evidence After</b>", styles["Normal"])])
         evidence_data.append([evidence_before, evidence_after])
         evidence_table = Table(evidence_data, colWidths=[doc.width/2.0, doc.width/2.0])
         evidence_table.setStyle(TableStyle([
@@ -158,7 +154,7 @@ def export_pdf(data):
         story.append(evidence_table)
         story.append(Spacer(1, 20))
         
-        # Garis pemisah antar record
+        # Garis pembatas antar record
         story.append(Spacer(1, 12))
         story.append(Paragraph("<hr/>", styles["Normal"]))
         story.append(Spacer(1, 12))
