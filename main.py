@@ -49,7 +49,6 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
-    # Pastikan kolom Status juga ada
     return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance"])
 
 # ========== Simpan Data ==========
@@ -77,64 +76,75 @@ def export_pdf(data):
     for index, row in data.iterrows():
         if count % records_per_page == 0:
             pdf.add_page()
-            # Tambahkan logo pada header
+            # Tambahkan logo pada pojok kiri atas
             if os.path.exists("logo.png"):
                 pdf.image("logo.png", x=10, y=8, w=30)
-            pdf.set_font("Arial", "B", 16)
-            pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
-            pdf.ln(10)
+            # Atur posisi judul agar tidak sejajar dengan logo
+            pdf.set_xy(0, 40)
+            pdf.set_font("Arial", "B", 18)
+            pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
+            pdf.ln(5)
         
         label_width = 40  # Lebar label untuk format "Label : Value"
         
+        # ID
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "ID", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["ID"]), 0, 1)
         
+        # Tanggal (format tanpa jam)
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Tanggal", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Tanggal"]), 0, 1)
+        tanggal_str = pd.to_datetime(row["Tanggal"]).strftime("%Y-%m-%d")
+        pdf.cell(0, 10, tanggal_str, 0, 1)
         
+        # Jenis
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Jenis", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Jenis"]), 0, 1)
         
+        # Area
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Area", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Area"]), 0, 1)
         
+        # Nomor SR
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Nomor SR", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Nomor SR"]), 0, 1)
         
+        # Nama Pelaksana
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Nama Pelaksana", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]))
         
+        # Keterangan
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Keterangan", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.multi_cell(0, 10, str(row["Keterangan"]))
         
+        # Status
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Status", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Status"]), 0, 1)
         
-        # Tampilkan evidence image jika ada
+        # Evidence
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             pdf.set_font("Arial", "B", 12)
             pdf.cell(label_width, 10, "Evidence", 0, 0)
@@ -255,9 +265,7 @@ export_start_date = st.date_input("Export Start Date", datetime.today(), key="ex
 export_end_date = st.date_input("Export End Date", datetime.today(), key="export_end_date")
 export_type = st.selectbox("Pilih Tipe Export", ["Semua", "FLM", "CM"], key="export_type")
 
-# Tombol untuk Export PDF dengan filtering
 if st.button("Export ke PDF"):
-    # Filter data berdasarkan tanggal
     filtered_data = st.session_state.data.copy()
     if not filtered_data.empty:
         filtered_data["Tanggal"] = pd.to_datetime(filtered_data["Tanggal"])
@@ -265,7 +273,6 @@ if st.button("Export ke PDF"):
         end_date = pd.to_datetime(export_end_date)
         filtered_data = filtered_data[(filtered_data["Tanggal"] >= start_date) & (filtered_data["Tanggal"] <= end_date)]
     
-    # Filter berdasarkan tipe jika tidak memilih "Semua"
     if export_type != "Semua":
         if export_type == "FLM":
             filtered_data = filtered_data[filtered_data["Jenis"] == "FLM"]
@@ -294,7 +301,6 @@ if not st.session_state.data.empty:
     else:
         st.warning("Pilih ID yang memiliki evidence.")
     
-    # Pilih ID untuk hapus
     id_hapus = st.selectbox("Pilih ID untuk hapus", st.session_state.data["ID"])
     if st.button("Hapus Data"):
         st.session_state.data = st.session_state.data[st.session_state.data["ID"] != id_hapus]
@@ -302,7 +308,6 @@ if not st.session_state.data.empty:
         st.success("Data berhasil dihapus!")
         st.rerun()
     
-    # Download CSV
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_data.csv", mime="text/csv")
 
