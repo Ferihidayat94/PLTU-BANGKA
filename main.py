@@ -5,7 +5,7 @@ import hashlib
 from datetime import datetime
 from PIL import Image
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -81,9 +81,9 @@ def export_pdf(data):
     styles = getSampleStyleSheet()
     story = []
     
-    # Header laporan: Logo di kiri dan Judul di bawahnya (terpusat)
+    # Header laporan: Logo di kiri, judul di bawahnya
     if os.path.exists("logo.png"):
-        logo_img = RLImage("logo.png", width=1.5*inch, height=0.5*inch)
+        logo_img = RLImage("logo.png", width=1.5*inch, height=1*inch)
         story.append(logo_img)
     story.append(Spacer(1, 6))
     title = Paragraph("<b>Laporan Monitoring FLM & Corrective Maintenance</b>", styles["Title"])
@@ -122,18 +122,18 @@ def export_pdf(data):
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
-        
         combined_table = Table([[left_table, right_table]], colWidths=[doc.width/2.0, doc.width/2.0])
         combined_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('BOX', (0, 0), (-1, -1), 0.5, colors.black),
-            ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black)
+            ('BOX', (0,0), (-1,-1), 0.5, colors.black),
+            ('INNERGRID', (0,0), (-1,-1), 0.25, colors.black)
         ]))
         story.append(combined_table)
         story.append(Spacer(1, 12))
         
-        # Evidence: Untuk FLM hanya satu evidence, untuk Corrective Maintenance tampilkan Before & After
+        # Evidence
         if row["Jenis"] == "FLM":
+            # Untuk FLM, hanya satu evidence (finish)
             if row["Evidance"] and os.path.exists(row["Evidance"]):
                 evidence = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
             else:
@@ -148,6 +148,7 @@ def export_pdf(data):
             ]))
             story.append(evidence_table)
         else:
+            # Untuk Corrective Maintenance, tampilkan Evidence Before dan After
             evidence_data = []
             if row["Evidance"] and os.path.exists(row["Evidance"]):
                 evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
@@ -172,10 +173,6 @@ def export_pdf(data):
         story.append(Spacer(1, 12))
         story.append(Paragraph("<hr/>", styles["Normal"]))
         story.append(Spacer(1, 12))
-        
-        # Tambahkan PageBreak setelah setiap 2 record
-        if (idx + 1) % 2 == 0:
-            story.append(PageBreak())
     
     doc.build(story)
     return pdf_filename
