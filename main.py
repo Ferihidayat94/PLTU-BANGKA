@@ -13,16 +13,10 @@ st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 st.markdown(
     """
     <style>
-        body {
-            background-color: (to right, #141e30, #243b55); /* Gradient Dark Blue */
+        .stApp {
+            background: linear-gradient(to right, #141e30, #243b55);
             color: white;
             font-family: 'Arial', sans-serif;
-        }
-        .stApp {
-            background-color: #0A192F;
-        }
-        .stTextInput, .stSelectbox, .stMultiselect, .stFileUploader, .stTextArea {
-            color: black;
         }
     </style>
     """,
@@ -82,7 +76,6 @@ ADMIN_CREDENTIALS = {
 }
 
 if not st.session_state.logged_in and st.session_state.page == "login":
-    st.image("logo.png", width=200)
     st.markdown("## Login")
     
     username = st.text_input("Username")
@@ -123,7 +116,7 @@ with st.form("monitoring_form"):
         else:
             nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"])
     with col3:
-        evidance_file = st.file_uploader("Upload Evidance", type=["png", "jpg", "jpeg"])
+        evidance_file = st.file_uploader("Upload Evidence", type=["png", "jpg", "jpeg"])
         keterangan = st.text_area("Keterangan")
     
     submit_button = st.form_submit_button("Submit")
@@ -135,8 +128,9 @@ if submit_button:
         with open(evidance_path, "wb") as f:
             f.write(evidance_file.getbuffer())
     
+    id_prefix = "FLM" if jenis == "FLM" else "CM"
     new_data = pd.DataFrame({
-        "ID": [f"FLM-{len(st.session_state.data) + 1:03d}"],
+        "ID": [f"{id_prefix}-{len(st.session_state.data) + 1:03d}"],
         "Tanggal": [tanggal],
         "Jenis": [jenis],
         "Area": [area],
@@ -155,6 +149,7 @@ if submit_button:
 if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     st.dataframe(st.session_state.data)
+
 
 # ========== Preview Evidence dengan Expander ==========
 st.markdown("### Preview Evidence")
