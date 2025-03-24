@@ -101,7 +101,7 @@ def export_pdf(data):
         img_path = os.path.join(UPLOAD_FOLDER, str(row['Evidance']).strip())
         if os.path.exists(img_path) and os.path.isfile(img_path):
             pdf.image(img_path, x=pdf.get_x(), y=pdf.get_y(), w=30, h=20)
-            pdf.cell(col_widths[6], 20, "", border=1, align='C')
+            pdf.cell(col_widths[6], 30, "", border=1, align='C')
         else:
             pdf.cell(col_widths[6], 10, "No Image", border=1, align='C')
         pdf.ln()
@@ -148,7 +148,7 @@ if not st.session_state.logged_in and st.session_state.page == "login":
     st.stop()
 
 # ========== Tampilan Dashboard ==========
-st.title("MONITORING FIRST LINE MAINTENANCE")
+st.title("MONITORING FLM DAN CORECTIVE MAINTENANCE")
 st.write("Produksi A PLTU Bangka")
 
 col1, col2 = st.columns([9, 1])
