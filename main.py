@@ -31,7 +31,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Tampilan logo halaman (untuk Streamlit)
+# Tampilan logo di halaman Streamlit
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 
@@ -48,7 +48,7 @@ DATA_FILE = "monitoring_data.csv"
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# ========== Load & Simpan Data ==========
+# ========== Fungsi Load & Simpan Data ==========
 def load_users():
     if os.path.exists(USER_FILE):
         return pd.read_csv(USER_FILE)
@@ -81,9 +81,8 @@ def export_pdf(data):
     styles = getSampleStyleSheet()
     story = []
     
-    # Header laporan: Logo di kiri dan judul laporan di bawahnya (terpusat)
+    # Header laporan: Logo di kiri, judul di bawahnya
     if os.path.exists("logo.png"):
-        # Tempatkan logo di kiri dengan ukuran yang disesuaikan
         logo_img = RLImage("logo.png", width=1.5*inch, height=0.5*inch)
         story.append(logo_img)
     story.append(Spacer(1, 6))
@@ -91,8 +90,9 @@ def export_pdf(data):
     story.append(title)
     story.append(Spacer(1, 12))
     
-    # Untuk setiap record, buat tabel data dua kolom
+    # Proses setiap record
     for idx, row in data.iterrows():
+        # Tabel data utama: dua kolom
         # Kolom kiri: ID, Tanggal, Jenis, Area
         left_data = [
             ["ID", f": {row['ID']}"],
@@ -122,7 +122,6 @@ def export_pdf(data):
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
-        
         combined_table = Table([[left_table, right_table]], colWidths=[doc.width/2.0, doc.width/2.0])
         combined_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -132,29 +131,45 @@ def export_pdf(data):
         story.append(combined_table)
         story.append(Spacer(1, 12))
         
-        # Evidence: Tampilkan dalam tabel dua kolom
-        evidence_data = []
-        if row["Evidance"] and os.path.exists(row["Evidance"]):
-            evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
+        # Evidence
+        if row["Jenis"] == "FLM":
+            # Untuk FLM, hanya satu evidence (finish)
+            if row["Evidance"] and os.path.exists(row["Evidance"]):
+                evidence = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
+            else:
+                evidence = Paragraph("Evidence tidak ditemukan", styles["Normal"])
+            evidence_table = Table([[Paragraph("<b>Evidence</b>", styles["Normal"])],
+                                    [evidence]], colWidths=[doc.width])
+            evidence_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
+                ('BOX', (0, 0), (-1, -1), 0.25, colors.black)
+            ]))
+            story.append(evidence_table)
         else:
-            evidence_before = Paragraph("Evidence Before tidak ditemukan", styles["Normal"])
-        if row.get("Evidance After") and pd.notna(row["Evidance After"]) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
-            evidence_after = RLImage(row["Evidance After"], width=2.5*inch, height=2*inch)
-        else:
-            evidence_after = Paragraph("Tidak ada Evidence After", styles["Normal"])
-        evidence_data.append([Paragraph("<b>Evidence Before</b>", styles["Normal"]), Paragraph("<b>Evidence After</b>", styles["Normal"])])
-        evidence_data.append([evidence_before, evidence_after])
-        evidence_table = Table(evidence_data, colWidths=[doc.width/2.0, doc.width/2.0])
-        evidence_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
-            ('BOX', (0, 0), (-1, -1), 0.25, colors.black)
-        ]))
-        story.append(evidence_table)
+            # Untuk Corrective Maintenance, tampilkan Evidence Before dan After
+            evidence_data = []
+            if row["Evidance"] and os.path.exists(row["Evidance"]):
+                evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
+            else:
+                evidence_before = Paragraph("Evidence Before tidak ditemukan", styles["Normal"])
+            if row.get("Evidance After") and pd.notna(row["Evidance After"]) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
+                evidence_after = RLImage(row["Evidance After"], width=2.5*inch, height=2*inch)
+            else:
+                evidence_after = Paragraph("Tidak ada Evidence After", styles["Normal"])
+            evidence_data.append([Paragraph("<b>Evidence Before</b>", styles["Normal"]),
+                                  Paragraph("<b>Evidence After</b>", styles["Normal"])])
+            evidence_data.append([evidence_before, evidence_after])
+            evidence_table = Table(evidence_data, colWidths=[doc.width/2.0, doc.width/2.0])
+            evidence_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
+                ('BOX', (0, 0), (-1, -1), 0.25, colors.black)
+            ]))
+            story.append(evidence_table)
         story.append(Spacer(1, 20))
-        
-        # Garis pembatas antar record
         story.append(Spacer(1, 12))
         story.append(Paragraph("<hr/>", styles["Normal"]))
         story.append(Spacer(1, 12))
@@ -341,7 +356,7 @@ if not st.session_state.data.empty:
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_data.csv", mime="text/csv")
 
-st.info("PLTU BANGKA 2X30 MW - Sistem Monitoring")
+st.info("PLTU Bangka 2X30 MW - Sistem Monitoring")
 
 # ========== Footer ==========
 st.markdown(
