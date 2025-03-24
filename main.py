@@ -5,7 +5,7 @@ import hashlib
 from datetime import datetime
 from PIL import Image
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
@@ -81,18 +81,23 @@ def export_pdf(data):
     styles = getSampleStyleSheet()
     story = []
     
-    # Header laporan: Logo di kiri, judul di bawahnya
+    # Header laporan: Logo di kiri dan judul laporan (terpusat)
     if os.path.exists("logo.png"):
-        logo_img = RLImage("logo.png", width=1.5*inch, height=0.5*inch)
+        logo_img = RLImage("logo.png", width=1.5*inch, height=1*inch)
         story.append(logo_img)
     story.append(Spacer(1, 6))
     title = Paragraph("<b>Laporan Monitoring FLM & Corrective Maintenance</b>", styles["Title"])
     story.append(title)
     story.append(Spacer(1, 12))
     
-    # Proses setiap record
+    # Setiap halaman akan memuat 2 record
+    records_per_page = 2
     for idx, row in data.iterrows():
-        # Tabel data utama: dua kolom
+        # Tambahkan PageBreak setiap 2 record (kecuali record pertama)
+        if idx > 0 and idx % records_per_page == 0:
+            story.append(PageBreak())
+        
+        # Data utama dalam dua kolom:
         # Kolom kiri: ID, Tanggal, Jenis, Area
         left_data = [
             ["ID", f": {row['ID']}"],
@@ -107,7 +112,6 @@ def export_pdf(data):
             ["Keterangan", f": {row['Keterangan']}"],
             ["Status", f": {row['Status']}"]
         ]
-        
         left_table = Table(left_data, colWidths=[80, 150])
         left_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
@@ -131,9 +135,8 @@ def export_pdf(data):
         story.append(combined_table)
         story.append(Spacer(1, 12))
         
-        # Evidence
+        # Evidence: untuk record FLM hanya satu evidence, untuk Corrective tampilkan Before & After
         if row["Jenis"] == "FLM":
-            # Untuk FLM, hanya satu evidence (finish)
             if row["Evidance"] and os.path.exists(row["Evidance"]):
                 evidence = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
             else:
@@ -148,7 +151,6 @@ def export_pdf(data):
             ]))
             story.append(evidence_table)
         else:
-            # Untuk Corrective Maintenance, tampilkan Evidence Before dan After
             evidence_data = []
             if row["Evidance"] and os.path.exists(row["Evidance"]):
                 evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
@@ -177,7 +179,7 @@ def export_pdf(data):
     doc.build(story)
     return pdf_filename
 
-# ========== Sistem Login ==========
+# ========== Sistem Login & Data ==========
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "page" not in st.session_state:
@@ -216,14 +218,13 @@ with col2:
     if st.button("Logout"):
         logout()
 
-# Container untuk input data agar tampilan lebih terstruktur
+# Container Input Data
 with st.container():
     st.markdown("<div class='input-container'>", unsafe_allow_html=True)
     tanggal = st.date_input("Tanggal", datetime.today())
     jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"], key="jenis")
     area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
     nomor_flm = st.text_input("Nomor SR")
-    
     if jenis == "FLM":
         nama_pelaksana = st.multiselect("Nama Pelaksana", 
                                         ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", 
@@ -232,12 +233,10 @@ with st.container():
                                         key="nama_pelaksana")
     else:
         nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"], key="nama_pelaksana")
-    
     evidance_file = st.file_uploader("Upload Evidence (Before)", type=["png", "jpg", "jpeg"])
     keterangan = st.text_area("Keterangan")
     status = st.radio("Status", ["Finish", "Belum"], key="status")
     st.markdown("</div>", unsafe_allow_html=True)
-    
     submit_button = st.button("Submit")
 
 if submit_button:
