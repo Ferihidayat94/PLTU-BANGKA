@@ -5,6 +5,7 @@ import hashlib
 from datetime import datetime
 from fpdf import FPDF
 from PIL import Image
+import json
 
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
@@ -52,11 +53,13 @@ def load_users():
 
 def load_data():
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance"])
-
-def save_users(df):
-    df.to_csv(USER_FILE, index=False)
+        df = pd.read_csv(DATA_FILE)
+        # Jika kolom "Evidance After" tidak ada, tambahkan sebagai kolom kosong
+        if "Evidance After" not in df.columns:
+            df["Evidance After"] = ""
+        return df
+    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", 
+                                   "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"])
 
 def save_data(df):
     df.to_csv(DATA_FILE, index=False)
@@ -82,15 +85,15 @@ def export_pdf(data):
             # Tambahkan logo pada pojok kiri atas dengan ukuran lebih besar
             if os.path.exists("logo.png"):
                 pdf.image("logo.png", x=10, y=8, w=50)
-            # Atur posisi judul (tidak terlalu jauh dari logo)
+            # Atur posisi judul agar tidak terlalu jauh dari logo
             pdf.set_xy(0, 20)
             pdf.set_font("Arial", "B", 18)
             pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
             pdf.ln(5)
         
-        label_width = 40
+        label_width = 40  # Lebar label untuk format "Label : Value"
         
-        # Tampilkan detail record dengan format "Label : Value"
+        # Tampilkan detail record
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "ID", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
@@ -140,10 +143,10 @@ def export_pdf(data):
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Status"]), 0, 1)
         
-        # Evidence
+        # Tampilkan Evidence Before (evidance asli)
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(label_width, 10, "Evidence", 0, 0)
+            pdf.cell(label_width, 10, "Evidence Before", 0, 0)
             pdf.cell(5, 10, ":", 0, 0)
             try:
                 pdf.image(row["Evidance"], w=50)
@@ -154,8 +157,23 @@ def export_pdf(data):
         else:
             pdf.ln(5)
         
+        # Tampilkan Evidence After (jika ada)
+        if "Evidance After" in row and pd.notna(row["Evidance After"]) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(label_width, 10, "Evidence After", 0, 0)
+            pdf.cell(5, 10, ":", 0, 0)
+            try:
+                pdf.image(row["Evidance After"], w=50)
+            except Exception as e:
+                pdf.set_font("Arial", "", 10)
+                pdf.cell(0, 10, "Gagal menampilkan evidence", 0, 1)
+            pdf.ln(10)
+        else:
+            pdf.ln(5)
+        
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(10)
+        
         count += 1
     
     pdf_file = "monitoring_data.pdf"
@@ -201,7 +219,7 @@ with col2:
     if st.button("Logout"):
         logout()
 
-# Container untuk input data (agar reaktif)
+# Container untuk input data agar tampilan lebih terstruktur
 with st.container():
     st.markdown("<div class='input-container'>", unsafe_allow_html=True)
     tanggal = st.date_input("Tanggal", datetime.today())
@@ -232,6 +250,7 @@ if submit_button:
         with open(evidance_path, "wb") as f:
             f.write(evidance_file.getbuffer())
     
+    # Tambahkan kolom "Evidance After" sebagai string kosong saat record baru diinput
     id_prefix = "FLM" if jenis == "FLM" else "CM"
     new_data = pd.DataFrame({
         "ID": [f"{id_prefix}-{len(st.session_state.data) + 1:03d}"],
@@ -242,12 +261,42 @@ if submit_button:
         "Nama Pelaksana": [", ".join(nama_pelaksana)],
         "Keterangan": [keterangan],
         "Status": [status],
-        "Evidance": [evidance_path]
+        "Evidance": [evidance_path],
+        "Evidance After": [""]
     })
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     save_data(st.session_state.data)
     st.success("Data berhasil disimpan!")
     st.rerun()
+
+# ========== Edit Status Corrective Maintenance ==========
+st.markdown("### Edit Status Corrective Maintenance")
+# Filter record Corrective Maintenance dengan status "Belum"
+editable_records = st.session_state.data[
+    (st.session_state.data["Jenis"] == "Corrective Maintenance") & 
+    (st.session_state.data["Status"] == "Belum")
+]
+if not editable_records.empty:
+    edit_id = st.selectbox("Pilih ID untuk Edit Status", editable_records["ID"])
+    if edit_id:
+        current_record = st.session_state.data[st.session_state.data["ID"] == edit_id]
+        st.write("Status saat ini:", current_record["Status"].values[0])
+        st.write("Evidence Before:", current_record["Evidance"].values[0])
+        new_evidence = st.file_uploader("Upload Evidence Baru (After)", type=["png", "jpg", "jpeg"], key="edit_evidence")
+        if st.button("Update Status ke Finish"):
+            updated_evidence_after = current_record["Evidance After"].values[0]
+            if new_evidence is not None:
+                new_evid_path = os.path.join(UPLOAD_FOLDER, new_evidence.name)
+                with open(new_evid_path, "wb") as f:
+                    f.write(new_evidence.getbuffer())
+                updated_evidence_after = new_evid_path
+            st.session_state.data.loc[st.session_state.data["ID"] == edit_id, "Status"] = "Finish"
+            st.session_state.data.loc[st.session_state.data["ID"] == edit_id, "Evidance After"] = updated_evidence_after
+            save_data(st.session_state.data)
+            st.success("Status berhasil diupdate menjadi Finish!")
+            st.rerun()
+else:
+    st.info("Tidak ada record Corrective Maintenance dengan status 'Belum' untuk diupdate.")
 
 # ========== Tampilan Data ==========
 if not st.session_state.data.empty:
@@ -288,11 +337,17 @@ if not st.session_state.data.empty:
     selected_row = st.session_state.data[st.session_state.data["ID"] == id_pilih]
     if not selected_row.empty:
         evidence_path = selected_row["Evidance"].values[0]
+        evidence_after = selected_row["Evidance After"].values[0]
         if evidence_path and os.path.exists(evidence_path):
-            with st.expander(f"Evidence untuk {id_pilih}", expanded=False):
-                st.image(evidence_path, caption=f"Evidence untuk {id_pilih}", use_column_width=True)
+            with st.expander(f"Evidence Before untuk {id_pilih}", expanded=False):
+                st.image(evidence_path, caption=f"Evidence Before untuk {id_pilih}", use_column_width=True)
         else:
-            st.warning("Evidence tidak ditemukan atau belum diupload.")
+            st.warning("Evidence Before tidak ditemukan atau belum diupload.")
+        if evidence_after and os.path.exists(evidence_after):
+            with st.expander(f"Evidence After untuk {id_pilih}", expanded=False):
+                st.image(evidence_after, caption=f"Evidence After untuk {id_pilih}", use_column_width=True)
+        else:
+            st.info("Tidak ada Evidence After untuk record ini.")
     else:
         st.warning("Pilih ID yang memiliki evidence.")
     
