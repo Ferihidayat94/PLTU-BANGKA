@@ -53,7 +53,6 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
-        # Jika kolom "Evidance After" belum ada, tambahkan
         if "Evidance After" not in df.columns:
             df["Evidance After"] = ""
         return df
@@ -74,9 +73,11 @@ def export_pdf(data):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Setiap halaman memuat 2 record
     records_per_page = 2
     count = 0
+    left_x = 10
+    right_x = 110
+    line_height = 10
     
     for index, row in data.iterrows():
         if count % records_per_page == 0:
@@ -84,70 +85,102 @@ def export_pdf(data):
             # Tambahkan logo pada pojok kiri atas dengan ukuran lebih besar (w=50)
             if os.path.exists("logo.png"):
                 pdf.image("logo.png", x=10, y=8, w=50)
-            # Atur posisi judul agar tidak terlalu jauh dari logo (misalnya y=20)
+            # Atur posisi judul (tidak terlalu jauh dari logo)
             pdf.set_xy(0, 20)
             pdf.set_font("Arial", "B", 18)
             pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
             pdf.ln(5)
         
-        label_width = 40  # Lebar label untuk format "Label : Value"
+        # Simpan posisi awal y untuk dua kolom
+        y_start = pdf.get_y()
         
-        # Fungsi bantu untuk mencetak field dengan label kiri dan nilai kanan
-        def print_field(label, value):
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(label_width, 10, label, 0, 0, "L")
-            pdf.cell(5, 10, ":", 0, 0, "C")
-            pdf.set_font("Arial", "", 12)
-            pdf.cell(0, 10, value, 0, 1, "R")
+        # LEFT COLUMN: ID, Tanggal, Jenis, Area
+        pdf.set_xy(left_x, y_start)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, line_height, "ID", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, line_height, str(row["ID"]), 0, 1, "R")
+        y_left = pdf.get_y()
         
-        print_field("ID", str(row["ID"]))
+        pdf.set_xy(left_x, y_left)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, line_height, "Tanggal", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
+        pdf.set_font("Arial", "", 12)
         tanggal_str = pd.to_datetime(row["Tanggal"]).strftime("%Y-%m-%d")
-        print_field("Tanggal", tanggal_str)
-        print_field("Jenis", str(row["Jenis"]))
-        print_field("Area", str(row["Area"]))
-        print_field("Nomor SR", str(row["Nomor SR"]))
+        pdf.cell(0, line_height, tanggal_str, 0, 1, "R")
+        y_left = pdf.get_y()
         
-        # Untuk teks panjang, cetak label dulu, kemudian multi_cell untuk nilai
+        pdf.set_xy(left_x, y_left)
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Nama Pelaksana", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
+        pdf.cell(40, line_height, "Jenis", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
         pdf.set_font("Arial", "", 12)
-        pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]), align="R")
+        pdf.cell(0, line_height, str(row["Jenis"]), 0, 1, "R")
+        y_left = pdf.get_y()
         
+        pdf.set_xy(left_x, y_left)
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Keterangan", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
+        pdf.cell(40, line_height, "Area", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
         pdf.set_font("Arial", "", 12)
-        pdf.multi_cell(0, 10, str(row["Keterangan"]), align="R")
+        pdf.cell(0, line_height, str(row["Area"]), 0, 1, "R")
+        y_left = pdf.get_y()
         
-        print_field("Status", str(row["Status"]))
+        # RIGHT COLUMN: Nomor SR, Nama Pelaksana, Keterangan, Status
+        pdf.set_xy(right_x, y_start)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, line_height, "Nomor SR", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, line_height, str(row["Nomor SR"]), 0, 1, "R")
+        y_right = pdf.get_y()
         
-        # Tampilkan evidence Before dan After sejajar
-        y_evidence = pdf.get_y()  # Simpan posisi y saat ini
-        evidence_before_exists = row["Evidance"] and os.path.exists(row["Evidance"])
-        evidence_after_exists = ("Evidance After" in row and pd.notna(row["Evidance After"]) 
-                                   and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]))
-        if evidence_before_exists or evidence_after_exists:
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(label_width, 10, "Evidence", 0, 0, "L")
-            pdf.cell(5, 10, ":", 0, 0, "C")
-            # Jika evidence Before ada, tampilkan di sisi kiri
-            if evidence_before_exists:
-                try:
-                    pdf.image(row["Evidance"], x=10, y=y_evidence, w=50)
-                except Exception as e:
-                    pdf.set_font("Arial", "", 10)
-                    pdf.cell(0, 10, "Gagal menampilkan evidence Before", 0, 1)
-            # Jika evidence After ada, tampilkan di sisi kanan
-            if evidence_after_exists:
-                try:
-                    pdf.image(row["Evidance After"], x=120, y=y_evidence, w=50)
-                except Exception as e:
-                    pdf.set_font("Arial", "", 10)
-                    pdf.cell(0, 10, "Gagal menampilkan evidence After", 0, 1)
-            pdf.ln(55)  # Sesuaikan jarak vertikal setelah gambar
-        else:
-            pdf.ln(5)
+        pdf.set_xy(right_x, y_right)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, line_height, "Nama Pelaksana", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
+        pdf.set_font("Arial", "", 12)
+        pdf.multi_cell(0, line_height, str(row["Nama Pelaksana"]), align="R")
+        y_right = pdf.get_y()
+        
+        pdf.set_xy(right_x, y_right)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, line_height, "Keterangan", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
+        pdf.set_font("Arial", "", 12)
+        pdf.multi_cell(0, line_height, str(row["Keterangan"]), align="R")
+        y_right = pdf.get_y()
+        
+        pdf.set_xy(right_x, y_right)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(40, line_height, "Status", 0, 0, "L")
+        pdf.cell(5, line_height, ":", 0, 0, "C")
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, line_height, str(row["Status"]), 0, 1, "R")
+        y_right = pdf.get_y()
+        
+        # Tentukan posisi akhir (y_final) dari kedua kolom
+        y_final = max(y_left, y_right)
+        pdf.set_y(y_final + 5)
+        
+        # Evidence: Ditampilkan di bawah kolom (Evidence Before dan After)
+        x_evidence_left = 10
+        x_evidence_right = 120
+        if row["Evidance"] and os.path.exists(row["Evidance"]):
+            try:
+                pdf.image(row["Evidance"], x=x_evidence_left, y=pdf.get_y(), w=50)
+            except Exception as e:
+                pdf.set_font("Arial", "", 10)
+                pdf.cell(0, 10, "Gagal menampilkan evidence Before", 0, 1)
+        if "Evidance After" in row and pd.notna(row["Evidance After"]) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
+            try:
+                pdf.image(row["Evidance After"], x=x_evidence_right, y=pdf.get_y(), w=50)
+            except Exception as e:
+                pdf.set_font("Arial", "", 10)
+                pdf.cell(0, 10, "Gagal menampilkan evidence After", 0, 1)
+        pdf.ln(55)  # Jarak vertikal setelah evidence
         
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(10)
