@@ -77,31 +77,68 @@ def export_pdf(data):
     pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
     pdf.ln(10)
     
-    # Tampilkan tiap record secara detail
+    # Ukuran label untuk menyamakan titik dua
+    label_width = 40
+
+    # Tampilkan tiap record dengan format label: value
     for index, row in data.iterrows():
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 10, f"ID: {row['ID']}", ln=True)
+        pdf.cell(label_width, 10, "ID", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, f"Tanggal: {row['Tanggal']}", ln=True)
-        pdf.cell(0, 10, f"Jenis: {row['Jenis']}", ln=True)
-        pdf.cell(0, 10, f"Area: {row['Area']}", ln=True)
-        pdf.cell(0, 10, f"Nomor SR: {row['Nomor SR']}", ln=True)
-        pdf.cell(0, 10, f"Nama Pelaksana: {row['Nama Pelaksana']}", ln=True)
-        pdf.multi_cell(0, 10, f"Keterangan: {row['Keterangan']}")
-        pdf.ln(5)
+        pdf.cell(0, 10, str(row["ID"]), 0, 1)
+        
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Tanggal", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, str(row["Tanggal"]), 0, 1)
+        
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Jenis", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, str(row["Jenis"]), 0, 1)
+        
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Area", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, str(row["Area"]), 0, 1)
+        
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Nomor SR", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, str(row["Nomor SR"]), 0, 1)
+        
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Nama Pelaksana", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
+        pdf.set_font("Arial", "", 12)
+        pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]))
+        
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Keterangan", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
+        pdf.set_font("Arial", "", 12)
+        pdf.multi_cell(0, 10, str(row["Keterangan"]))
         
         # Tampilkan evidence image jika ada
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(0, 10, "Evidence:", ln=True)
+            pdf.cell(label_width, 10, "Evidence", 0, 0)
+            pdf.cell(5, 10, ":", 0, 0)
             try:
-                # Sesuaikan ukuran gambar agar muat di halaman PDF
                 pdf.image(row["Evidance"], w=50)
             except Exception as e:
                 pdf.set_font("Arial", "", 10)
-                pdf.cell(0, 10, "Gagal menampilkan evidence", ln=True)
+                pdf.cell(0, 10, "Gagal menampilkan evidence", 0, 1)
             pdf.ln(10)
+        else:
+            pdf.ln(5)
         
+        # Garis pembatas antar record
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(10)
     
