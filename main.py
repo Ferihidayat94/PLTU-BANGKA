@@ -5,7 +5,6 @@ import hashlib
 from datetime import datetime
 from fpdf import FPDF
 from PIL import Image
-import json
 
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
@@ -54,11 +53,11 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
-        # Jika kolom "Evidance After" tidak ada, tambahkan sebagai kolom kosong
+        # Jika kolom "Evidance After" belum ada, tambahkan
         if "Evidance After" not in df.columns:
             df["Evidance After"] = ""
         return df
-    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", 
+    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR",
                                    "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"])
 
 def save_data(df):
@@ -82,10 +81,10 @@ def export_pdf(data):
     for index, row in data.iterrows():
         if count % records_per_page == 0:
             pdf.add_page()
-            # Tambahkan logo pada pojok kiri atas dengan ukuran lebih besar
+            # Tambahkan logo pada pojok kiri atas dengan ukuran lebih besar (w=50)
             if os.path.exists("logo.png"):
                 pdf.image("logo.png", x=10, y=8, w=50)
-            # Atur posisi judul agar tidak terlalu jauh dari logo
+            # Atur posisi judul agar tidak terlalu jauh dari logo (misalnya y=20)
             pdf.set_xy(0, 20)
             pdf.set_font("Arial", "B", 18)
             pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
@@ -93,81 +92,60 @@ def export_pdf(data):
         
         label_width = 40  # Lebar label untuk format "Label : Value"
         
-        # Tampilkan detail record
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "ID", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["ID"]), 0, 1)
+        # Fungsi bantu untuk mencetak field dengan label kiri dan nilai kanan
+        def print_field(label, value):
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(label_width, 10, label, 0, 0, "L")
+            pdf.cell(5, 10, ":", 0, 0, "C")
+            pdf.set_font("Arial", "", 12)
+            pdf.cell(0, 10, value, 0, 1, "R")
         
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Tanggal", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
-        pdf.set_font("Arial", "", 12)
+        print_field("ID", str(row["ID"]))
         tanggal_str = pd.to_datetime(row["Tanggal"]).strftime("%Y-%m-%d")
-        pdf.cell(0, 10, tanggal_str, 0, 1)
+        print_field("Tanggal", tanggal_str)
+        print_field("Jenis", str(row["Jenis"]))
+        print_field("Area", str(row["Area"]))
+        print_field("Nomor SR", str(row["Nomor SR"]))
+        
+        # Untuk teks panjang, cetak label dulu, kemudian multi_cell untuk nilai
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Nama Pelaksana", 0, 0, "L")
+        pdf.cell(5, 10, ":", 0, 0, "C")
+        pdf.set_font("Arial", "", 12)
+        pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]), align="R")
         
         pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Jenis", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
+        pdf.cell(label_width, 10, "Keterangan", 0, 0, "L")
+        pdf.cell(5, 10, ":", 0, 0, "C")
         pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Jenis"]), 0, 1)
+        pdf.multi_cell(0, 10, str(row["Keterangan"]), align="R")
         
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Area", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Area"]), 0, 1)
+        print_field("Status", str(row["Status"]))
         
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Nomor SR", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Nomor SR"]), 0, 1)
-        
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Nama Pelaksana", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
-        pdf.set_font("Arial", "", 12)
-        pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]))
-        
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Keterangan", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
-        pdf.set_font("Arial", "", 12)
-        pdf.multi_cell(0, 10, str(row["Keterangan"]))
-        
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(label_width, 10, "Status", 0, 0)
-        pdf.cell(5, 10, ":", 0, 0)
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Status"]), 0, 1)
-        
-        # Tampilkan Evidence Before (evidance asli)
-        if row["Evidance"] and os.path.exists(row["Evidance"]):
+        # Tampilkan evidence Before dan After sejajar
+        y_evidence = pdf.get_y()  # Simpan posisi y saat ini
+        evidence_before_exists = row["Evidance"] and os.path.exists(row["Evidance"])
+        evidence_after_exists = ("Evidance After" in row and pd.notna(row["Evidance After"]) 
+                                   and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]))
+        if evidence_before_exists or evidence_after_exists:
             pdf.set_font("Arial", "B", 12)
-            pdf.cell(label_width, 10, "Evidence Before", 0, 0)
-            pdf.cell(5, 10, ":", 0, 0)
-            try:
-                pdf.image(row["Evidance"], w=50)
-            except Exception as e:
-                pdf.set_font("Arial", "", 10)
-                pdf.cell(0, 10, "Gagal menampilkan evidence", 0, 1)
-            pdf.ln(10)
-        else:
-            pdf.ln(5)
-        
-        # Tampilkan Evidence After (jika ada)
-        if "Evidance After" in row and pd.notna(row["Evidance After"]) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
-            pdf.set_font("Arial", "B", 12)
-            pdf.cell(label_width, 10, "Evidence After", 0, 0)
-            pdf.cell(5, 10, ":", 0, 0)
-            try:
-                pdf.image(row["Evidance After"], w=50)
-            except Exception as e:
-                pdf.set_font("Arial", "", 10)
-                pdf.cell(0, 10, "Gagal menampilkan evidence", 0, 1)
-            pdf.ln(10)
+            pdf.cell(label_width, 10, "Evidence", 0, 0, "L")
+            pdf.cell(5, 10, ":", 0, 0, "C")
+            # Jika evidence Before ada, tampilkan di sisi kiri
+            if evidence_before_exists:
+                try:
+                    pdf.image(row["Evidance"], x=10, y=y_evidence, w=50)
+                except Exception as e:
+                    pdf.set_font("Arial", "", 10)
+                    pdf.cell(0, 10, "Gagal menampilkan evidence Before", 0, 1)
+            # Jika evidence After ada, tampilkan di sisi kanan
+            if evidence_after_exists:
+                try:
+                    pdf.image(row["Evidance After"], x=120, y=y_evidence, w=50)
+                except Exception as e:
+                    pdf.set_font("Arial", "", 10)
+                    pdf.cell(0, 10, "Gagal menampilkan evidence After", 0, 1)
+            pdf.ln(55)  # Sesuaikan jarak vertikal setelah gambar
         else:
             pdf.ln(5)
         
@@ -236,7 +214,7 @@ with st.container():
     else:
         nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"], key="nama_pelaksana")
     
-    evidance_file = st.file_uploader("Upload Evidence", type=["png", "jpg", "jpeg"])
+    evidance_file = st.file_uploader("Upload Evidence (Before)", type=["png", "jpg", "jpeg"])
     keterangan = st.text_area("Keterangan")
     status = st.radio("Status", ["Finish", "Belum"], key="status")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -250,7 +228,6 @@ if submit_button:
         with open(evidance_path, "wb") as f:
             f.write(evidance_file.getbuffer())
     
-    # Tambahkan kolom "Evidance After" sebagai string kosong saat record baru diinput
     id_prefix = "FLM" if jenis == "FLM" else "CM"
     new_data = pd.DataFrame({
         "ID": [f"{id_prefix}-{len(st.session_state.data) + 1:03d}"],
@@ -271,7 +248,6 @@ if submit_button:
 
 # ========== Edit Status Corrective Maintenance ==========
 st.markdown("### Edit Status Corrective Maintenance")
-# Filter record Corrective Maintenance dengan status "Belum"
 editable_records = st.session_state.data[
     (st.session_state.data["Jenis"] == "Corrective Maintenance") & 
     (st.session_state.data["Status"] == "Belum")
