@@ -80,7 +80,7 @@ def export_pdf(data):
             if os.path.exists("logo.png"):
                 pdf.image("logo.png", x=10, y=8, w=50)
             # Atur posisi judul agar tidak terlalu jauh dari logo
-            pdf.set_xy(0, 35)
+            pdf.set_xy(0, 20)
             pdf.set_font("Arial", "B", 18)
             pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
             pdf.ln(5)
