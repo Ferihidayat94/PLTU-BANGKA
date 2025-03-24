@@ -3,8 +3,12 @@ import pandas as pd
 import os
 import hashlib
 from datetime import datetime
-from fpdf import FPDF
 from PIL import Image
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import inch
 
 # ========== Konfigurasi Streamlit ==========
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
@@ -27,7 +31,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Tampilan logo halaman
+# Tampilan logo halaman (untuk tampilan Streamlit)
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 
@@ -68,127 +72,96 @@ def logout():
     st.session_state.page = "login"
     st.rerun()
 
-# ========== Fungsi Export PDF ==========
+# ========== Fungsi Export PDF (menggunakan ReportLab) ==========
 def export_pdf(data):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    # File output PDF
+    pdf_filename = "monitoring_report.pdf"
+    doc = SimpleDocTemplate(pdf_filename, pagesize=A4,
+                            rightMargin=30,leftMargin=30,
+                            topMargin=30,bottomMargin=18)
+    styles = getSampleStyleSheet()
+    story = []
     
-    records_per_page = 2
-    count = 0
-    for index, row in data.iterrows():
-        # Tambahkan halaman baru jika perlu
-        if count % records_per_page == 0:
-            pdf.add_page()
-            # Header halaman
-            if os.path.exists("logo.png"):
-                pdf.image("logo.png", x=10, y=8, w=50)
-            pdf.set_xy(0, 20)
-            pdf.set_font("Arial", "B", 18)
-            pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
-            pdf.ln(10)
+    # Judul laporan
+    title = Paragraph("<b>Laporan Monitoring FLM & Corrective Maintenance</b>", styles["Title"])
+    story.append(title)
+    story.append(Spacer(1, 12))
+    
+    # Untuk setiap record, buat tabel data dan evidence
+    for idx, row in data.iterrows():
+        # Buat data tabel dalam dua kolom
+        # Kolom kiri: ID, Tanggal, Jenis, Area
+        # Kolom kanan: Nomor SR, Nama Pelaksana, Keterangan, Status
+        left_data = [
+            ["ID", f": {row['ID']}"],
+            ["Tanggal", f": {pd.to_datetime(row['Tanggal']).strftime('%Y-%m-%d')}"],
+            ["Jenis", f": {row['Jenis']}"],
+            ["Area", f": {row['Area']}"]
+        ]
+        right_data = [
+            ["Nomor SR", f": {row['Nomor SR']}"],
+            ["Nama Pelaksana", f": {row['Nama Pelaksana']}"],
+            ["Keterangan", f": {row['Keterangan']}"],
+            ["Status", f": {row['Status']}"]
+        ]
         
-        # Simpan posisi awal untuk field
-        y_start = pdf.get_y()
+        # Gabungkan kedua tabel menjadi satu baris dengan dua kolom
+        # Masing-masing kolom akan berisi tabel kecil
+        left_table = Table(left_data, colWidths=[80, 150])
+        left_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        right_table = Table(right_data, colWidths=[80, 150])
+        right_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
         
-        # LEFT COLUMN: ID, Tanggal, Jenis, Area
-        left_x = 10
-        pdf.set_xy(left_x, y_start)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "ID", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["ID"]), 0, 1, "R")
-        y_left = pdf.get_y()
+        # Gabungkan dua tabel tersebut secara horizontal
+        data_table = Table([[left_table, right_table]], colWidths=[doc.width/2.0, doc.width/2.0])
+        data_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        story.append(data_table)
+        story.append(Spacer(1, 12))
         
-        pdf.set_xy(left_x, y_left)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "Tanggal", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        tanggal_str = pd.to_datetime(row["Tanggal"]).strftime("%Y-%m-%d")
-        pdf.cell(0, 10, tanggal_str, 0, 1, "R")
-        y_left = pdf.get_y()
-        
-        pdf.set_xy(left_x, y_left)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "Jenis", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Jenis"]), 0, 1, "R")
-        y_left = pdf.get_y()
-        
-        pdf.set_xy(left_x, y_left)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "Area", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Area"]), 0, 1, "R")
-        y_left = pdf.get_y()
-        
-        # RIGHT COLUMN: Nomor SR, Nama Pelaksana, Keterangan, Status
-        right_x = 110
-        pdf.set_xy(right_x, y_start)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "Nomor SR", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Nomor SR"]), 0, 1, "R")
-        y_right = pdf.get_y()
-        
-        pdf.set_xy(right_x, y_right)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "Nama Pelaksana", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]), align="R")
-        y_right = pdf.get_y()
-        
-        pdf.set_xy(right_x, y_right)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "Keterangan", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        pdf.multi_cell(0, 10, str(row["Keterangan"]), align="R")
-        y_right = pdf.get_y()
-        
-        pdf.set_xy(right_x, y_right)
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(40, 10, "Status", 0, 0, "L")
-        pdf.cell(5, 10, ":", 0, 0, "C")
-        pdf.set_font("Arial", "", 12)
-        pdf.cell(0, 10, str(row["Status"]), 0, 1, "R")
-        y_right = pdf.get_y()
-        
-        # Tentukan posisi akhir kedua kolom dan update y
-        y_fields = max(y_left, y_right) + 5
-        pdf.set_y(y_fields)
-        
-        # Evidence: Evidence Before dan Evidence After ditampilkan sejajar
-        x_evidence_left = 10
-        x_evidence_right = 120
-        y_evidence = pdf.get_y()
+        # Evidence: Buat tabel dua kolom untuk evidence Before dan After
+        evidence_data = []
         if row["Evidance"] and os.path.exists(row["Evidance"]):
-            try:
-                pdf.image(row["Evidance"], x=x_evidence_left, y=y_evidence, w=50)
-            except Exception as e:
-                pdf.set_font("Arial", "", 10)
-                pdf.cell(0, 10, "Gagal menampilkan evidence Before", 0, 1)
+            evidence_before = RLImage(row["Evidance"], width=2.5*inch, height=2*inch)
+        else:
+            evidence_before = Paragraph("Evidence Before tidak ditemukan", styles["Normal"])
         if row.get("Evidance After") and pd.notna(row["Evidance After"]) and row["Evidance After"] != "" and os.path.exists(row["Evidance After"]):
-            try:
-                pdf.image(row["Evidance After"], x=x_evidence_right, y=y_evidence, w=50)
-            except Exception as e:
-                pdf.set_font("Arial", "", 10)
-                pdf.cell(0, 10, "Gagal menampilkan evidence After", 0, 1)
-        pdf.ln(60)  # Jarak vertikal setelah evidence
+            evidence_after = RLImage(row["Evidance After"], width=2.5*inch, height=2*inch)
+        else:
+            evidence_after = Paragraph("Tidak ada Evidence After", styles["Normal"])
         
-        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.ln(10)
+        evidence_data.append([Paragraph("<b>Evidence Before</b>", styles["Normal"]), Paragraph("<b>Evidence After</b>", styles["Normal"])])
+        evidence_data.append([evidence_before, evidence_after])
+        evidence_table = Table(evidence_data, colWidths=[doc.width/2.0, doc.width/2.0])
+        evidence_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('INNERGRID', (0, 0), (-1, -1), 0.25, colors.black),
+            ('BOX', (0, 0), (-1, -1), 0.25, colors.black)
+        ]))
+        story.append(evidence_table)
+        story.append(Spacer(1, 20))
         
-        count += 1
+        # Garis pembatas antar record
+        story.append(Spacer(1, 12))
+        story.append(Paragraph("<hr/>", styles["Normal"]))
+        story.append(Spacer(1, 12))
     
-    pdf_file = "monitoring_data.pdf"
-    pdf.output(pdf_file)
-    return pdf_file
+    doc.build(story)
+    return pdf_filename
 
 # ========== Sistem Login ==========
 if "logged_in" not in st.session_state:
