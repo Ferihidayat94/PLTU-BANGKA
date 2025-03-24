@@ -10,3 +10,5 @@ Pillow
 requests
 fpdf2
 setuptools
+reportlab
+
