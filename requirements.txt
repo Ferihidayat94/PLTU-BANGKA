@@ -3,4 +3,5 @@ pandas
 fpdf
 reportlab
 numpy
+opencv-python-headless
 
