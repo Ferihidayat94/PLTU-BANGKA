@@ -69,23 +69,32 @@ def export_pdf(data):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
+    
+    # Header laporan dengan logo
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(200, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
-    pdf.ln(10)
+    pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
+    pdf.ln(5)
     
-    pdf.set_font("Arial", "B", 12)
+    # Definisikan kolom dan ukuran (penyesuaian ukuran kolom)
     columns = ["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan"]
-    col_widths = [30, 30, 40, 30, 30, 60, 60]
+    # Ukuran kolom yang telah disesuaikan
+    col_widths = [20, 25, 30, 20, 25, 50, 50]
     
+    pdf.set_font("Arial", "B", 10)
     # Header tabel
     for col, width in zip(columns, col_widths):
-        pdf.cell(width, 10, col, 1)
+        pdf.cell(width, 10, col, 1, 0, "C")
     pdf.ln()
     
-    pdf.set_font("Arial", "", 10)
+    pdf.set_font("Arial", "", 9)
+    # Isi tabel
     for _, row in data.iterrows():
         for col, width in zip(columns, col_widths):
-            pdf.cell(width, 10, str(row[col]), 1)
+            # Batasi teks jika terlalu panjang agar tidak keluar dari sel
+            text = str(row[col])
+            if len(text) > 30:
+                text = text[:27] + "..."
+            pdf.cell(width, 10, text, 1, 0, "C")
         pdf.ln()
     
     pdf_file = "monitoring_data.pdf"
@@ -125,7 +134,7 @@ if not st.session_state.logged_in and st.session_state.page == "login":
     st.stop()
 
 # ========== Tampilan Dashboard ==========
-st.title("MONITORING FLM & CORRECTive MAINTENANCE")
+st.title("MONITORING FLM & Corrective Maintenance")
 st.write("Produksi A PLTU Bangka")
 
 col1, col2 = st.columns([9, 1])
