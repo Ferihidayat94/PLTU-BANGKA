@@ -23,7 +23,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Tambahkan Logo
+# Tambahkan Logo untuk tampilan halaman
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 
@@ -49,7 +49,7 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
-    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance"])
+    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance"])
 
 # ========== Simpan Data ==========
 def save_users(df):
@@ -68,20 +68,22 @@ def logout():
 def export_pdf(data):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
     
-    # Tambahkan logo pada PDF jika tersedia
-    if os.path.exists("logo.png"):
-        pdf.image("logo.png", x=10, y=8, w=30)
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
-    pdf.ln(10)
-    
-    # Ukuran label untuk menyamakan titik dua
-    label_width = 40
-
-    # Tampilkan tiap record dengan format label: value
+    # Untuk setiap record, buat halaman baru
     for index, row in data.iterrows():
+        pdf.add_page()
+        
+        # Header per halaman dengan logo
+        if os.path.exists("logo.png"):
+            pdf.image("logo.png", x=10, y=8, w=30)
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
+        pdf.ln(10)
+        
+        # Lebar label untuk format "Label : Value"
+        label_width = 40
+        
+        # Tampilkan detail record
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "ID", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
@@ -124,6 +126,12 @@ def export_pdf(data):
         pdf.set_font("Arial", "", 12)
         pdf.multi_cell(0, 10, str(row["Keterangan"]))
         
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(label_width, 10, "Status", 0, 0)
+        pdf.cell(5, 10, ":", 0, 0)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, str(row["Status"]), 0, 1)
+        
         # Tampilkan evidence image jika ada
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             pdf.set_font("Arial", "B", 12)
@@ -138,7 +146,7 @@ def export_pdf(data):
         else:
             pdf.ln(5)
         
-        # Garis pembatas antar record
+        # Garis pembatas sebagai pemisah (opsional)
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(10)
     
@@ -189,27 +197,28 @@ with col2:
     if st.button("Logout"):
         logout()
 
-with st.form("monitoring_form"):
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        tanggal = st.date_input("Tanggal", datetime.today())
-        jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"], key="jenis")
-        area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
-    with col2:
-        nomor_flm = st.text_input("Nomor SR")
-        if jenis == "FLM":
-            nama_pelaksana = st.multiselect("Nama Pelaksana", 
-                                             ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", 
-                                              "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", 
-                                              "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"],
-                                             key="nama_pelaksana_flm")
-        else:
-            nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"], key="nama_pelaksana_cm")
-    with col3:
-        evidance_file = st.file_uploader("Upload Evidence", type=["png", "jpg", "jpeg"])
-        keterangan = st.text_area("Keterangan")
+# Gunakan container agar input terupdate secara dinamis
+with st.container():
+    tanggal = st.date_input("Tanggal", datetime.today())
+    jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"], key="jenis")
+    area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
+    nomor_flm = st.text_input("Nomor SR")
     
-    submit_button = st.form_submit_button("Submit")
+    # Update opsi Nama Pelaksana berdasarkan jenis
+    if jenis == "FLM":
+        nama_pelaksana = st.multiselect("Nama Pelaksana", 
+                                        ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", 
+                                         "Gilang", "M. Soleh Alqodri", "Soleh", "Dandi", "Debby", "Budy", 
+                                         "Sarmidun", "Reno", "Raffi", "Akbar", "Sunir", "Aminudin", "Hasan", "Feri"],
+                                        key="nama_pelaksana")
+    else:
+        nama_pelaksana = st.multiselect("Nama Pelaksana", ["Mekanik", "Konin", "Elektrik"], key="nama_pelaksana")
+    
+    evidance_file = st.file_uploader("Upload Evidence", type=["png", "jpg", "jpeg"])
+    keterangan = st.text_area("Keterangan")
+    status = st.radio("Status", ["Finish", "Belum"], key="status")
+    
+    submit_button = st.button("Submit")
 
 if submit_button:
     evidance_path = ""
@@ -227,12 +236,12 @@ if submit_button:
         "Nomor SR": [nomor_flm],
         "Nama Pelaksana": [", ".join(nama_pelaksana)],
         "Keterangan": [keterangan],
+        "Status": [status],
         "Evidance": [evidance_path]
     })
     st.session_state.data = pd.concat([st.session_state.data, new_data], ignore_index=True)
     save_data(st.session_state.data)
     st.success("Data berhasil disimpan!")
-    st.session_state.page = "dashboard"
     st.rerun()
 
 # ========== Tampilan Data ==========
