@@ -49,6 +49,7 @@ def load_users():
 def load_data():
     if os.path.exists(DATA_FILE):
         return pd.read_csv(DATA_FILE)
+    # Pastikan kolom Status juga ada
     return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance"])
 
 # ========== Simpan Data ==========
@@ -69,21 +70,22 @@ def export_pdf(data):
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     
-    # Untuk setiap record, buat halaman baru
+    # Setiap halaman memuat 2 record
+    records_per_page = 2
+    count = 0
+    
     for index, row in data.iterrows():
-        pdf.add_page()
+        if count % records_per_page == 0:
+            pdf.add_page()
+            # Tambahkan logo pada header
+            if os.path.exists("logo.png"):
+                pdf.image("logo.png", x=10, y=8, w=30)
+            pdf.set_font("Arial", "B", 16)
+            pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
+            pdf.ln(10)
         
-        # Header per halaman dengan logo
-        if os.path.exists("logo.png"):
-            pdf.image("logo.png", x=10, y=8, w=30)
-        pdf.set_font("Arial", "B", 16)
-        pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
-        pdf.ln(10)
+        label_width = 40  # Lebar label untuk format "Label : Value"
         
-        # Lebar label untuk format "Label : Value"
-        label_width = 40
-        
-        # Tampilkan detail record
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "ID", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
@@ -146,9 +148,10 @@ def export_pdf(data):
         else:
             pdf.ln(5)
         
-        # Garis pembatas sebagai pemisah (opsional)
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(10)
+        
+        count += 1
     
     pdf_file = "monitoring_data.pdf"
     pdf.output(pdf_file)
@@ -171,11 +174,9 @@ ADMIN_CREDENTIALS = {
 
 if not st.session_state.logged_in and st.session_state.page == "login":
     st.markdown("## Login")
-    
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     login_button = st.button("Login")
-    
     if login_button:
         if username in ADMIN_CREDENTIALS and password == ADMIN_CREDENTIALS[username]:
             st.session_state.logged_in = True
@@ -204,7 +205,6 @@ with st.container():
     area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
     nomor_flm = st.text_input("Nomor SR")
     
-    # Update opsi Nama Pelaksana berdasarkan jenis
     if jenis == "FLM":
         nama_pelaksana = st.multiselect("Nama Pelaksana", 
                                         ["Winner", "Devri", "Rendy", "Selamat", "M. Yanuardi", "Hendra", "Kamil", 
@@ -249,6 +249,36 @@ if not st.session_state.data.empty:
     st.markdown("### Data Monitoring")
     st.dataframe(st.session_state.data)
 
+# ========== Opsi Export PDF ==========
+st.markdown("### Export PDF Options")
+export_start_date = st.date_input("Export Start Date", datetime.today(), key="export_start_date")
+export_end_date = st.date_input("Export End Date", datetime.today(), key="export_end_date")
+export_type = st.selectbox("Pilih Tipe Export", ["Semua", "FLM", "CM"], key="export_type")
+
+# Tombol untuk Export PDF dengan filtering
+if st.button("Export ke PDF"):
+    # Filter data berdasarkan tanggal
+    filtered_data = st.session_state.data.copy()
+    if not filtered_data.empty:
+        filtered_data["Tanggal"] = pd.to_datetime(filtered_data["Tanggal"])
+        start_date = pd.to_datetime(export_start_date)
+        end_date = pd.to_datetime(export_end_date)
+        filtered_data = filtered_data[(filtered_data["Tanggal"] >= start_date) & (filtered_data["Tanggal"] <= end_date)]
+    
+    # Filter berdasarkan tipe jika tidak memilih "Semua"
+    if export_type != "Semua":
+        if export_type == "FLM":
+            filtered_data = filtered_data[filtered_data["Jenis"] == "FLM"]
+        elif export_type == "CM":
+            filtered_data = filtered_data[filtered_data["Jenis"] == "Corrective Maintenance"]
+    
+    if filtered_data.empty:
+        st.warning("Data tidak ditemukan untuk kriteria export tersebut.")
+    else:
+        pdf_file = export_pdf(filtered_data)
+        with open(pdf_file, "rb") as f:
+            st.download_button("Unduh PDF", f, file_name=pdf_file)
+
 # ========== Preview Evidence dengan Expander ==========
 st.markdown("### Preview Evidence")
 if not st.session_state.data.empty:
@@ -275,12 +305,6 @@ if not st.session_state.data.empty:
     # Download CSV
     csv = st.session_state.data.to_csv(index=False)
     st.download_button("Download Data CSV", data=csv, file_name="monitoring_data.csv", mime="text/csv")
-
-# Tombol untuk Export PDF
-if st.button("Export ke PDF"):
-    pdf_file = export_pdf(st.session_state.data)
-    with open(pdf_file, "rb") as f:
-        st.download_button("Unduh PDF", f, file_name=pdf_file)
 
 st.info("PLTU BANGKA 2X30 MW - Sistem Monitoring")
 
