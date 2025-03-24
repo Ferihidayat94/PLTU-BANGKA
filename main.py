@@ -70,32 +70,40 @@ def export_pdf(data):
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     
-    # Header laporan dengan logo
+    # Tambahkan logo pada PDF jika tersedia
+    if os.path.exists("logo.png"):
+        pdf.image("logo.png", x=10, y=8, w=30)
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 10, "Monitoring FLM & Corrective Maintenance", ln=True, align="C")
-    pdf.ln(5)
+    pdf.ln(10)
     
-    # Definisikan kolom dan ukuran (penyesuaian ukuran kolom)
-    columns = ["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan"]
-    # Ukuran kolom yang telah disesuaikan
-    col_widths = [20, 25, 30, 20, 25, 50, 50]
-    
-    pdf.set_font("Arial", "B", 10)
-    # Header tabel
-    for col, width in zip(columns, col_widths):
-        pdf.cell(width, 10, col, 1, 0, "C")
-    pdf.ln()
-    
-    pdf.set_font("Arial", "", 9)
-    # Isi tabel
-    for _, row in data.iterrows():
-        for col, width in zip(columns, col_widths):
-            # Batasi teks jika terlalu panjang agar tidak keluar dari sel
-            text = str(row[col])
-            if len(text) > 30:
-                text = text[:27] + "..."
-            pdf.cell(width, 10, text, 1, 0, "C")
-        pdf.ln()
+    # Tampilkan tiap record secara detail
+    for index, row in data.iterrows():
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, f"ID: {row['ID']}", ln=True)
+        pdf.set_font("Arial", "", 12)
+        pdf.cell(0, 10, f"Tanggal: {row['Tanggal']}", ln=True)
+        pdf.cell(0, 10, f"Jenis: {row['Jenis']}", ln=True)
+        pdf.cell(0, 10, f"Area: {row['Area']}", ln=True)
+        pdf.cell(0, 10, f"Nomor SR: {row['Nomor SR']}", ln=True)
+        pdf.cell(0, 10, f"Nama Pelaksana: {row['Nama Pelaksana']}", ln=True)
+        pdf.multi_cell(0, 10, f"Keterangan: {row['Keterangan']}")
+        pdf.ln(5)
+        
+        # Tampilkan evidence image jika ada
+        if row["Evidance"] and os.path.exists(row["Evidance"]):
+            pdf.set_font("Arial", "B", 12)
+            pdf.cell(0, 10, "Evidence:", ln=True)
+            try:
+                # Sesuaikan ukuran gambar agar muat di halaman PDF
+                pdf.image(row["Evidance"], w=50)
+            except Exception as e:
+                pdf.set_font("Arial", "", 10)
+                pdf.cell(0, 10, "Gagal menampilkan evidence", ln=True)
+            pdf.ln(10)
+        
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(10)
     
     pdf_file = "monitoring_data.pdf"
     pdf.output(pdf_file)
