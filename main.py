@@ -18,12 +18,16 @@ st.markdown(
             color: white;
             font-family: 'Arial', sans-serif;
         }
+        .input-container {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Tambahkan Logo untuk tampilan halaman
+# Tampilan logo halaman
 logo = Image.open("logo.png")
 st.image(logo, width=150)
 
@@ -32,7 +36,7 @@ UPLOAD_FOLDER = "uploads/"
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
-# File database user
+# File database
 USER_FILE = "users.csv"
 DATA_FILE = "monitoring_data.csv"
 
@@ -40,7 +44,7 @@ DATA_FILE = "monitoring_data.csv"
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# ========== Load Data ==========
+# ========== Load & Simpan Data ==========
 def load_users():
     if os.path.exists(USER_FILE):
         return pd.read_csv(USER_FILE)
@@ -51,7 +55,6 @@ def load_data():
         return pd.read_csv(DATA_FILE)
     return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance"])
 
-# ========== Simpan Data ==========
 def save_users(df):
     df.to_csv(USER_FILE, index=False)
 
@@ -76,25 +79,24 @@ def export_pdf(data):
     for index, row in data.iterrows():
         if count % records_per_page == 0:
             pdf.add_page()
-            # Tambahkan logo pada pojok kiri atas dengan ukuran yang lebih besar (w=50)
+            # Tambahkan logo pada pojok kiri atas dengan ukuran lebih besar
             if os.path.exists("logo.png"):
                 pdf.image("logo.png", x=10, y=8, w=50)
-            # Atur posisi judul agar tidak terlalu jauh dari logo
+            # Atur posisi judul (tidak terlalu jauh dari logo)
             pdf.set_xy(0, 20)
             pdf.set_font("Arial", "B", 18)
             pdf.cell(0, 10, "Laporan Monitoring FLM & Corrective Maintenance", ln=True, align="C")
             pdf.ln(5)
         
-        label_width = 40  # Lebar label untuk format "Label : Value"
+        label_width = 40
         
-        # Tampilkan ID
+        # Tampilkan detail record dengan format "Label : Value"
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "ID", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["ID"]), 0, 1)
         
-        # Tampilkan Tanggal dengan format tanpa jam
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Tanggal", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
@@ -102,49 +104,43 @@ def export_pdf(data):
         tanggal_str = pd.to_datetime(row["Tanggal"]).strftime("%Y-%m-%d")
         pdf.cell(0, 10, tanggal_str, 0, 1)
         
-        # Tampilkan Jenis
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Jenis", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Jenis"]), 0, 1)
         
-        # Tampilkan Area
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Area", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Area"]), 0, 1)
         
-        # Tampilkan Nomor SR
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Nomor SR", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Nomor SR"]), 0, 1)
         
-        # Tampilkan Nama Pelaksana
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Nama Pelaksana", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.multi_cell(0, 10, str(row["Nama Pelaksana"]))
         
-        # Tampilkan Keterangan
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Keterangan", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.multi_cell(0, 10, str(row["Keterangan"]))
         
-        # Tampilkan Status
         pdf.set_font("Arial", "B", 12)
         pdf.cell(label_width, 10, "Status", 0, 0)
         pdf.cell(5, 10, ":", 0, 0)
         pdf.set_font("Arial", "", 12)
         pdf.cell(0, 10, str(row["Status"]), 0, 1)
         
-        # Tampilkan evidence image jika ada
+        # Evidence
         if row["Evidance"] and os.path.exists(row["Evidance"]):
             pdf.set_font("Arial", "B", 12)
             pdf.cell(label_width, 10, "Evidence", 0, 0)
@@ -160,7 +156,6 @@ def export_pdf(data):
         
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
         pdf.ln(10)
-        
         count += 1
     
     pdf_file = "monitoring_data.pdf"
@@ -170,10 +165,8 @@ def export_pdf(data):
 # ========== Sistem Login ==========
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-
 if "page" not in st.session_state:
     st.session_state.page = "login"
-
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
@@ -208,8 +201,9 @@ with col2:
     if st.button("Logout"):
         logout()
 
-# Gunakan container agar input terupdate secara dinamis
+# Container untuk input data (agar reaktif)
 with st.container():
+    st.markdown("<div class='input-container'>", unsafe_allow_html=True)
     tanggal = st.date_input("Tanggal", datetime.today())
     jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"], key="jenis")
     area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP"])
@@ -227,6 +221,7 @@ with st.container():
     evidance_file = st.file_uploader("Upload Evidence", type=["png", "jpg", "jpeg"])
     keterangan = st.text_area("Keterangan")
     status = st.radio("Status", ["Finish", "Belum"], key="status")
+    st.markdown("</div>", unsafe_allow_html=True)
     
     submit_button = st.button("Submit")
 
