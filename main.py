@@ -10,7 +10,10 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RL
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+from dotenv import load_dotenv
 
+# ================== Load Environment Variables ==================
+load_dotenv()  # Pastikan file .env ada di root project jika digunakan
 
 # ================== HIDE STREAMLIT MENU & FOOTER ==================
 hide_streamlit_style = """
