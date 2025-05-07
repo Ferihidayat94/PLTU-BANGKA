@@ -10,10 +10,6 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RL
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
-from dotenv import load_dotenv
-
-# ================== Load Environment Variables ==================
-load_dotenv()  # Pastikan file .env ada di root project jika digunakan
 
 # ================== HIDE STREAMLIT MENU & FOOTER ==================
 hide_streamlit_style = """
@@ -24,10 +20,10 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# ================== Konfigurasi Streamlit (harus pertama) ==================
+# ================== Konfigurasi Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS untuk tampilan Streamlit ==================
+# ================== CSS untuk Tampilan ==================
 st.markdown(
     """
     <style>
@@ -36,33 +32,28 @@ st.markdown(
             color: white;
             font-family: 'Arial', sans-serif;
         }
-        .input-container {
-            margin-top: 20px;
-            margin-bottom: 20px;
-        }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# ================== Tampilan Logo (Streamlit) ==================
+# ================== Logo ==================
 try:
     logo = Image.open("logo.png")
     st.image(logo, width=150)
-except Exception as e:
-    st.error("Logo tidak ditemukan. Pastikan file logo.png tersedia.")
+except:
+    st.error("Logo tidak ditemukan.")
 
-# ================== Konfigurasi Folder & File ==================
+# ================== Folder & File ==================
 UPLOAD_FOLDER = "uploads"
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATA_FILE = "monitoring_data.csv"
 
 # ================== Fungsi Helper ==================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Kredensial (gunakan st.secrets atau .env untuk produksi)
+# Kredensial Login
 ADMIN_CREDENTIALS = {
     "admin": hash_password(st.secrets.get("ADMIN_PASSWORD", "pltubangka")),
     "operator": hash_password(st.secrets.get("OPERATOR_PASSWORD", "op123")),
@@ -75,7 +66,7 @@ def load_data():
             df["Evidance After"] = ""
         return df
     return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR",
-                                   "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"])
+                                 "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"])
 
 def save_data(df):
     df.to_csv(DATA_FILE, index=False)
@@ -84,7 +75,7 @@ def logout():
     st.session_state.clear()
     st.experimental_rerun()
 
-# ================== Timeout Login (30 menit) ==================
+# ================== Timeout Sesi ==================
 if "last_activity" in st.session_state:
     if datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
         logout()
@@ -96,7 +87,7 @@ if "logged_in" not in st.session_state:
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
-# ================== Sidebar: Login & Navigasi ==================
+# ================== Login & Navigasi ==================
 if not st.session_state.logged_in:
     st.sidebar.title("Login")
     username = st.sidebar.text_input("Username")
@@ -105,9 +96,9 @@ if not st.session_state.logged_in:
         if username in ADMIN_CREDENTIALS and ADMIN_CREDENTIALS[username] == hash_password(password):
             st.session_state.logged_in = True
             st.session_state.user = username
-            st.sidebar.success("Login successful!")
+            st.sidebar.success("Login berhasil!")
         else:
-            st.sidebar.error("Invalid username or password")
+            st.sidebar.error("Username atau password salah")
     st.stop()
 else:
     with st.sidebar:
@@ -120,7 +111,7 @@ else:
 st.title("MONITORING FLM & Corrective Maintenance")
 st.write("Produksi A PLTU Bangka")
 
-# ================== Menu: Input Data ==================
+# ================== Input Data ==================
 if menu == "Input Data":
     st.subheader("Input Data FLM & CM")
     with st.form("input_form"):
@@ -141,21 +132,19 @@ if menu == "Input Data":
             if not nomor_sr.strip() or not nama_pelaksana.strip() or not keterangan.strip():
                 st.error("Nomor SR, Nama Pelaksana, dan Keterangan tidak boleh kosong!")
             else:
-                # Simpan file dengan nama unik menggunakan UUID
                 evidance_path = ""
-                if evidance_file is not None:
+                if evidance_file:
                     ext = evidance_file.name.split('.')[-1]
                     evidance_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}.{ext}")
                     with open(evidance_path, "wb") as f:
                         f.write(evidance_file.getbuffer())
                 evidance_after_path = ""
-                if jenis != "FLM" and evidance_after_file is not None:
+                if jenis != "FLM" and evidance_after_file:
                     ext = evidance_after_file.name.split('.')[-1]
                     evidance_after_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}.{ext}")
-                    with open(evidance_after_file, "wb") as f:
+                    with open(evidance_after_path, "wb") as f:
                         f.write(evidance_after_file.getbuffer())
-                id_prefix = "FLM" if jenis == "FLM" else "CM"
-                new_id = f"{id_prefix}-{len(st.session_state.data) + 1:03d}"
+                new_id = f"{'FLM' if jenis == 'FLM' else 'CM'}-{len(st.session_state.data) + 1:03d}"
                 new_row = pd.DataFrame([[new_id, tanggal, jenis, area, nomor_sr, nama_pelaksana, keterangan, status, evidance_path, evidance_after_path]],
                                         columns=st.session_state.data.columns)
                 st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
@@ -163,32 +152,55 @@ if menu == "Input Data":
                 st.success("Data berhasil disimpan!")
                 st.experimental_rerun()
 
-# ================== Menu: Lihat Data ==================
+# ================== Lihat Data ==================
 elif menu == "Lihat Data":
     st.subheader("Data Monitoring")
     st.dataframe(st.session_state.data)
 
-# ================== Menu: Export PDF ==================
+# ================== Export PDF ==================
 elif menu == "Export PDF":
     st.subheader("Export Laporan PDF")
-    export_start_date = st.date_input("Export Start Date", date.today(), key="export_start_date")
-    export_end_date = st.date_input("Export End Date", date.today(), key="export_end_date")
-    export_type = st.selectbox("Pilih Tipe Export", ["Semua", "FLM", "Corrective Maintenance"], key="export_type")
+    export_start_date = st.date_input("Export Start Date", date.today())
+    export_end_date = st.date_input("Export End Date", date.today())
+    export_type = st.selectbox("Pilih Tipe Export", ["Semua", "FLM", "Corrective Maintenance"])
     if st.button("Export ke PDF"):
         filtered_data = st.session_state.data.copy()
-        if not filtered_data.empty:
-            filtered_data["Tanggal"] = pd.to_datetime(filtered_data["Tanggal"])
-            start = pd.to_datetime(export_start_date)
-            end = pd.to_datetime(export_end_date)
-            filtered_data = filtered_data[(filtered_data["Tanggal"] >= start) & (filtered_data["Tanggal"] <= end)]
+        filtered_data["Tanggal"] = pd.to_datetime(filtered_data["Tanggal"])
+        filtered_data = filtered_data[
+            (filtered_data["Tanggal"] >= pd.to_datetime(export_start_date)) & 
+            (filtered_data["Tanggal"] <= pd.to_datetime(export_end_date))
+        ]
         if export_type != "Semua":
             filtered_data = filtered_data[filtered_data["Jenis"] == export_type]
         if filtered_data.empty:
-            st.warning("Data tidak ditemukan untuk kriteria export tersebut.")
+            st.warning("Data tidak ditemukan.")
         else:
-            pdf_file = export_pdf(filtered_data)
-            with open(pdf_file, "rb") as f:
-                st.download_button("Unduh PDF", f, file_name=pdf_file)
+            file_path = "laporan_monitoring.pdf"
+            doc = SimpleDocTemplate(file_path, pagesize=A4)
+            elements = []
+            styles = getSampleStyleSheet()
+
+            for _, row in filtered_data.iterrows():
+                elements.append(Paragraph(f"<b>ID:</b> {row['ID']} | <b>Tanggal:</b> {row['Tanggal'].strftime('%Y-%m-%d')}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Jenis:</b> {row['Jenis']} | <b>Area:</b> {row['Area']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Nomor SR:</b> {row['Nomor SR']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Pelaksana:</b> {row['Nama Pelaksana']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Status:</b> {row['Status']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Keterangan:</b><br/>{row['Keterangan']}", styles["Normal"]))
+                elements.append(Spacer(1, 6))
+
+                if row["Evidance"] and os.path.exists(row["Evidance"]):
+                    elements.append(Paragraph("Evidence Before:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
+                if row["Evidance After"] and os.path.exists(row["Evidance After"]):
+                    elements.append(Paragraph("Evidence After:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
+
+                elements.append(PageBreak())
+
+            doc.build(elements)
+            with open(file_path, "rb") as f:
+                st.download_button("Unduh PDF", f, file_name=file_path)
 
 # ================== Preview Evidence ==================
 st.markdown("### Preview Evidence")
@@ -199,28 +211,20 @@ if not st.session_state.data.empty:
         ev_before = selected_row["Evidance"].values[0]
         ev_after = selected_row["Evidance After"].values[0]
         if ev_before and os.path.exists(ev_before):
-            with st.expander(f"Evidence Before untuk {id_pilih}", expanded=False):
-                st.image(ev_before, caption=f"Evidence Before untuk {id_pilih}", use_column_width=True)
-        else:
-            st.warning("Evidence Before tidak ditemukan atau belum diupload.")
+            with st.expander(f"Evidence Before untuk {id_pilih}"):
+                st.image(ev_before, caption=f"Before - {id_pilih}", use_column_width=True)
         if ev_after and os.path.exists(ev_after):
-            with st.expander(f"Evidence After untuk {id_pilih}", expanded=False):
-                st.image(ev_after, caption=f"Evidence After untuk {id_pilih}", use_column_width=True)
-        else:
-            st.info("Tidak ada Evidence After untuk record ini.")
-    else:
-        st.warning("Pilih ID yang memiliki evidence.")
-    
+            with st.expander(f"Evidence After untuk {id_pilih}"):
+                st.image(ev_after, caption=f"After - {id_pilih}", use_column_width=True)
     if st.button("Hapus Data"):
         st.session_state.data = st.session_state.data[st.session_state.data["ID"] != id_pilih]
         save_data(st.session_state.data)
         st.success("Data berhasil dihapus!")
         st.experimental_rerun()
-    
-    csv_data = st.session_state.data.to_csv(index=False)
-    st.download_button("Download Data CSV", data=csv_data, file_name="monitoring_data.csv", mime="text/csv")
 
-st.info("PLTU Bangka 2X30 MW - Sistem Monitoring")
+# ================== Download CSV ==================
+csv_data = st.session_state.data.to_csv(index=False)
+st.download_button("Download Data CSV", data=csv_data, file_name="monitoring_data.csv", mime="text/csv")
 
 # ================== Footer ==================
 st.markdown(
