@@ -11,6 +11,8 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 
+st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
+
 # ================== HIDE STREAMLIT MENU & FOOTER ==================
 hide_streamlit_style = """
     <style>
@@ -21,7 +23,7 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # ================== Konfigurasi Streamlit ==================
-st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
+
 
 # ================== CSS untuk Tampilan ==================
 st.markdown(
