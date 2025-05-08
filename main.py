@@ -115,7 +115,7 @@ st.write("Produksi A PLTU Bangka")
 
 # ================== Input Data ==================
 if menu == "Input Data":
-    st.subheader("Input Data FLM & CM")
+    st.subheader("Input Data")
     with st.form("input_form"):
         tanggal = st.date_input("Tanggal", date.today())
         jenis = st.selectbox("Jenis", ["FLM", "Corrective Maintenance"])
