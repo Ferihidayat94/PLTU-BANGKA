@@ -11,7 +11,6 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 
-# ================== Configuration ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== HIDE STREAMLIT MENU & FOOTER ==================
@@ -23,7 +22,10 @@ hide_streamlit_style = """
 """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# ================== CSS for Design ==================
+# ================== Konfigurasi Streamlit ==================
+
+
+# ================== CSS untuk Tampilan ==================
 st.markdown(
     """
     <style>
@@ -49,11 +51,11 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATA_FILE = "monitoring_data.csv"
 
-# ================== Helper Functions ==================
+# ================== Fungsi Helper ==================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Admin Credentials
+# Kredensial Login
 ADMIN_CREDENTIALS = {
     "admin": hash_password(st.secrets.get("ADMIN_PASSWORD", "pltubangka")),
     "operator": hash_password(st.secrets.get("OPERATOR_PASSWORD", "op123")),
@@ -75,19 +77,19 @@ def logout():
     st.session_state.clear()
     st.experimental_rerun()
 
-# ================== Timeout Session ==================
+# ================== Timeout Sesi ==================
 if "last_activity" in st.session_state:
     if datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
         logout()
 st.session_state.last_activity = datetime.now()
 
-# ================== Initialize State ==================
+# ================== Inisialisasi State ==================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "data" not in st.session_state:
     st.session_state.data = load_data()
 
-# ================== Login & Navigation ==================
+# ================== Login & Navigasi ==================
 if not st.session_state.logged_in:
     st.sidebar.title("Login")
     username = st.sidebar.text_input("Username")
@@ -107,7 +109,7 @@ else:
         if st.button("Logout"):
             logout()
 
-# ================== Main Interface ==================
+# ================== Tampilan Utama ==================
 st.title("MONITORING FLM & Corrective Maintenance")
 st.write("Produksi A PLTU Bangka")
 
@@ -152,7 +154,7 @@ if menu == "Input Data":
                 st.success("Data berhasil disimpan!")
                 st.experimental_rerun()
 
-# ================== View Data ==================
+# ================== Lihat Data ==================
 elif menu == "Lihat Data":
     st.subheader("Data Monitoring")
     st.dataframe(st.session_state.data)
@@ -164,7 +166,6 @@ elif menu == "Export PDF":
     export_end_date = st.date_input("Export End Date", date.today())
     export_type = st.selectbox("Pilih Tipe Export", ["Semua", "FLM", "Corrective Maintenance"])
     if st.button("Export ke PDF"):
-        # Filter the data based on the selected date range and type
         filtered_data = st.session_state.data.copy()
         filtered_data["Tanggal"] = pd.to_datetime(filtered_data["Tanggal"])
         filtered_data = filtered_data[
@@ -173,7 +174,6 @@ elif menu == "Export PDF":
         ]
         if export_type != "Semua":
             filtered_data = filtered_data[filtered_data["Jenis"] == export_type]
-        
         if filtered_data.empty:
             st.warning("Data tidak ditemukan.")
         else:
@@ -182,38 +182,51 @@ elif menu == "Export PDF":
             elements = []
             styles = getSampleStyleSheet()
 
-            # Add report title
-            elements.append(Paragraph("Laporan Monitoring FLM & Corrective Maintenance", styles["Title"]))
-            elements.append(Spacer(1, 12))
-
-            # Loop through the filtered data and format each record for the PDF
             for _, row in filtered_data.iterrows():
-                # Adding each field with a simple layout
-                elements.append(Paragraph(f"<b>ID :</b> {row['ID']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Tanggal :</b> {row['Tanggal'].strftime('%Y-%m-%d')}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Jenis :</b> {row['Jenis']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Area :</b> {row['Area']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Nomor SR :</b> {row['Nomor SR']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Nama Pelaksana :</b> {row['Nama Pelaksana']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Keterangan :</b> {row['Keterangan']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Status :</b> {row['Status']}", styles["Normal"]))
-                elements.append(Spacer(1, 12))  # Space between sections
+                elements.append(Paragraph(f"<b>ID:</b> {row['ID']} | <b>Tanggal:</b> {row['Tanggal'].strftime('%Y-%m-%d')}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Jenis:</b> {row['Jenis']} | <b>Area:</b> {row['Area']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Nomor SR:</b> {row['Nomor SR']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Pelaksana:</b> {row['Nama Pelaksana']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Status:</b> {row['Status']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Keterangan:</b><br/>{row['Keterangan']}", styles["Normal"]))
+                elements.append(Spacer(1, 6))
 
-                # Evidence section (if exists)
                 if row["Evidance"] and os.path.exists(row["Evidance"]):
-                    elements.append(Paragraph("<b>Evidence :</b>", styles["Italic"]))
-                    elements.append(Paragraph(f"<i>{row['Evidance']}</i>", styles["Normal"]))
-                    elements.append(Spacer(1, 12))  # Space after evidence section
+                    elements.append(Paragraph("Evidence Before:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
+                if row["Evidance After"] and os.path.exists(row["Evidance After"]):
+                    elements.append(Paragraph("Evidence After:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
 
-                # Add page break after each entry for better separation
                 elements.append(PageBreak())
 
-            # Generate the PDF document
             doc.build(elements)
-
-            # Provide a download link for the PDF
             with open(file_path, "rb") as f:
                 st.download_button("Unduh PDF", f, file_name=file_path)
+
+# ================== Preview Evidence ==================
+st.markdown("### Preview Evidence")
+if not st.session_state.data.empty:
+    id_pilih = st.selectbox("Pilih ID untuk melihat evidence", st.session_state.data["ID"])
+    selected_row = st.session_state.data[st.session_state.data["ID"] == id_pilih]
+    if not selected_row.empty:
+        ev_before = selected_row["Evidance"].values[0]
+        ev_after = selected_row["Evidance After"].values[0]
+        if ev_before and os.path.exists(ev_before):
+            with st.expander(f"Evidence Before untuk {id_pilih}"):
+                st.image(ev_before, caption=f"Before - {id_pilih}", use_column_width=True)
+        if ev_after and os.path.exists(ev_after):
+            with st.expander(f"Evidence After untuk {id_pilih}"):
+                st.image(ev_after, caption=f"After - {id_pilih}", use_column_width=True)
+    if st.button("Hapus Data"):
+        st.session_state.data = st.session_state.data[st.session_state.data["ID"] != id_pilih]
+        save_data(st.session_state.data)
+        st.success("Data berhasil dihapus!")
+        st.experimental_rerun()
+
+# ================== Download CSV ==================
+csv_data = st.session_state.data.to_csv(index=False)
+st.download_button("Download Data CSV", data=csv_data, file_name="monitoring_data.csv", mime="text/csv")
 
 # ================== Footer ==================
 st.markdown(
