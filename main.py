@@ -34,11 +34,13 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-try:
-    logo = Image.open("logo.png")
+# Correct file path handling for logo
+logo_path = "logo.png"
+if os.path.exists(logo_path):
+    logo = Image.open(logo_path)
     st.image(logo, width=150)
-except:
-    st.error("Logo tidak ditemukan.")
+else:
+    st.warning("Logo tidak ditemukan.")
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -216,6 +218,7 @@ elif menu == "Export PDF":
             with open(file_path, "rb") as f:
                 st.download_button("Unduh PDF", f, file_name=file_path)
 
+# Continue with remaining code as per your existing logic
 st.markdown("### Preview Evidence")
 if not st.session_state.data.empty:
     id_pilih = st.selectbox("Pilih ID untuk melihat evidence", st.session_state.data["ID"])
@@ -224,7 +227,7 @@ if not st.session_state.data.empty:
         ev_before = selected_row["Evidance"].values[0]
         ev_after = selected_row["Evidance After"].values[0]
         if ev_before and os.path.exists(ev_before):
-            with st.expander(f"Evidence Before untuk {id_pilih}"):
+            with st.expander(f"Evidence Before untuk {id_pilih}") :
                 st.image(ev_before, caption=f"Before - {id_pilih}", use_column_width=True)
         if ev_after and os.path.exists(ev_after):
             with st.expander(f"Evidence After untuk {id_pilih}"):
