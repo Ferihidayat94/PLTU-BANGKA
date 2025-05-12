@@ -158,13 +158,13 @@ elif menu == "Lihat Data":
     st.dataframe(st.session_state.data)
 
 # ================== Export PDF ==================
-
 elif menu == "Export PDF":
     st.subheader("Export Laporan PDF")
     export_start_date = st.date_input("Export Start Date", date.today())
     export_end_date = st.date_input("Export End Date", date.today())
     export_type = st.selectbox("Pilih Tipe Export", ["Semua", "FLM", "Corrective Maintenance"])
     if st.button("Export ke PDF"):
+        # Filter the data based on the selected date range and type
         filtered_data = st.session_state.data.copy()
         filtered_data["Tanggal"] = pd.to_datetime(filtered_data["Tanggal"])
         filtered_data = filtered_data[
@@ -173,6 +173,7 @@ elif menu == "Export PDF":
         ]
         if export_type != "Semua":
             filtered_data = filtered_data[filtered_data["Jenis"] == export_type]
+        
         if filtered_data.empty:
             st.warning("Data tidak ditemukan.")
         else:
@@ -181,11 +182,11 @@ elif menu == "Export PDF":
             elements = []
             styles = getSampleStyleSheet()
 
-            # Add title for the report
+            # Add report title
             elements.append(Paragraph("Laporan Monitoring FLM & Corrective Maintenance", styles["Title"]))
             elements.append(Spacer(1, 12))
 
-            # Loop through each entry and format the report
+            # Loop through the filtered data and format each record for the PDF
             for _, row in filtered_data.iterrows():
                 # Adding each field with a simple layout
                 elements.append(Paragraph(f"<b>ID :</b> {row['ID']}", styles["Normal"]))
@@ -202,15 +203,17 @@ elif menu == "Export PDF":
                 if row["Evidance"] and os.path.exists(row["Evidance"]):
                     elements.append(Paragraph("<b>Evidence :</b>", styles["Italic"]))
                     elements.append(Paragraph(f"<i>{row['Evidance']}</i>", styles["Normal"]))
-                    elements.append(Spacer(1, 12))
+                    elements.append(Spacer(1, 12))  # Space after evidence section
 
-                elements.append(PageBreak())  # Page break between each entry
+                # Add page break after each entry for better separation
+                elements.append(PageBreak())
 
-            # Generate PDF
+            # Generate the PDF document
             doc.build(elements)
+
+            # Provide a download link for the PDF
             with open(file_path, "rb") as f:
                 st.download_button("Unduh PDF", f, file_name=file_path)
-
 
 # ================== Footer ==================
 st.markdown(
