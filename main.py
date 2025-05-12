@@ -170,8 +170,9 @@ elif menu == "Export PDF":
                 canvas.rect(doc.leftMargin - 10, doc.bottomMargin - 10, doc.width + 20, doc.height + 20)
                 canvas.restoreState()
 
-            frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')
             doc = SimpleDocTemplate(file_path, pagesize=A4)
+            frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')
+
             doc.addPageTemplates([PageTemplate(id='Bordered', frames=[frame], onPage=header_footer)])
 
             elements = []
