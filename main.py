@@ -172,7 +172,6 @@ elif menu == "Export PDF":
 
             doc = SimpleDocTemplate(file_path, pagesize=A4)
             frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='normal')
-
             doc.addPageTemplates([PageTemplate(id='Bordered', frames=[frame], onPage=header_footer)])
 
             elements = []
@@ -182,24 +181,36 @@ elif menu == "Export PDF":
                 elements.append(Spacer(1, 12))
             except:
                 pass
+            elements.append(Paragraph("Laporan Monitoring FLM & Corrective Maintenance", styles["Title"]))
+            elements.append(Spacer(1, 12))
 
+            table_data = [["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Pelaksana", "Status", "Keterangan"]]
             for _, row in filtered_data.iterrows():
-                elements.append(Paragraph(f"<b>ID:</b> {row['ID']} | <b>Tanggal:</b> {row['Tanggal'].strftime('%Y-%m-%d')}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Jenis:</b> {row['Jenis']} | <b>Area:</b> {row['Area']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Nomor SR:</b> {row['Nomor SR']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Pelaksana:</b> {row['Nama Pelaksana']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Status:</b> {row['Status']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Keterangan:</b><br/>{row['Keterangan']}", styles["Normal"]))
-                elements.append(Spacer(1, 6))
+                table_data.append([
+                    row["ID"],
+                    row["Tanggal"].strftime('%Y-%m-%d'),
+                    row["Jenis"],
+                    row["Area"],
+                    row["Nomor SR"],
+                    row["Nama Pelaksana"],
+                    row["Status"],
+                    row["Keterangan"]
+                ])
 
-                if row["Evidance"] and os.path.exists(row["Evidance"]):
-                    elements.append(Paragraph("Evidence Before:", styles["Italic"]))
-                    elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
-                if row["Evidance After"] and os.path.exists(row["Evidance After"]):
-                    elements.append(Paragraph("Evidence After:", styles["Italic"]))
-                    elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
+            table = Table(table_data, repeatRows=1, colWidths=[50, 60, 60, 60, 60, 80, 50, 180])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 1), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
 
-                elements.append(PageBreak())
+            elements.append(table)
 
             doc.build(elements)
             with open(file_path, "rb") as f:
