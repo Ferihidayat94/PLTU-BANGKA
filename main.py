@@ -158,6 +158,7 @@ elif menu == "Lihat Data":
     st.dataframe(st.session_state.data)
 
 # ================== Export PDF ==================
+
 elif menu == "Export PDF":
     st.subheader("Export Laporan PDF")
     export_start_date = st.date_input("Export Start Date", date.today())
@@ -180,43 +181,36 @@ elif menu == "Export PDF":
             elements = []
             styles = getSampleStyleSheet()
 
-            # Table header
-            data = [["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Pelaksana", "Status", "Keterangan", "Evidence Before", "Evidence After"]]
+            # Add title for the report
+            elements.append(Paragraph("Laporan Monitoring FLM & Corrective Maintenance", styles["Title"]))
+            elements.append(Spacer(1, 12))
 
-            # Populate the table with the filtered data
+            # Loop through each entry and format the report
             for _, row in filtered_data.iterrows():
-                row_data = [
-                    row["ID"], 
-                    row["Tanggal"].strftime('%Y-%m-%d'),
-                    row["Jenis"], 
-                    row["Area"], 
-                    row["Nomor SR"], 
-                    row["Nama Pelaksana"], 
-                    row["Status"], 
-                    row["Keterangan"], 
-                    f"Evidence Before: {row['Evidance']}" if row['Evidance'] else "No evidence",
-                    f"Evidence After: {row['Evidance After']}" if row['Evidance After'] else "No evidence"
-                ]
-                data.append(row_data)
+                # Adding each field with a simple layout
+                elements.append(Paragraph(f"<b>ID :</b> {row['ID']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Tanggal :</b> {row['Tanggal'].strftime('%Y-%m-%d')}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Jenis :</b> {row['Jenis']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Area :</b> {row['Area']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Nomor SR :</b> {row['Nomor SR']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Nama Pelaksana :</b> {row['Nama Pelaksana']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Keterangan :</b> {row['Keterangan']}", styles["Normal"]))
+                elements.append(Paragraph(f"<b>Status :</b> {row['Status']}", styles["Normal"]))
+                elements.append(Spacer(1, 12))  # Space between sections
 
-            # Create table and style it
-            table = Table(data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch, 2*inch, 2*inch, 1.5*inch, 2.5*inch, 2*inch, 2*inch])
-            table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ]))
+                # Evidence section (if exists)
+                if row["Evidance"] and os.path.exists(row["Evidance"]):
+                    elements.append(Paragraph("<b>Evidence :</b>", styles["Italic"]))
+                    elements.append(Paragraph(f"<i>{row['Evidance']}</i>", styles["Normal"]))
+                    elements.append(Spacer(1, 12))
 
-            elements.append(table)
+                elements.append(PageBreak())  # Page break between each entry
 
             # Generate PDF
             doc.build(elements)
             with open(file_path, "rb") as f:
                 st.download_button("Unduh PDF", f, file_name=file_path)
+
 
 # ================== Footer ==================
 st.markdown(
