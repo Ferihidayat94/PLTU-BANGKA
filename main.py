@@ -4,7 +4,7 @@ import os
 import hashlib
 from datetime import datetime, timedelta, date
 import uuid
-from PIL import Image
+from PIL import Image, ExifTags
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
@@ -13,53 +13,68 @@ from reportlab.lib.units import inch
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 
 # ================== Konfigurasi Halaman Streamlit ==================
-# Menggunakan layout "wide" agar lebih banyak informasi bisa tampil, terutama untuk data_editor
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== CSS Kustom untuk Tampilan ==================
-# Memberikan tampilan modern dan profesional
 st.markdown(
     """
     <style>
-        /* Mengubah latar belakang utama aplikasi */
+        /* Latar belakang utama aplikasi dengan gradient gelap */
         .stApp {
-            background: #f0f2f6; /* Warna abu-abu terang yang netral */
-            color: #333; /* Warna teks gelap agar mudah dibaca */
+            background: linear-gradient(to bottom right, #0F172A, #1E293B);
+            color: #E2E8F0; /* Warna teks abu-abu terang */
         }
-        /* Style untuk judul utama */
-        .stApp h1 {
-            color: #1E3A8A; /* Biru tua untuk judul, memberikan kesan korporat */
+
+        /* Warna untuk judul utama dan sub-judul */
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+            color: #FFFFFF; /* Putih untuk kontras */
         }
-        /* Style untuk tombol */
+
+        /* Sidebar dengan warna dasar gelap yang konsisten */
+        [data-testid="stSidebar"] {
+            background-color: #0F172A; /* Warna paling gelap dari gradient */
+            border-right: 1px solid #334155;
+        }
+        [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] .stRadio > label {
+            color: #E2E8F0;
+        }
+
+        /* Tombol dengan aksen biru cerah */
         .stButton>button {
-            border-radius: 20px;
-            border: 1px solid #1E3A8A;
-            background-color: #1E3A8A;
-            color: white;
-            transition: all 0.2s ease-in-out;
+            border-radius: 8px;
+            border: 1px solid #3B82F6;
+            background-color: transparent;
+            color: #3B82F6;
+            transition: all 0.3s ease-in-out;
+            padding: 8px 16px;
         }
         .stButton>button:hover {
-            background-color: white;
-            color: #1E3A8A;
-            border: 1px solid #1E3A8A;
-        }
-        /* Style untuk sidebar */
-        [data-testid="stSidebar"] {
-            background-color: #1E3A8A;
-        }
-        [data-testid="stSidebar"] .stMarkdown {
+            background-color: #3B82F6;
             color: white;
+            border: 1px solid #3B82F6;
+            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
         }
-        [data-testid="stSidebar"] .stRadio > label {
+        .stButton>button:focus {
+            background-color: #2563EB;
             color: white;
+            border-color: #2563EB;
+            box-shadow: none;
         }
+        
+        /* Memberikan style pada form login agar lebih menonjol */
+        [data-testid="stForm"] {
+            background-color: #1E293B;
+            border: 1px solid #334155;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # ================== Inisialisasi Awal ==================
-# Menentukan path folder dan file data
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATA_FILE = "monitoring_data.csv"
@@ -74,7 +89,6 @@ def load_data():
     """Memuat data dari file CSV. Jika file tidak ada, buat DataFrame kosong."""
     try:
         df = pd.read_csv(DATA_FILE, parse_dates=["Tanggal"])
-        # Pastikan semua kolom yang dibutuhkan ada untuk mencegah error
         required_cols = ["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"]
         for col in required_cols:
             if col not in df.columns:
@@ -82,7 +96,6 @@ def load_data():
         return df
     except FileNotFoundError:
         return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"])
-
 
 def save_data(df):
     """Menyimpan DataFrame ke file CSV."""
@@ -101,33 +114,54 @@ def generate_next_id(df, jenis):
     if relevant_ids.empty:
         return f"{prefix}-001"
     
-    # Ekstrak nomor dari ID, konversi ke integer, dan cari nilai maksimal
     max_num = relevant_ids['ID'].str.split('-').str[1].astype(int).max()
     next_num = max_num + 1
     return f"{prefix}-{next_num:03d}"
 
+# --- FUNGSI BARU: Untuk memperbaiki orientasi gambar ---
+def fix_image_orientation(image):
+    """Membaca data EXIF dan memutar gambar sesuai orientasinya."""
+    try:
+        # Cari tag orientasi di data EXIF
+        for orientation in ExifTags.TAGS.keys():
+            if ExifTags.TAGS[orientation] == 'Orientation':
+                break
+        
+        exif = image._getexif()
+
+        if exif is not None:
+            orientation_val = exif.get(orientation)
+            # Putar gambar berdasarkan nilai orientasi
+            if orientation_val == 3:
+                image = image.rotate(180, expand=True)
+            elif orientation_val == 6:
+                image = image.rotate(270, expand=True)
+            elif orientation_val == 8:
+                image = image.rotate(90, expand=True)
+    except (AttributeError, KeyError, IndexError):
+        # Jika tidak ada data EXIF atau terjadi error, kembalikan gambar asli
+        pass
+    return image
+
 def create_pdf_report(filtered_data):
     """Menciptakan laporan PDF dari data yang difilter."""
     file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    doc = SimpleDocTemplate(file_path, pagesize=A4,
-                            rightMargin=30, leftMargin=30,
-                            topMargin=40, bottomMargin=30)
+    doc = SimpleDocTemplate(file_path, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
 
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=16, leading=22, spaceAfter=20, fontName='Helvetica-Bold'))
     styles.add(ParagraphStyle(name='SubTitle', alignment=TA_LEFT, fontSize=12, leading=16, spaceAfter=10, fontName='Helvetica-Bold'))
-    styles.add(ParagraphStyle(name='NormalLeft', alignment=TA_LEFT, fontSize=10, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='NormalLeft', alignment=TA_LEFT, fontSize=10, leading=14, fontName='Helvetica'))
 
     elements = []
     
-    # Menambahkan Kop Laporan
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
-            header_data = [[RLImage(logo_path, width=0.8*inch, height=0.8*inch), 
-                            Paragraph("<b>PT PLN NUSANTARA POWER SERVICES</b><br/><b>PLTU BANGKA UNIT 1 & 2</b>", styles['NormalLeft'])]]
+            header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
+            header_data = [[RLImage(logo_path, width=0.8*inch, height=0.8*inch), Paragraph(header_text, styles['NormalLeft'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
-            header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
+            header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
             elements.append(header_table)
             elements.append(Spacer(1, 20))
     except Exception as e:
@@ -148,28 +182,35 @@ def create_pdf_report(filtered_data):
             ["Keterangan", Paragraph(f": {row.get('Keterangan', 'N/A')}", styles['NormalLeft'])],
         ]
         table = Table(data, colWidths=[120, 360])
-        table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 2),
-        ]))
+        table.setStyle(TableStyle([('ALIGN', (0, 0), (0, -1), 'LEFT'), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'), ('BOTTOMPADDING', (0, 0), (-1, -1), 6), ('TOPPADDING', (0, 0), (-1, -1), 2)]))
         elements.append(table)
         elements.append(Spacer(1, 10))
 
-        # Menambahkan gambar evidence
         img_data, col_widths, title_row, img_row = [], [], [], []
         ev_before_path = str(row.get("Evidance", ""))
         ev_after_path = str(row.get("Evidance After", ""))
         
-        if os.path.exists(ev_before_path):
+        # --- PERUBAHAN: Terapkan perbaikan orientasi pada gambar ---
+        def process_image(path):
+            if os.path.exists(path):
+                try:
+                    img = Image.open(path)
+                    img = fix_image_orientation(img) # Panggil fungsi perbaikan
+                    return RLImage(img, width=3*inch, height=2.25*inch, kind='bound')
+                except Exception:
+                    return None
+            return None
+
+        img_before = process_image(ev_before_path)
+        img_after = process_image(ev_after_path)
+
+        if img_before:
             title_row.append(Paragraph("<b>Evidence Before</b>", styles['SubTitle']))
-            img_row.append(RLImage(ev_before_path, width=3*inch, height=2.25*inch, kind='bound'))
+            img_row.append(img_before)
             col_widths.append(3*inch)
-        if os.path.exists(ev_after_path):
+        if img_after:
             title_row.append(Paragraph("<b>Evidence After</b>", styles['SubTitle']))
-            img_row.append(RLImage(ev_after_path, width=3*inch, height=2.25*inch, kind='bound'))
+            img_row.append(img_after)
             col_widths.append(3*inch)
 
         if img_row:
@@ -304,23 +345,18 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
     
-    # --- PENAMBAHAN FITUR: FILTER INTERAKTIF ---
     st.write("Gunakan filter di bawah untuk mencari data spesifik.")
     
-    # Ambil data dari session state
     data_to_display = st.session_state.data.copy()
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        # Filter berdasarkan Jenis Pekerjaan
         jenis_options = ["Semua"] + list(data_to_display["Jenis"].unique())
         filter_jenis = st.selectbox("Saring berdasarkan Jenis:", jenis_options)
     with col2:
-        # Filter berdasarkan Status
         status_options = ["Semua"] + list(data_to_display["Status"].unique())
         filter_status = st.selectbox("Saring berdasarkan Status:", status_options)
 
-    # Terapkan filter ke DataFrame
     if filter_jenis != "Semua":
         data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
     if filter_status != "Semua":
@@ -341,21 +377,16 @@ elif menu == "Manajemen & Laporan Data":
         "ID": st.column_config.TextColumn("ID", disabled=True),
     }
 
-    # Tampilkan data yang sudah difilter di data_editor
     edited_data = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic",
                                 key="data_editor", use_container_width=True,
                                 column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
-    # Logika untuk menyimpan perubahan
-    # Cek apakah ada perubahan antara data yang ditampilkan dengan data yang sudah diedit
     if not edited_data.equals(data_to_display):
         if st.session_state.user == 'admin':
-            # Gabungkan perubahan dari data yang diedit kembali ke data utama (session_state)
-            # Ini penting karena edited_data mungkin hanya tampilan yang sudah difilter
             st.session_state.data.set_index('ID', inplace=True)
             edited_data.set_index('ID', inplace=True)
             st.session_state.data.update(edited_data)
-            st.session_state.data.reset_index(inplace=True) # Kembalikan ID sebagai kolom
+            st.session_state.data.reset_index(inplace=True)
             
             save_data(st.session_state.data)
             st.toast("Perubahan telah disimpan!", icon="✅")
@@ -377,7 +408,6 @@ elif menu == "Manajemen & Laporan Data":
             export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance"], key="pdf_export_type")
 
             if st.button("Buat Laporan PDF"):
-                # Gunakan data lengkap dari session_state untuk export, bukan data yang difilter di tabel
                 report_data = st.session_state.data.copy()
                 report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
                 
@@ -401,4 +431,3 @@ elif menu == "Manajemen & Laporan Data":
             csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
             st.download_button("Download Data CSV", data=csv_data,
                                 file_name="monitoring_data_lengkap.csv", mime="text/csv")
-
