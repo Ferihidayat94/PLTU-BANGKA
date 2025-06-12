@@ -179,20 +179,17 @@ elif menu == "Export PDF":
         if filtered_data.empty:
             st.warning("Data tidak ditemukan.")
         else:
-
-
-
-file_path = "laporan_monitoring.pdf"
-doc = SimpleDocTemplate(file_path, pagesize=A4,
+            file_path = "laporan_monitoring.pdf"
+            doc = SimpleDocTemplate(file_path, pagesize=A4,
                         rightMargin=30, leftMargin=30,
                         topMargin=40, bottomMargin=30)
 
-styles = getSampleStyleSheet()
-styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
+            styles = getSampleStyleSheet()
+            styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
 
-elements = []
-elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles["TitleCenter"]))
-elements.append(Spacer(1, 12))
+            elements = []
+            elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles["TitleCenter"]))
+            elements.append(Spacer(1, 12))
 
 for i, row in filtered_data.iterrows():
     data = [
