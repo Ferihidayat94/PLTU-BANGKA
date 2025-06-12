@@ -16,63 +16,76 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== CSS Kustom untuk Tampilan ==================
+# --- PERUBAHAN: Desain Elegan dan Profesional ---
 st.markdown(
     """
     <style>
-        /* Latar belakang utama aplikasi dengan gradient gelap */
+        /* Mengatur font utama aplikasi */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        html, body, [class*="st-"] {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Latar belakang utama yang bersih */
         .stApp {
-            background: linear-gradient(to bottom right, #0F172A, #1E293B);
-            color: #E2E8F0; /* Warna teks abu-abu terang */
+            background-color: #F8F9FA; /* Warna off-white yang lembut */
+            color: #212529; /* Warna teks gelap untuk kontras tinggi */
         }
 
-        /* Warna untuk judul utama dan sub-judul */
-        .stApp h1, .stApp h2, .stApp h3, .stApp h4 {
-            color: #FFFFFF; /* Putih untuk kontras */
-        }
-
-        /* Sidebar dengan warna dasar gelap yang konsisten */
-        [data-testid="stSidebar"] {
-            background-color: #0F172A; /* Warna paling gelap dari gradient */
-            border-right: 1px solid #334155;
-        }
-        [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] .stRadio > label {
-            color: #E2E8F0;
-        }
-
-        /* Tombol dengan aksen biru cerah */
-        .stButton>button {
-            border-radius: 8px;
-            border: 1px solid #3B82F6;
-            background-color: transparent;
-            color: #3B82F6;
-            transition: all 0.3s ease-in-out;
-            padding: 8px 16px;
-        }
-        .stButton>button:hover {
-            background-color: #3B82F6;
-            color: white;
-            border: 1px solid #3B82F6;
-            box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
-        }
-        .stButton>button:focus {
-            background-color: #2563EB;
-            color: white;
-            border-color: #2563EB;
-            box-shadow: none;
+        /* Judul dengan warna biru korporat */
+        .stApp h1, .stApp h2, .stApp h3 {
+            color: #0d3b66; /* Biru tua yang elegan */
         }
         
-        /* Memberikan style pada form login agar lebih menonjol */
-        [data-testid="stForm"] {
-            background-color: #1E293B;
-            border: 1px solid #334155;
-            padding: 20px;
+        /* Sidebar dengan desain bersih */
+        [data-testid="stSidebar"] {
+            background-color: #FFFFFF;
+            border-right: 1px solid #DEE2E6;
+        }
+        [data-testid="stSidebar"] .stMarkdown h1, [data-testid="stSidebar"] .stMarkdown h2 {
+            color: #0d3b66;
+        }
+         [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] .stRadio > label {
+            color: #495057; /* Abu-abu gelap untuk teks sidebar */
+        }
+
+        /* Tombol yang lebih halus dan modern */
+        .stButton>button {
+            font-weight: 600;
+            border-radius: 8px;
+            border: 1px solid #0d3b66;
+            background-color: #0d3b66;
+            color: #FFFFFF;
+            transition: all 0.2s ease-in-out;
+            padding: 10px 24px;
+        }
+        .stButton>button:hover {
+            background-color: #FFFFFF;
+            color: #0d3b66;
+        }
+        .stButton>button:focus {
+            box-shadow: 0 0 0 3px rgba(13, 59, 102, 0.25);
+            border-color: #0d3b66;
+        }
+        
+        /* Styling untuk form dan expander agar konsisten */
+        [data-testid="stForm"], [data-testid="stExpander"] {
+            border: 1px solid #DEE2E6;
             border-radius: 10px;
+            background-color: #FFFFFF;
+        }
+        
+        /* Garis pemisah yang lebih halus */
+        hr {
+            border-top: 1px solid #DEE2E6;
         }
 
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 # ================== Inisialisasi Awal ==================
 UPLOAD_FOLDER = "uploads"
@@ -118,11 +131,9 @@ def generate_next_id(df, jenis):
     next_num = max_num + 1
     return f"{prefix}-{next_num:03d}"
 
-# --- FUNGSI BARU: Untuk memperbaiki orientasi gambar ---
 def fix_image_orientation(image):
     """Membaca data EXIF dan memutar gambar sesuai orientasinya."""
     try:
-        # Cari tag orientasi di data EXIF
         for orientation in ExifTags.TAGS.keys():
             if ExifTags.TAGS[orientation] == 'Orientation':
                 break
@@ -131,7 +142,6 @@ def fix_image_orientation(image):
 
         if exif is not None:
             orientation_val = exif.get(orientation)
-            # Putar gambar berdasarkan nilai orientasi
             if orientation_val == 3:
                 image = image.rotate(180, expand=True)
             elif orientation_val == 6:
@@ -139,7 +149,6 @@ def fix_image_orientation(image):
             elif orientation_val == 8:
                 image = image.rotate(90, expand=True)
     except (AttributeError, KeyError, IndexError):
-        # Jika tidak ada data EXIF atau terjadi error, kembalikan gambar asli
         pass
     return image
 
@@ -159,9 +168,19 @@ def create_pdf_report(filtered_data):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            header_data = [[RLImage(logo_path, width=0.8*inch, height=0.8*inch), Paragraph(header_text, styles['NormalLeft'])]]
-            header_table = Table(header_data, colWidths=[1*inch, 6*inch])
-            header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
+            # --- PERUBAHAN: Menyesuaikan ukuran logo dan layout header ---
+            # Mengatur lebar logo menjadi 1.5 inci. Tinggi akan disesuaikan otomatis
+            logo_img = RLImage(logo_path, width=1.5*inch)
+            logo_img.hAlign = 'CENTER' # Pusatkan gambar di dalam sel tabel
+
+            header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
+            
+            # Menyesuaikan lebar kolom untuk mengakomodasi logo yang lebih besar
+            header_table = Table(header_data, colWidths=[1.7*inch, 5.3*inch])
+            header_table.setStyle(TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), 
+                ('LEFTPADDING', (1,0), (1,0), 0)
+            ]))
             elements.append(header_table)
             elements.append(Spacer(1, 20))
     except Exception as e:
@@ -190,14 +209,19 @@ def create_pdf_report(filtered_data):
         ev_before_path = str(row.get("Evidance", ""))
         ev_after_path = str(row.get("Evidance After", ""))
         
-        # --- PERUBAHAN: Terapkan perbaikan orientasi pada gambar ---
-        def process_image(path):
-            if os.path.exists(path):
+        def process_image(relative_path):
+            if not relative_path or pd.isna(relative_path):
+                return None
+            
+            absolute_path = os.path.abspath(relative_path)
+
+            if os.path.exists(absolute_path):
                 try:
-                    img = Image.open(path)
-                    img = fix_image_orientation(img) # Panggil fungsi perbaikan
+                    img = Image.open(absolute_path)
+                    img = fix_image_orientation(img)
                     return RLImage(img, width=3*inch, height=2.25*inch, kind='bound')
-                except Exception:
+                except Exception as e:
+                    print(f"Error processing image {absolute_path}: {e}")
                     return None
             return None
 
@@ -244,7 +268,7 @@ if st.session_state.logged_in:
 
 # ================== Halaman Login ==================
 if not st.session_state.logged_in:
-    col1, col2, col3 = st.columns([1,2,1])
+    col1, col2, col3 = st.columns([1,1.5,1]) # Memberi ruang lebih untuk form
     with col2:
         st.title("Login Sistem Monitoring")
         try:
@@ -259,8 +283,10 @@ if not st.session_state.logged_in:
         }
         
         with st.form("login_form"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
+            st.markdown("### Silakan Masuk")
+            username = st.text_input("Username", placeholder="e.g., admin")
+            password = st.text_input("Password", type="password", placeholder="••••••••")
+            st.markdown("---") # Garis pemisah
             submitted = st.form_submit_button("Login")
 
             if submitted:
@@ -285,11 +311,12 @@ with st.sidebar:
         
     menu = st.radio("Pilih Menu:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
     
+    st.markdown("<br/><br/>", unsafe_allow_html=True) # Spacer
     if st.button("Logout"):
         logout()
     
-    st.markdown("---")
-    st.info("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
 st.title("MONITORING FLM & CORRECTIVE MAINTENANCE")
 st.write("#### Produksi A PLTU Bangka")
@@ -345,22 +372,23 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
     
-    st.write("Gunakan filter di bawah untuk mencari data spesifik.")
-    
-    data_to_display = st.session_state.data.copy()
+    with st.container():
+        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
+        
+        data_to_display = st.session_state.data.copy()
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        jenis_options = ["Semua"] + list(data_to_display["Jenis"].unique())
-        filter_jenis = st.selectbox("Saring berdasarkan Jenis:", jenis_options)
-    with col2:
-        status_options = ["Semua"] + list(data_to_display["Status"].unique())
-        filter_status = st.selectbox("Saring berdasarkan Status:", status_options)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            jenis_options = ["Semua"] + list(data_to_display["Jenis"].unique())
+            filter_jenis = st.selectbox("Saring berdasarkan Jenis:", jenis_options)
+        with col2:
+            status_options = ["Semua"] + list(data_to_display["Status"].unique())
+            filter_status = st.selectbox("Saring berdasarkan Status:", status_options)
 
-    if filter_jenis != "Semua":
-        data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
-    if filter_status != "Semua":
-        data_to_display = data_to_display[data_to_display["Status"] == filter_status]
+        if filter_jenis != "Semua":
+            data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
+        if filter_status != "Semua":
+            data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
     st.markdown("---")
     
@@ -398,36 +426,30 @@ elif menu == "Manajemen & Laporan Data":
     st.markdown("---")
     st.subheader("📄 Laporan & Unduh Data")
 
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        with st.expander("**Export Laporan ke PDF**", expanded=True):
-            today = date.today()
-            export_start_date = st.date_input("Tanggal Mulai", today.replace(day=1))
-            export_end_date = st.date_input("Tanggal Akhir", today)
+    with st.expander("**Export Laporan ke PDF**"):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
+        with col2:
+            export_end_date = st.date_input("Tanggal Akhir", date.today())
+        with col3:
             export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance"], key="pdf_export_type")
 
-            if st.button("Buat Laporan PDF"):
-                report_data = st.session_state.data.copy()
-                report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
-                
-                mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
-                if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
-                final_data_to_export = report_data[mask]
+        if st.button("Buat Laporan PDF"):
+            report_data = st.session_state.data.copy()
+            report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
+            
+            mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
+            if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
+            final_data_to_export = report_data[mask]
 
-                if final_data_to_export.empty:
-                    st.warning("Tidak ada data yang ditemukan untuk rentang tanggal dan jenis yang dipilih.")
-                else:
-                    with st.spinner("Membuat file PDF..."):
-                        pdf_file = create_pdf_report(final_data_to_export)
-                    if pdf_file:
-                        st.success("Laporan PDF berhasil dibuat!")
-                        with open(pdf_file, "rb") as f:
-                            st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
+            if final_data_to_export.empty:
+                st.warning("Tidak ada data yang ditemukan untuk rentang tanggal dan jenis yang dipilih.")
+            else:
+                with st.spinner("Membuat file PDF..."):
+                    pdf_file = create_pdf_report(final_data_to_export)
+                if pdf_file:
+                    st.success("Laporan PDF berhasil dibuat!")
+                    with open(pdf_file, "rb") as f:
+                        st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
     
-    with col2:
-        with st.expander("**Unduh Data Mentah (CSV)**", expanded=True):
-            st.write("Klik tombol di bawah untuk mengunduh semua data monitoring dalam format CSV.")
-            csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
-            st.download_button("Download Data CSV", data=csv_data,
-                                file_name="monitoring_data_lengkap.csv", mime="text/csv")
