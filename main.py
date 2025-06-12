@@ -10,6 +10,8 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RL
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.styles import ParagraphStyle
 
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
@@ -177,30 +179,59 @@ elif menu == "Export PDF":
         if filtered_data.empty:
             st.warning("Data tidak ditemukan.")
         else:
-            file_path = "laporan_monitoring.pdf"
-            doc = SimpleDocTemplate(file_path, pagesize=A4)
-            elements = []
-            styles = getSampleStyleSheet()
 
-            for _, row in filtered_data.iterrows():
-                elements.append(Paragraph(f"<b>ID:</b> {row['ID']} | <b>Tanggal:</b> {row['Tanggal'].strftime('%Y-%m-%d')}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Jenis:</b> {row['Jenis']} | <b>Area:</b> {row['Area']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Nomor SR:</b> {row['Nomor SR']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Pelaksana:</b> {row['Nama Pelaksana']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Status:</b> {row['Status']}", styles["Normal"]))
-                elements.append(Paragraph(f"<b>Keterangan:</b><br/>{row['Keterangan']}", styles["Normal"]))
-                elements.append(Spacer(1, 6))
 
-                if row["Evidance"] and os.path.exists(row["Evidance"]):
-                    elements.append(Paragraph("Evidence Before:", styles["Italic"]))
-                    elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
-                if row["Evidance After"] and os.path.exists(row["Evidance After"]):
-                    elements.append(Paragraph("Evidence After:", styles["Italic"]))
-                    elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
 
-                elements.append(PageBreak())
+file_path = "laporan_monitoring.pdf"
+doc = SimpleDocTemplate(file_path, pagesize=A4,
+                        rightMargin=30, leftMargin=30,
+                        topMargin=40, bottomMargin=30)
 
-            doc.build(elements)
+styles = getSampleStyleSheet()
+styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
+
+elements = []
+elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles["TitleCenter"]))
+elements.append(Spacer(1, 12))
+
+for i, row in filtered_data.iterrows():
+    data = [
+        ["ID", row['ID']],
+        ["Tanggal", row['Tanggal'].strftime('%Y-%m-%d')],
+        ["Jenis", row['Jenis']],
+        ["Area", row['Area']],
+        ["Nomor SR", row['Nomor SR']],
+        ["Nama Pelaksana", row['Nama Pelaksana']],
+        ["Status", row['Status']],
+        ["Keterangan", row['Keterangan']],
+    ]
+
+    table = Table(data, colWidths=[100, 380])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('BOX', (0, 0), (-1, -1), 1, colors.black),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+    ]))
+
+    elements.append(table)
+    elements.append(Spacer(1, 10))
+
+    if row["Evidance"] and os.path.exists(row["Evidance"]):
+        elements.append(Paragraph("Evidence Before:", styles["Italic"]))
+        elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
+        elements.append(Spacer(1, 6))
+    if row["Evidance After"] and os.path.exists(row["Evidance After"]):
+        elements.append(Paragraph("Evidence After:", styles["Italic"]))
+        elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
+        elements.append(Spacer(1, 10))
+
+    elements.append(PageBreak())
+
+doc.build(elements)
+
+            
             with open(file_path, "rb") as f:
                 st.download_button("Unduh PDF", f, file_name=file_path)
 
