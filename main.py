@@ -72,15 +72,17 @@ def hash_password(password):
 
 def load_data():
     """Memuat data dari file CSV. Jika file tidak ada, buat DataFrame kosong."""
-    if os.path.exists(DATA_FILE):
+    try:
         df = pd.read_csv(DATA_FILE, parse_dates=["Tanggal"])
-        # Pastikan semua kolom yang dibutuhkan ada
+        # Pastikan semua kolom yang dibutuhkan ada untuk mencegah error
         required_cols = ["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"]
         for col in required_cols:
             if col not in df.columns:
                 df[col] = pd.NA
         return df
-    return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"])
+    except FileNotFoundError:
+        return pd.DataFrame(columns=["ID", "Tanggal", "Jenis", "Area", "Nomor SR", "Nama Pelaksana", "Keterangan", "Status", "Evidance", "Evidance After"])
+
 
 def save_data(df):
     """Menyimpan DataFrame ke file CSV."""
@@ -88,15 +90,13 @@ def save_data(df):
 
 def logout():
     """Membersihkan session state untuk logout."""
-    st.session_state.clear()
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
     st.rerun()
 
-# --- PERUBAHAN 1: Fungsi baru untuk ID yang lebih andal ---
-# Fungsi ini mencegah ID duplikat jika ada data yang dihapus.
 def generate_next_id(df, jenis):
     """Membuat ID unik berikutnya berdasarkan jenis (FLM/CM) dan nomor terakhir."""
     prefix = 'FLM' if jenis == 'FLM' else 'CM'
-    # Filter data berdasarkan prefix
     relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]
     if relevant_ids.empty:
         return f"{prefix}-001"
@@ -108,7 +108,7 @@ def generate_next_id(df, jenis):
 
 def create_pdf_report(filtered_data):
     """Menciptakan laporan PDF dari data yang difilter."""
-    file_path = "laporan_monitoring.pdf"
+    file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(file_path, pagesize=A4,
                             rightMargin=30, leftMargin=30,
                             topMargin=40, bottomMargin=30)
@@ -124,9 +124,8 @@ def create_pdf_report(filtered_data):
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
-             # Membuat tabel untuk kop surat (logo dan teks)
             header_data = [[RLImage(logo_path, width=0.8*inch, height=0.8*inch), 
-                            Paragraph("<b>PT PLN NUSANTARA POWER SERVICES</b><br/>UNIT PLTU BANGKA</b>", styles['NormalLeft'])]]
+                            Paragraph("<b>PT PLN (PERSERO)</b><br/>UNIT INDUK PEMBANGKITAN SUMATERA BAGIAN SELATAN<br/>UNIT PELAKSANA PEMBANGKITAN BANGKA BELITUNG<br/><b>PLTU BANGKA UNIT 1 & 2</b>", styles['NormalLeft'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
             elements.append(header_table)
@@ -138,7 +137,6 @@ def create_pdf_report(filtered_data):
     elements.append(Spacer(1, 12))
 
     for i, row in filtered_data.iterrows():
-        # Membuat tabel data untuk setiap entri
         data = [
             ["ID Laporan", f": {row.get('ID', 'N/A')}"],
             ["Tanggal", f": {pd.to_datetime(row.get('Tanggal')).strftime('%d %B %Y')}"],
@@ -149,7 +147,6 @@ def create_pdf_report(filtered_data):
             ["Status", f": {row.get('Status', 'N/A')}"],
             ["Keterangan", Paragraph(f": {row.get('Keterangan', 'N/A')}", styles['NormalLeft'])],
         ]
-
         table = Table(data, colWidths=[120, 360])
         table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (0, -1), 'LEFT'),
@@ -162,44 +159,34 @@ def create_pdf_report(filtered_data):
         elements.append(Spacer(1, 10))
 
         # Menambahkan gambar evidence
-        img_data = []
-        ev_before_path = row.get("Evidance")
-        ev_after_path = row.get("Evidance After")
+        img_data, col_widths, title_row, img_row = [], [], [], []
+        ev_before_path = str(row.get("Evidance", ""))
+        ev_after_path = str(row.get("Evidance After", ""))
         
-        col_widths = []
-        img_row = []
-
-        if ev_before_path and os.path.exists(str(ev_before_path)):
-            img_row.append(RLImage(str(ev_before_path), width=3*inch, height=2.25*inch))
+        if os.path.exists(ev_before_path):
+            title_row.append(Paragraph("<b>Evidence Before</b>", styles['SubTitle']))
+            img_row.append(RLImage(ev_before_path, width=3*inch, height=2.25*inch, kind='bound'))
             col_widths.append(3*inch)
-        
-        if ev_after_path and os.path.exists(str(ev_after_path)):
-            img_row.append(RLImage(str(ev_after_path), width=3*inch, height=2.25*inch))
+        if os.path.exists(ev_after_path):
+            title_row.append(Paragraph("<b>Evidence After</b>", styles['SubTitle']))
+            img_row.append(RLImage(ev_after_path, width=3*inch, height=2.25*inch, kind='bound'))
             col_widths.append(3*inch)
 
         if img_row:
-            # Tabel untuk judul gambar
-            title_row = []
-            if ev_before_path and os.path.exists(str(ev_before_path)):
-                title_row.append(Paragraph("<b>Evidence Before</b>", styles['SubTitle']))
-            if ev_after_path and os.path.exists(str(ev_after_path)):
-                 title_row.append(Paragraph("<b>Evidence After</b>", styles['SubTitle']))
-
             img_data.append(title_row)
             img_data.append(img_row)
-            
             img_table = Table(img_data, colWidths=col_widths)
             img_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'TOP')]))
             elements.append(img_table)
             elements.append(Spacer(1, 20))
-
         elements.append(PageBreak())
 
-    doc.build(elements)
-    return file_path
+    if elements:
+        doc.build(elements)
+        return file_path
+    return None
 
 # ================== Inisialisasi Session State ==================
-# Dilakukan sekali saat aplikasi pertama kali dijalankan atau setelah logout
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user = None
@@ -209,8 +196,9 @@ if "logged_in" not in st.session_state:
 # ================== Manajemen Sesi & Logout Otomatis ==================
 if st.session_state.logged_in:
     if datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
-        st.warning("Sesi Anda telah berakhir karena tidak ada aktivitas. Silakan login kembali.")
         logout()
+        st.warning("Sesi Anda telah berakhir karena tidak ada aktivitas. Silakan login kembali.")
+        st.stop()
     st.session_state.last_activity = datetime.now()
 
 # ================== Halaman Login ==================
@@ -224,7 +212,6 @@ if not st.session_state.logged_in:
         except FileNotFoundError:
             st.error("File `logo.png` tidak ditemukan.")
 
-        # Kredensial login bisa dari st.secrets untuk deployment
         ADMIN_CREDENTIALS = {
             "admin": hash_password(st.secrets.get("ADMIN_PASSWORD", "pltubangka")),
             "operator": hash_password(st.secrets.get("OPERATOR_PASSWORD", "op123")),
@@ -243,19 +230,17 @@ if not st.session_state.logged_in:
                     st.rerun()
                 else:
                     st.error("Username atau password salah.")
-    st.stop() # Menghentikan eksekusi script sampai login berhasil
+    st.stop()
 
 # ================== Tampilan Utama Setelah Login ==================
-
-# --- Sidebar Navigasi ---
 with st.sidebar:
     st.title("Menu Navigasi")
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try:
         logo = Image.open("logo.png")
-        st.image(logo, use_column_width=True)
+        st.image(logo, use_container_width=True) 
     except FileNotFoundError:
-        pass
+        st.info("logo.png tidak ditemukan.")
         
     menu = st.radio("Pilih Menu:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
     
@@ -265,12 +250,10 @@ with st.sidebar:
     st.markdown("---")
     st.info("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-# --- Konten Halaman ---
 st.title("MONITORING FLM & CORRECTIVE MAINTENANCE")
 st.write("#### Produksi A PLTU Bangka")
 st.markdown("---")
 
-# --- Menu: Input Data ---
 if menu == "Input Data":
     st.header("📋 Input Data Pekerjaan Baru")
     with st.form("input_form", clear_on_submit=True):
@@ -299,44 +282,54 @@ if menu == "Input Data":
             if not all([nomor_sr, nama_pelaksana, keterangan]):
                 st.error("Mohon isi semua field yang wajib: Nomor SR, Nama Pelaksana, dan Keterangan.")
             else:
-                # Proses penyimpanan file evidence
-                evidance_path = ""
+                evidance_path, evidance_after_path = "", ""
                 if evidance_file:
                     ext = os.path.splitext(evidance_file.name)[1]
                     evidance_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}{ext}")
-                    with open(evidance_path, "wb") as f:
-                        f.write(evidance_file.getbuffer())
-
-                evidance_after_path = ""
+                    with open(evidance_path, "wb") as f: f.write(evidance_file.getbuffer())
                 if evidance_after_file:
                     ext = os.path.splitext(evidance_after_file.name)[1]
                     evidance_after_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}{ext}")
-                    with open(evidance_after_path, "wb") as f:
-                        f.write(evidance_after_file.getbuffer())
+                    with open(evidance_after_path, "wb") as f: f.write(evidance_after_file.getbuffer())
 
-                # Membuat ID baru yang andal
                 new_id = generate_next_id(st.session_state.data, jenis)
-                
-                new_row = pd.DataFrame([{
-                    "ID": new_id, "Tanggal": pd.to_datetime(tanggal), "Jenis": jenis, "Area": area, 
-                    "Nomor SR": nomor_sr, "Nama Pelaksana": nama_pelaksana, "Keterangan": keterangan, 
-                    "Status": status, "Evidance": evidance_path, "Evidance After": evidance_after_path
-                }])
+                new_row = pd.DataFrame([{"ID": new_id, "Tanggal": pd.to_datetime(tanggal), "Jenis": jenis, "Area": area, 
+                                        "Nomor SR": nomor_sr, "Nama Pelaksana": nama_pelaksana, "Keterangan": keterangan, 
+                                        "Status": status, "Evidance": evidance_path, "Evidance After": evidance_after_path}])
                 
                 st.session_state.data = pd.concat([st.session_state.data, new_row], ignore_index=True)
                 save_data(st.session_state.data)
                 st.success(f"Data dengan ID '{new_id}' berhasil disimpan!")
 
-
-# --- Menu: Manajemen & Laporan Data ---
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
     
-    # --- PERUBAHAN 2: Mengganti st.dataframe dengan st.data_editor ---
-    # Ini adalah cara modern untuk menampilkan, mengedit, dan menghapus data.
-    st.info("Anda dapat mengedit data langsung di tabel di bawah ini. Untuk menghapus baris, tandai baris dan tekan tombol 'delete' di keyboard Anda.")
+    # --- PENAMBAHAN FITUR: FILTER INTERAKTIF ---
+    st.write("Gunakan filter di bawah untuk mencari data spesifik.")
     
-    # Konfigurasi kolom agar lebih interaktif
+    # Ambil data dari session state
+    data_to_display = st.session_state.data.copy()
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        # Filter berdasarkan Jenis Pekerjaan
+        jenis_options = ["Semua"] + list(data_to_display["Jenis"].unique())
+        filter_jenis = st.selectbox("Saring berdasarkan Jenis:", jenis_options)
+    with col2:
+        # Filter berdasarkan Status
+        status_options = ["Semua"] + list(data_to_display["Status"].unique())
+        filter_status = st.selectbox("Saring berdasarkan Status:", status_options)
+
+    # Terapkan filter ke DataFrame
+    if filter_jenis != "Semua":
+        data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
+    if filter_status != "Semua":
+        data_to_display = data_to_display[data_to_display["Status"] == filter_status]
+        
+    st.markdown("---")
+    
+    st.info("Anda dapat mengedit data langsung di tabel di bawah. Perubahan akan disimpan otomatis jika Anda adalah admin.")
+    
     column_config = {
         "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"),
         "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance"]),
@@ -345,38 +338,32 @@ elif menu == "Manajemen & Laporan Data":
         "Keterangan": st.column_config.TextColumn("Keterangan", width="large"),
         "Evidance": st.column_config.ImageColumn("Evidence Before", help="Klik untuk memperbesar"),
         "Evidance After": st.column_config.ImageColumn("Evidence After", help="Klik untuk memperbesar"),
-        # Sembunyikan kolom ID karena tidak untuk diedit pengguna
         "ID": st.column_config.TextColumn("ID", disabled=True),
     }
 
-    # Menampilkan data editor. Kunci "data_editor" digunakan untuk mendeteksi perubahan.
-    edited_data = st.data_editor(
-        st.session_state.data,
-        column_config=column_config,
-        num_rows="dynamic",  # Memungkinkan pengguna menambah dan menghapus baris
-        key="data_editor",
-        use_container_width=True,
-        # Mengatur urutan kolom agar lebih logis
-        column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
-    )
+    # Tampilkan data yang sudah difilter di data_editor
+    edited_data = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic",
+                                key="data_editor", use_container_width=True,
+                                column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
-    # Logika untuk menyimpan perubahan dari data_editor
-    # `st.session_state.data_editor` akan berisi status editor (baris yang diedit, ditambah, dihapus)
-    if "data_editor" in st.session_state:
-        # Cek apakah ada perubahan
-        if len(edited_data) != len(st.session_state.data) or not edited_data.equals(st.session_state.data):
-             # Hanya admin yang bisa mengedit/menghapus
-            if st.session_state.user == 'admin':
-                st.session_state.data = edited_data.copy()
-                save_data(st.session_state.data)
-                st.toast("Perubahan telah disimpan!", icon="✅")
-            else:
-                 st.warning("Hanya 'admin' yang dapat mengedit atau menghapus data.")
-                 # Kembalikan ke state semula jika bukan admin
-                 st.rerun()
+    # Logika untuk menyimpan perubahan
+    # Cek apakah ada perubahan antara data yang ditampilkan dengan data yang sudah diedit
+    if not edited_data.equals(data_to_display):
+        if st.session_state.user == 'admin':
+            # Gabungkan perubahan dari data yang diedit kembali ke data utama (session_state)
+            # Ini penting karena edited_data mungkin hanya tampilan yang sudah difilter
+            st.session_state.data.set_index('ID', inplace=True)
+            edited_data.set_index('ID', inplace=True)
+            st.session_state.data.update(edited_data)
+            st.session_state.data.reset_index(inplace=True) # Kembalikan ID sebagai kolom
+            
+            save_data(st.session_state.data)
+            st.toast("Perubahan telah disimpan!", icon="✅")
+            st.rerun() 
+        else:
+            st.warning("Hanya 'admin' yang dapat mengedit atau menghapus data.")
+            st.rerun()
 
-
-    # --- Bagian Laporan dan Unduh ---
     st.markdown("---")
     st.subheader("📄 Laporan & Unduh Data")
 
@@ -387,41 +374,31 @@ elif menu == "Manajemen & Laporan Data":
             today = date.today()
             export_start_date = st.date_input("Tanggal Mulai", today.replace(day=1))
             export_end_date = st.date_input("Tanggal Akhir", today)
-            export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance"])
+            export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance"], key="pdf_export_type")
 
             if st.button("Buat Laporan PDF"):
-                # Filter data berdasarkan rentang tanggal dan jenis
-                filtered_data = st.session_state.data.copy()
-                filtered_data["Tanggal"] = pd.to_datetime(filtered_data["Tanggal"])
+                # Gunakan data lengkap dari session_state untuk export, bukan data yang difilter di tabel
+                report_data = st.session_state.data.copy()
+                report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
                 
-                mask = (filtered_data["Tanggal"].dt.date >= export_start_date) & \
-                       (filtered_data["Tanggal"].dt.date <= export_end_date)
-                
-                if export_type != "Semua":
-                    mask &= (filtered_data["Jenis"] == export_type)
-                
-                final_data_to_export = filtered_data[mask]
+                mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
+                if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
+                final_data_to_export = report_data[mask]
 
                 if final_data_to_export.empty:
                     st.warning("Tidak ada data yang ditemukan untuk rentang tanggal dan jenis yang dipilih.")
                 else:
                     with st.spinner("Membuat file PDF..."):
                         pdf_file = create_pdf_report(final_data_to_export)
-                    st.success("Laporan PDF berhasil dibuat!")
-                    with open(pdf_file, "rb") as f:
-                        st.download_button(
-                            "Unduh Laporan PDF", f, 
-                            file_name=f"Laporan_{export_type}_{export_start_date}_sd_{export_end_date}.pdf"
-                        )
+                    if pdf_file:
+                        st.success("Laporan PDF berhasil dibuat!")
+                        with open(pdf_file, "rb") as f:
+                            st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
     
     with col2:
         with st.expander("**Unduh Data Mentah (CSV)**", expanded=True):
             st.write("Klik tombol di bawah untuk mengunduh semua data monitoring dalam format CSV.")
             csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                "Download Data CSV",
-                data=csv_data,
-                file_name="monitoring_data_lengkap.csv",
-                mime="text/csv"
-            )
+            st.download_button("Download Data CSV", data=csv_data,
+                                file_name="monitoring_data_lengkap.csv", mime="text/csv")
 
