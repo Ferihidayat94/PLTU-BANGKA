@@ -107,6 +107,7 @@ def save_image_from_bytes(image_bytes):
         st.error(f"Gagal memproses gambar: {e}")
         return ""
 
+# --- FUNGSI PDF DIKEMBALIKAN KE VERSI AWAL YANG LEBIH SEDERHANA ---
 def create_pdf_report(filtered_data):
     file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(file_path, pagesize=A4,
@@ -115,16 +116,18 @@ def create_pdf_report(filtered_data):
 
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
+    # Menambah style untuk sub-judul gambar
     styles.add(ParagraphStyle(name='ImageTitle', fontSize=10, spaceBefore=6, spaceAfter=2))
 
 
     elements = []
     
+    # Menambahkan Kop Laporan (opsional, bisa disesuaikan lagi)
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.6*inch)
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
             header_data = [[logo_img, Paragraph(header_text, styles['Normal'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
@@ -160,6 +163,7 @@ def create_pdf_report(filtered_data):
         elements.append(table)
         elements.append(Spacer(1, 10))
         
+        # Logika menampilkan gambar, langsung dari path yang sudah divalidasi
         evidance_path = row.get("Evidance")
         if evidance_path and isinstance(evidance_path, str) and os.path.exists(evidance_path):
             elements.append(Paragraph("Evidence Before:", styles['ImageTitle']))
@@ -272,44 +276,8 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
     
-    # --- PENAMBAHAN FITUR: Upload Cepat Evidence After ---
-    with st.expander("✅ Upload Cepat Evidence After & Selesaikan Pekerjaan"):
-        # Filter pekerjaan yang masih open atau on progress
-        open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
-        if not open_jobs.empty:
-            # Buat daftar pilihan dengan format "ID - Keterangan"
-            job_options = {f"{row['ID']} - {row['Keterangan'][:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
-            
-            selected_job_display = st.selectbox("Pilih Pekerjaan yang Selesai:", list(job_options.keys()))
-            
-            uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai (Evidence After)", type=["png", "jpg", "jpeg"], key="quick_upload")
-
-            if st.button("Selesaikan Pekerjaan Ini"):
-                if selected_job_display and uploaded_evidence_after:
-                    job_id_to_update = job_options[selected_job_display]
-                    
-                    # Simpan file yang diupload
-                    evidence_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}{os.path.splitext(uploaded_evidence_after.name)[1]}")
-                    with open(evidence_path, "wb") as f:
-                        f.write(uploaded_evidence_after.getbuffer())
-                    
-                    # Cari index dari data utama dan update
-                    job_index = st.session_state.data.index[st.session_state.data['ID'] == job_id_to_update].tolist()
-                    if job_index:
-                        st.session_state.data.loc[job_index[0], 'Evidance After'] = evidence_path
-                        st.session_state.data.loc[job_index[0], 'Status'] = 'Finish'
-                        
-                        save_data(st.session_state.data)
-                        st.success(f"Pekerjaan dengan ID {job_id_to_update} telah diselesaikan!")
-                        st.rerun()
-                else:
-                    st.warning("Mohon pilih pekerjaan dan upload bukti selesai.")
-        else:
-            st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
-
-
     with st.container():
-        st.write("Gunakan filter di bawah untuk melihat data lainnya.")
+        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
         data_to_display = st.session_state.data.copy()
         col1, col2, col3 = st.columns(3)
         with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
@@ -321,19 +289,22 @@ elif menu == "Manajemen & Laporan Data":
     
     column_config = { "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"), "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance"]), "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), "Evidance": st.column_config.ImageColumn("Evidence Before"), "Evidance After": st.column_config.ImageColumn("Evidence After"), "ID": st.column_config.TextColumn("ID", disabled=True), }
     
-    st.info("Untuk mengedit data lainnya, ubah langsung di tabel dan tekan 'Simpan Perubahan'.")
+    st.info("Edit data langsung di tabel. Tekan tombol 'Simpan Perubahan' di bawah untuk menyimpan.")
     edited_data = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic", key="data_editor", use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
-    if st.button("Simpan Perubahan Tabel", type="primary"):
+    # LOGIKA PENYIMPANAN DATA EDITOR YANG PALING ANDAL
+    if st.button("Simpan Perubahan", type="primary"):
         if st.session_state.user == 'admin':
             final_df = edited_data.copy()
             
+            # 1. Pastikan semua gambar adalah path, bukan byte
             for i, row in final_df.iterrows():
                 for col in ['Evidance', 'Evidance After']:
                     if isinstance(row[col], bytes):
                         path = save_image_from_bytes(row[col])
                         final_df.loc[i, col] = path
 
+            # 2. Hasilkan ID untuk baris baru
             new_rows_mask = final_df['ID'].isna()
             if new_rows_mask.any():
                 temp_data_for_id_gen = pd.concat([st.session_state.data, final_df[new_rows_mask]], ignore_index=True)
@@ -341,20 +312,23 @@ elif menu == "Manajemen & Laporan Data":
                     jenis = final_df.loc[i, 'Jenis']
                     final_df.loc[i, 'ID'] = generate_next_id(temp_data_for_id_gen, jenis)
             
+            # 3. Gabungkan data yang sudah bersih dengan data utama
             main_data = st.session_state.data.copy()
             combined_data = pd.concat([main_data, final_df]).drop_duplicates(subset=['ID'], keep='last')
             
             final_ids = set(final_df['ID'].dropna())
             combined_data = combined_data[combined_data['ID'].isin(final_ids)]
 
+            # 4. Simpan state akhir
             st.session_state.data = combined_data.reset_index(drop=True)
             save_data(st.session_state.data)
-            st.toast("Perubahan tabel telah disimpan!", icon="✅")
+            st.toast("Perubahan telah disimpan!", icon="✅")
             st.rerun()
         else:
             st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
 
     st.markdown("---"); st.subheader("📄 Laporan & Unduh Data")
+    # Tambahkan tombol Download CSV di sini
     csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
     st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv")
 
@@ -380,3 +354,4 @@ elif menu == "Manajemen & Laporan Data":
                     st.success("Laporan PDF berhasil dibuat!")
                     with open(pdf_file, "rb") as f:
                         st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
+
