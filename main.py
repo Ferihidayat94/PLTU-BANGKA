@@ -16,7 +16,6 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== CSS Kustom untuk Tampilan ==================
-# --- PERUBAHAN: Desain Elegan dan Profesional ---
 st.markdown(
     """
     <style>
@@ -168,18 +167,10 @@ def create_pdf_report(filtered_data):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            
-            # --- PERUBAHAN: Mengembalikan ukuran logo ke ukuran normal ---
-            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
-            
+            logo_img = RLImage(logo_path, width=1*inch, height=0.8*inch)
             header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
-            
-            # Mengembalikan lebar kolom ke ukuran semula
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
-            header_table.setStyle(TableStyle([
-                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), 
-                ('LEFTPADDING', (1,0), (1,0), 0)
-            ]))
+            header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
             elements.append(header_table)
             elements.append(Spacer(1, 20))
     except Exception as e:
@@ -208,6 +199,7 @@ def create_pdf_report(filtered_data):
         ev_before_path = str(row.get("Evidance", ""))
         ev_after_path = str(row.get("Evidance After", ""))
         
+        # --- PERBAIKAN FINAL: Membuka gambar dan memberikannya langsung ke ReportLab ---
         def process_image(relative_path):
             if not relative_path or pd.isna(relative_path):
                 return None
@@ -216,13 +208,18 @@ def create_pdf_report(filtered_data):
 
             if os.path.exists(absolute_path):
                 try:
-                    img = Image.open(absolute_path)
-                    img = fix_image_orientation(img)
-                    return RLImage(img, width=3*inch, height=2.25*inch, kind='bound')
+                    # 1. Buka gambar menggunakan Pillow
+                    pil_image = Image.open(absolute_path)
+                    # 2. Perbaiki orientasinya
+                    pil_image = fix_image_orientation(pil_image)
+                    # 3. Berikan objek gambar Pillow langsung ke RLImage
+                    return RLImage(pil_image, width=3*inch, height=2.25*inch, kind='bound')
                 except Exception as e:
-                    print(f"Error processing image {absolute_path}: {e}")
+                    print(f"Error saat memproses gambar {absolute_path}: {e}")
                     return None
-            return None
+            else:
+                print(f"File gambar tidak ditemukan di path: {absolute_path}")
+                return None
 
         img_before = process_image(ev_before_path)
         img_after = process_image(ev_after_path)
