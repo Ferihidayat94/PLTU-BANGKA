@@ -62,7 +62,9 @@ def save_data(df):
 
 def logout():
     for key in list(st.session_state.keys()):
-        del st.session_state[key]
+        if key != 'data': # Keep data on logout for potential future features
+            del st.session_state[key]
+    st.session_state.logged_in = False
     st.rerun()
 
 def generate_next_id(df, jenis):
@@ -71,7 +73,12 @@ def generate_next_id(df, jenis):
     if relevant_ids.empty:
         return f"{prefix}-001"
     
-    max_num = relevant_ids['ID'].str.split('-').str[1].astype(int).max()
+    # Filter out non-numeric parts and find the max
+    numeric_parts = relevant_ids['ID'].str.split('-').str[1].dropna().astype(int)
+    if numeric_parts.empty:
+        return f"{prefix}-001"
+    
+    max_num = numeric_parts.max()
     return f"{prefix}-{max_num + 1:03d}"
 
 def fix_image_orientation(image):
@@ -79,36 +86,29 @@ def fix_image_orientation(image):
         for orientation in ExifTags.TAGS.keys():
             if ExifTags.TAGS[orientation] == 'Orientation':
                 break
-        exif = image._getexif()
-        if exif is not None:
-            orientation_val = exif.get(orientation)
-            if orientation_val == 3: image = image.rotate(180, expand=True)
-            elif orientation_val == 6: image = image.rotate(270, expand=True)
-            elif orientation_val == 8: image = image.rotate(90, expand=True)
+        exif = image.getexif()
+        orientation_val = exif.get(orientation)
+        if orientation_val == 3: image = image.rotate(180, expand=True)
+        elif orientation_val == 6: image = image.rotate(270, expand=True)
+        elif orientation_val == 8: image = image.rotate(90, expand=True)
     except Exception:
         pass
     return image
 
-# --- FUNGSI BARU DAN KRUSIAL: Memastikan semua gambar adalah file fisik ---
-def ensure_images_are_saved(df):
-    """Iterasi melalui DataFrame, menemukan gambar di memori, menyimpannya, dan memperbarui path."""
-    for i, row in df.iterrows():
-        for col in ['Evidance', 'Evidance After']:
-            cell_value = row[col]
-            # Cek jika nilai sel adalah byte (gambar dari data_editor)
-            if isinstance(cell_value, bytes):
-                try:
-                    image = Image.open(io.BytesIO(cell_value))
-                    # Gunakan format PNG untuk konsistensi
-                    new_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}.png")
-                    image.save(new_path, "PNG")
-                    # Update nilai di DataFrame dengan path string yang baru
-                    df.loc[i, col] = new_path
-                except Exception as e:
-                    print(f"Gagal menyimpan gambar dari buffer untuk baris {i}: {e}")
-                    df.loc[i, col] = "" # Gagal, set menjadi kosong
-    return df
-
+# --- FUNGSI BARU DAN KRUSIAL: Menyimpan gambar dari byte data ---
+def save_image_from_bytes(image_bytes):
+    """Menyimpan data byte gambar ke file fisik dan mengembalikan path-nya."""
+    if not isinstance(image_bytes, bytes):
+        return None # Bukan unggahan baru
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        image = fix_image_orientation(image)
+        new_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}.png")
+        image.save(new_path, "PNG")
+        return new_path
+    except Exception as e:
+        st.error(f"Gagal memproses gambar: {e}")
+        return ""
 
 def create_pdf_report(filtered_data):
     file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
@@ -124,7 +124,7 @@ def create_pdf_report(filtered_data):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.8*inch, height=0.6*inch)
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
             header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
@@ -141,26 +141,26 @@ def create_pdf_report(filtered_data):
             ["ID Laporan", f": {row.get('ID', 'N/A')}"], ["Tanggal", f": {pd.to_datetime(row.get('Tanggal')).strftime('%d %B %Y')}"],
             ["Jenis Pekerjaan", f": {row.get('Jenis', 'N/A')}"], ["Area", f": {row.get('Area', 'N/A')}"],
             ["Nomor SR", f": {row.get('Nomor SR', 'N/A')}"], ["Nama Pelaksana", f": {row.get('Nama Pelaksana', 'N/A')}"],
-            ["Status", f": {row.get('Status', 'N/A')}"], ["Keterangan", Paragraph(f": {row.get('Keterangan', 'N/A')}", styles['NormalLeft'])],
+            ["Status", f": {row.get('Status', 'N/A')}"], ["Keterangan", Paragraph(f": {str(row.get('Keterangan', ''))}", styles['NormalLeft'])],
         ]
         table = Table(data, colWidths=[120, 360])
         table.setStyle(TableStyle([('ALIGN', (0, 0), (0, -1), 'LEFT'), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'), ('BOTTOMPADDING', (0, 0), (-1, -1), 6), ('TOPPADDING', (0, 0), (-1, -1), 2)]))
         elements.append(table)
         elements.append(Spacer(1, 10))
         
-        def process_image(path):
+        def process_image_for_pdf(path):
             if isinstance(path, str) and os.path.exists(path):
                 try:
                     pil_image = Image.open(path)
                     pil_image = fix_image_orientation(pil_image)
                     return RLImage(pil_image, width=3*inch, height=2.25*inch, kind='bound')
                 except Exception as e:
-                    print(f"Error saat memproses gambar untuk PDF {path}: {e}")
+                    print(f"Error memuat gambar ke PDF {path}: {e}")
             return None
 
         img_data, col_widths, title_row, img_row = [], [], [], []
-        img_before = process_image(row.get("Evidance"))
-        img_after = process_image(row.get("Evidance After"))
+        img_before = process_image_for_pdf(row.get("Evidance"))
+        img_after = process_image_for_pdf(row.get("Evidance After"))
 
         if img_before:
             title_row.append(Paragraph("<b>Evidence Before</b>", styles['SubTitle']))
@@ -180,7 +180,7 @@ def create_pdf_report(filtered_data):
             elements.append(Spacer(1, 20))
         elements.append(PageBreak())
 
-    if elements:
+    if len(elements) > 2: # Check if there is more than just the header
         doc.build(elements)
         return file_path
     return None
@@ -192,14 +192,13 @@ if "logged_in" not in st.session_state:
     st.session_state.data = load_data()
     st.session_state.last_activity = datetime.now()
 
-if st.session_state.logged_in:
+if st.session_state.get("logged_in"):
     if datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
         logout()
         st.warning("Sesi Anda telah berakhir.")
         st.stop()
     st.session_state.last_activity = datetime.now()
-
-if not st.session_state.logged_in:
+else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
         st.title("Login Sistem Monitoring")
@@ -277,8 +276,8 @@ elif menu == "Manajemen & Laporan Data":
         st.write("Gunakan filter di bawah untuk mencari data spesifik.")
         data_to_display = st.session_state.data.copy()
         col1, col2, col3 = st.columns(3)
-        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].unique()))
-        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].unique()))
+        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
+        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].dropna().unique()))
         if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
@@ -287,27 +286,52 @@ elif menu == "Manajemen & Laporan Data":
     
     column_config = { "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"), "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance"]), "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), "Evidance": st.column_config.ImageColumn("Evidence Before"), "Evidance After": st.column_config.ImageColumn("Evidence After"), "ID": st.column_config.TextColumn("ID", disabled=True), }
     
-    edited_data_display = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic", key="data_editor", use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
+    edited_data = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic", key="data_editor", use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
-    # --- PERBAIKAN FINAL: Logika penyimpanan yang andal ---
-    if not edited_data_display.reset_index(drop=True).equals(data_to_display.reset_index(drop=True)):
+    # --- LOGIKA PENYIMPANAN DATA EDITOR YANG PALING ANDAL ---
+    if st.session_state["data_editor"]["edited_rows"] or st.session_state["data_editor"]["added_rows"] or st.session_state["data_editor"]["deleted_rows"]:
         if st.session_state.user == 'admin':
-            # 1. Proses semua gambar untuk memastikan semuanya adalah file path
-            processed_df = ensure_images_are_saved(edited_data_display)
+            # Salin data utama untuk dimodifikasi
+            current_data = st.session_state.data.copy()
+
+            # 1. Hapus baris yang ditandai untuk dihapus
+            deleted_indices = [data_to_display.index[i] for i in st.session_state["data_editor"]["deleted_rows"]]
+            if deleted_indices:
+                current_data = current_data.drop(deleted_indices)
+
+            # 2. Perbarui baris yang diedit
+            for row_index, changes in st.session_state["data_editor"]["edited_rows"].items():
+                original_df_index = data_to_display.index[row_index]
+                for col_name, new_value in changes.items():
+                    if col_name in ['Evidance', 'Evidance After'] and isinstance(new_value, bytes):
+                        path = save_image_from_bytes(new_value)
+                        current_data.loc[original_df_index, col_name] = path
+                    else:
+                        current_data.loc[original_df_index, col_name] = new_value
+
+            # 3. Tambahkan baris baru
+            new_rows_list = []
+            for new_row_dict in st.session_state["data_editor"]["added_rows"]:
+                if any(new_row_dict.values()): # Hanya tambah jika tidak kosong
+                    new_row_dict['ID'] = generate_next_id(current_data, new_row_dict.get('Jenis', 'CM'))
+                    for col in ['Evidance', 'Evidance After']:
+                        if isinstance(new_row_dict.get(col), bytes):
+                            new_row_dict[col] = save_image_from_bytes(new_row_dict[col])
+                    new_rows_list.append(new_row_dict)
             
-            # 2. Update data utama dengan data yang sudah diproses
-            # Menggunakan ID sebagai kunci untuk update yang akurat
-            main_df = st.session_state.data.set_index('ID')
-            update_df = processed_df.set_index('ID')
-            main_df.update(update_df)
-            
-            # 3. Simpan kembali data utama yang sudah diperbarui
-            st.session_state.data = main_df.reset_index()
+            if new_rows_list:
+                new_rows_df = pd.DataFrame(new_rows_list)
+                current_data = pd.concat([current_data, new_rows_df], ignore_index=True)
+
+            # 4. Simpan state akhir
+            st.session_state.data = current_data
             save_data(st.session_state.data)
+            st.session_state["data_editor"] = {"edited_rows": {}, "added_rows": [], "deleted_rows": []} # Reset state editor
             st.toast("Perubahan telah disimpan!", icon="✅")
-            st.rerun() 
+            st.rerun()
         else:
             st.warning("Hanya 'admin' yang dapat mengedit atau menghapus data.")
+            st.session_state["data_editor"] = {"edited_rows": {}, "added_rows": [], "deleted_rows": []}
             st.rerun()
 
     st.markdown("---"); st.subheader("📄 Laporan & Unduh Data")
