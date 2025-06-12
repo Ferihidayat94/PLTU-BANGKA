@@ -107,74 +107,81 @@ def save_image_from_bytes(image_bytes):
         st.error(f"Gagal memproses gambar: {e}")
         return ""
 
+# --- FUNGSI PDF DIKEMBALIKAN KE VERSI AWAL YANG LEBIH SEDERHANA ---
 def create_pdf_report(filtered_data):
     file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
-    doc = SimpleDocTemplate(file_path, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
+    doc = SimpleDocTemplate(file_path, pagesize=A4,
+                            rightMargin=30, leftMargin=30,
+                            topMargin=40, bottomMargin=30)
+
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=16, leading=22, spaceAfter=20, fontName='Helvetica-Bold'))
-    styles.add(ParagraphStyle(name='SubTitle', alignment=TA_LEFT, fontSize=12, leading=16, spaceAfter=10, fontName='Helvetica-Bold'))
-    styles.add(ParagraphStyle(name='NormalLeft', alignment=TA_LEFT, fontSize=10, leading=14, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
+    # Menambah style untuk sub-judul gambar
+    styles.add(ParagraphStyle(name='ImageTitle', fontSize=10, spaceBefore=6, spaceAfter=2))
+
 
     elements = []
     
+    # Menambahkan Kop Laporan (opsional, bisa disesuaikan lagi)
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
             logo_img = RLImage(logo_path, width=0.8*inch, height=0.6*inch)
-            header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
+            header_data = [[logo_img, Paragraph(header_text, styles['Normal'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
             elements.append(header_table)
             elements.append(Spacer(1, 20))
-    except Exception as e:
-        st.warning(f"Logo tidak bisa dimuat ke PDF: {e}")
+    except Exception:
+        pass
 
-    elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles['TitleCenter']))
+    elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles["TitleCenter"]))
     elements.append(Spacer(1, 12))
 
     for i, row in filtered_data.iterrows():
         data = [
-            ["ID Laporan", f": {row.get('ID', 'N/A')}"], ["Tanggal", f": {pd.to_datetime(row.get('Tanggal')).strftime('%d %B %Y')}"],
-            ["Jenis Pekerjaan", f": {row.get('Jenis', 'N/A')}"], ["Area", f": {row.get('Area', 'N/A')}"],
-            ["Nomor SR", f": {row.get('Nomor SR', 'N/A')}"], ["Nama Pelaksana", f": {row.get('Nama Pelaksana', 'N/A')}"],
-            ["Status", f": {row.get('Status', 'N/A')}"], ["Keterangan", Paragraph(f": {str(row.get('Keterangan', ''))}", styles['NormalLeft'])],
+            ["ID", str(row.get('ID', ''))],
+            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%Y-%m-%d')],
+            ["Jenis", str(row.get('Jenis', ''))],
+            ["Area", str(row.get('Area', ''))],
+            ["Nomor SR", str(row.get('Nomor SR', ''))],
+            ["Nama Pelaksana", str(row.get('Nama Pelaksana', ''))],
+            ["Status", str(row.get('Status', ''))],
+            ["Keterangan", Paragraph(str(row.get('Keterangan', '')), styles['Normal'])],
         ]
-        table = Table(data, colWidths=[120, 360])
-        table.setStyle(TableStyle([('ALIGN', (0, 0), (0, -1), 'LEFT'), ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'), ('BOTTOMPADDING', (0, 0), (-1, -1), 6), ('TOPPADDING', (0, 0), (-1, -1), 2)]))
+
+        table = Table(data, colWidths=[100, 380])
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ]))
+
         elements.append(table)
         elements.append(Spacer(1, 10))
         
-        def process_image_for_pdf(path):
-            if isinstance(path, str) and os.path.exists(path):
-                try:
-                    pil_image = Image.open(path)
-                    pil_image = fix_image_orientation(pil_image)
-                    return RLImage(pil_image, width=3*inch, height=2.25*inch, kind='bound')
-                except Exception as e:
-                    print(f"Error memuat gambar ke PDF {path}: {e}")
-            return None
-
-        img_data, col_widths, title_row, img_row = [], [], [], []
-        img_before = process_image_for_pdf(row.get("Evidance"))
-        img_after = process_image_for_pdf(row.get("Evidance After"))
-
-        if img_before:
-            title_row.append(Paragraph("<b>Evidence Before</b>", styles['SubTitle']))
-            img_row.append(img_before)
-            col_widths.append(3*inch)
-        if img_after:
-            title_row.append(Paragraph("<b>Evidence After</b>", styles['SubTitle']))
-            img_row.append(img_after)
-            col_widths.append(3*inch)
+        # Logika menampilkan gambar, langsung dari path yang sudah divalidasi
+        evidance_path = row.get("Evidance")
+        if evidance_path and isinstance(evidance_path, str) and os.path.exists(evidance_path):
+            elements.append(Paragraph("Evidence Before:", styles['ImageTitle']))
+            try:
+                elements.append(RLImage(evidance_path, width=4*inch, height=3*inch, kind='bound'))
+            except Exception as e:
+                print(f"Gagal memuat gambar ke PDF (Before): {e}")
+            elements.append(Spacer(1, 6))
         
-        if img_row:
-            img_data.append(title_row)
-            img_data.append(img_row)
-            img_table = Table(img_data, colWidths=col_widths)
-            img_table.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'TOP')]))
-            elements.append(img_table)
-            elements.append(Spacer(1, 20))
+        evidance_after_path = row.get("Evidance After")
+        if evidance_after_path and isinstance(evidance_after_path, str) and os.path.exists(evidance_after_path):
+            elements.append(Paragraph("Evidence After:", styles['ImageTitle']))
+            try:
+                elements.append(RLImage(evidance_after_path, width=4*inch, height=3*inch, kind='bound'))
+            except Exception as e:
+                print(f"Gagal memuat gambar ke PDF (After): {e}")
+            elements.append(Spacer(1, 10))
+
         elements.append(PageBreak())
 
     if len(elements) > 2:
@@ -285,48 +292,46 @@ elif menu == "Manajemen & Laporan Data":
     st.info("Edit data langsung di tabel. Tekan tombol 'Simpan Perubahan' di bawah untuk menyimpan.")
     edited_data = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic", key="data_editor", use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
-    # --- LOGIKA PENYIMPANAN DATA EDITOR YANG PALING ANDAL ---
+    # LOGIKA PENYIMPANAN DATA EDITOR YANG PALING ANDAL
     if st.button("Simpan Perubahan", type="primary"):
         if st.session_state.user == 'admin':
-            # Salin data utama untuk dimodifikasi
-            updated_data = st.session_state.data.copy().set_index('ID')
+            final_df = edited_data.copy()
             
-            # Ubah dataframe yang diedit menjadi format yang mudah diolah
-            edited_df = edited_data.copy().set_index('ID')
-
-            # 1. Hapus baris
-            original_ids = set(st.session_state.data['ID'])
-            edited_ids = set(edited_data['ID'].dropna())
-            deleted_ids = original_ids - edited_ids
-            if deleted_ids:
-                updated_data.drop(labels=list(deleted_ids), inplace=True)
-            
-            # 2. Perbarui baris yang ada dan tambahkan baris baru
-            for id, row in edited_df.iterrows():
-                # Proses gambar untuk setiap baris
+            # 1. Pastikan semua gambar adalah path, bukan byte
+            for i, row in final_df.iterrows():
                 for col in ['Evidance', 'Evidance After']:
                     if isinstance(row[col], bytes):
-                        row[col] = save_image_from_bytes(row[col])
-                
-                if pd.isna(id): # Baris baru
-                    new_id = generate_next_id(updated_data.reset_index(), row.get('Jenis', 'CM'))
-                    row['ID'] = new_id
-                    new_row_df = pd.DataFrame([row.values], columns=row.index, index=[new_id])
-                    updated_data = pd.concat([updated_data, new_row_df])
-                else: # Baris yang diedit
-                    updated_data.update(pd.DataFrame(row).T)
+                        path = save_image_from_bytes(row[col])
+                        final_df.loc[i, col] = path
+
+            # 2. Hasilkan ID untuk baris baru
+            new_rows_mask = final_df['ID'].isna()
+            if new_rows_mask.any():
+                temp_data_for_id_gen = pd.concat([st.session_state.data, final_df[new_rows_mask]], ignore_index=True)
+                for i in final_df[new_rows_mask].index:
+                    jenis = final_df.loc[i, 'Jenis']
+                    final_df.loc[i, 'ID'] = generate_next_id(temp_data_for_id_gen, jenis)
+            
+            # 3. Gabungkan data yang sudah bersih dengan data utama
+            main_data = st.session_state.data.copy()
+            combined_data = pd.concat([main_data, final_df]).drop_duplicates(subset=['ID'], keep='last')
+            
+            final_ids = set(final_df['ID'].dropna())
+            combined_data = combined_data[combined_data['ID'].isin(final_ids)]
 
             # 4. Simpan state akhir
-            st.session_state.data = updated_data.reset_index()
+            st.session_state.data = combined_data.reset_index(drop=True)
             save_data(st.session_state.data)
             st.toast("Perubahan telah disimpan!", icon="✅")
             st.rerun()
         else:
             st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
-            st.rerun()
-
 
     st.markdown("---"); st.subheader("📄 Laporan & Unduh Data")
+    # Tambahkan tombol Download CSV di sini
+    csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
+    st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv")
+
     with st.expander("**Export Laporan ke PDF**"):
         col1, col2, col3 = st.columns(3)
         with col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
