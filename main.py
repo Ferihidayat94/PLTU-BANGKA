@@ -191,44 +191,43 @@ elif menu == "Export PDF":
             elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles["TitleCenter"]))
             elements.append(Spacer(1, 12))
 
-for i, row in filtered_data.iterrows():
-    data = [
-        ["ID", row['ID']],
-        ["Tanggal", row['Tanggal'].strftime('%Y-%m-%d')],
-        ["Jenis", row['Jenis']],
-        ["Area", row['Area']],
-        ["Nomor SR", row['Nomor SR']],
-        ["Nama Pelaksana", row['Nama Pelaksana']],
-        ["Status", row['Status']],
-        ["Keterangan", row['Keterangan']],
-    ]
+            for i, row in filtered_data.iterrows():
+                data = [
+                    ["ID", row['ID']],
+                    ["Tanggal", row['Tanggal'].strftime('%Y-%m-%d')],
+                    ["Jenis", row['Jenis']],
+                    ["Area", row['Area']],
+                    ["Nomor SR", row['Nomor SR']],
+                    ["Nama Pelaksana", row['Nama Pelaksana']],
+                    ["Status", row['Status']],
+                    ["Keterangan", row['Keterangan']],
+                ]
 
-    table = Table(data, colWidths=[100, 380])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-        ('BOX', (0, 0), (-1, -1), 1, colors.black),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-    ]))
+                table = Table(data, colWidths=[100, 380])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                    ('BOX', (0, 0), (-1, -1), 1, colors.black),
+                    ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ]))
 
-    elements.append(table)
-    elements.append(Spacer(1, 10))
+                elements.append(table)
+                elements.append(Spacer(1, 10))
 
-    if row["Evidance"] and os.path.exists(row["Evidance"]):
-        elements.append(Paragraph("Evidence Before:", styles["Italic"]))
-        elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
-        elements.append(Spacer(1, 6))
-    if row["Evidance After"] and os.path.exists(row["Evidance After"]):
-        elements.append(Paragraph("Evidence After:", styles["Italic"]))
-        elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
-        elements.append(Spacer(1, 10))
+                if row["Evidance"] and os.path.exists(row["Evidance"]):
+                    elements.append(Paragraph("Evidence Before:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
+                    elements.append(Spacer(1, 6))
+                if row["Evidance After"] and os.path.exists(row["Evidance After"]):
+                    elements.append(Paragraph("Evidence After:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
+                    elements.append(Spacer(1, 10))
 
-    elements.append(PageBreak())
+                elements.append(PageBreak())
 
-doc.build(elements)
+            doc.build(elements)
 
-            
             with open(file_path, "rb") as f:
                 st.download_button("Unduh PDF", f, file_name=file_path)
 
