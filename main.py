@@ -126,7 +126,7 @@ def create_pdf_report(filtered_data):
         if os.path.exists(logo_path):
              # Membuat tabel untuk kop surat (logo dan teks)
             header_data = [[RLImage(logo_path, width=0.8*inch, height=0.8*inch), 
-                            Paragraph("<b>PT PLN (PERSERO)</b><br/>UNIT INDUK PEMBANGKITAN SUMATERA BAGIAN SELATAN<br/>UNIT PELAKSANA PEMBANGKITAN BANGKA BELITUNG<br/><b>PLTU BANGKA UNIT 1 & 2</b>", styles['NormalLeft'])]]
+                            Paragraph("<b>PT PLN NUSANTARA POWER SERVICES</b><br/>UNIT PLTU BANGKA</b>", styles['NormalLeft'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
             elements.append(header_table)
