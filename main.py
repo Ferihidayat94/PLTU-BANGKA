@@ -168,15 +168,14 @@ def create_pdf_report(filtered_data):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            # --- PERUBAHAN: Menyesuaikan ukuran logo dan layout header ---
-            # Mengatur lebar logo menjadi 1.5 inci. Tinggi akan disesuaikan otomatis
-            logo_img = RLImage(logo_path, width=1.5*inch)
-            logo_img.hAlign = 'CENTER' # Pusatkan gambar di dalam sel tabel
-
+            
+            # --- PERUBAHAN: Mengembalikan ukuran logo ke ukuran normal ---
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
+            
             header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
             
-            # Menyesuaikan lebar kolom untuk mengakomodasi logo yang lebih besar
-            header_table = Table(header_data, colWidths=[1.7*inch, 5.3*inch])
+            # Mengembalikan lebar kolom ke ukuran semula
+            header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([
                 ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), 
                 ('LEFTPADDING', (1,0), (1,0), 0)
