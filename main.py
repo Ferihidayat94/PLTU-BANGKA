@@ -26,6 +26,7 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # ================== Konfigurasi Streamlit ==================
 
+
 # ================== CSS untuk Tampilan ==================
 st.markdown(
     """
@@ -159,24 +160,6 @@ if menu == "Input Data":
 elif menu == "Lihat Data":
     st.subheader("Data Monitoring")
     st.dataframe(st.session_state.data)
-    selected_id = st.selectbox("Pilih ID untuk merubah status dan evidence", st.session_state.data["ID"])
-    selected_row = st.session_state.data[st.session_state.data["ID"] == selected_id]
-    if not selected_row.empty:
-        evidance_before = selected_row["Evidance"].values[0]
-        evidance_after = selected_row["Evidance After"].values[0]
-        status = selected_row["Status"].values[0]
-        if st.button("Ubah Status menjadi After dan Upload Evidence After"):
-            new_evidence_file = st.file_uploader("Upload Evidence After", type=["png", "jpg", "jpeg"])
-            if new_evidence_file:
-                ext = new_evidence_file.name.split('.')[-1]
-                new_evidence_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}.{ext}")
-                with open(new_evidence_path, "wb") as f:
-                    f.write(new_evidence_file.getbuffer())
-                st.session_state.data.loc[st.session_state.data["ID"] == selected_id, "Evidance After"] = new_evidence_path
-                st.session_state.data.loc[st.session_state.data["ID"] == selected_id, "Status"] = "Finish"
-                save_data(st.session_state.data)
-                st.success("Status dan Evidence After berhasil diubah!")
-                st.experimental_rerun()
 
 # ================== Export PDF ==================
 elif menu == "Export PDF":
@@ -233,18 +216,12 @@ elif menu == "Export PDF":
                 elements.append(Spacer(1, 10))
 
                 if row["Evidance"] and os.path.exists(row["Evidance"]):
-                    elements.append(Paragraph("Evidence:", styles["Italic"]))
-                    data = [
-                        [RLImage(row["Evidance"], width=2*inch, height=1.5*inch), RLImage(row["Evidance After"], width=2*inch, height=1.5*inch)]
-                    ]
-                    table = Table(data, colWidths=[2.5*inch, 2.5*inch])
-                    table.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                        ('BOX', (0, 0), (-1, -1), 1, colors.black),
-                        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                        ('ALIGN', (0, 0), (-1, -1), 'CENTER')
-                    ]))
-                    elements.append(table)
+                    elements.append(Paragraph("Evidence Before:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
+                    elements.append(Spacer(1, 6))
+                if row["Evidance After"] and os.path.exists(row["Evidance After"]):
+                    elements.append(Paragraph("Evidence After:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
                     elements.append(Spacer(1, 10))
 
                 elements.append(PageBreak())
