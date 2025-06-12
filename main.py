@@ -179,8 +179,6 @@ elif menu == "Export PDF":
 
             styles = getSampleStyleSheet()
             styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
-            styles.add(ParagraphStyle(name='Italic', fontSize=10, leading=12, spaceBefore=6, spaceAfter=4))
-            styles.add(ParagraphStyle(name='Center', alignment=TA_CENTER, fontSize=10, spaceBefore=2))
 
             elements = []
             elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles["TitleCenter"]))
@@ -210,33 +208,13 @@ elif menu == "Export PDF":
                 elements.append(table)
                 elements.append(Spacer(1, 10))
 
-                # Gabungkan Evidence Before & After + label
-                if (row["Evidance"] and os.path.exists(row["Evidance"])) or (row["Evidance After"] and os.path.exists(row["Evidance After"])):
-                    elements.append(Paragraph("Evidence (Before & After):", styles["Italic"]))
-                    
-                    img_row = []
-                    caption_row = []
-
-                    if row["Evidance"] and os.path.exists(row["Evidance"]):
-                        img_row.append(RLImage(row["Evidance"], width=3*inch, height=2.5*inch))
-                        caption_row.append(Paragraph("Before", styles["Center"]))
-                    else:
-                        img_row.append(Spacer(3*inch, 2.5*inch))
-                        caption_row.append(Spacer(3*inch, 0.2*inch))
-
-                    if row["Evidance After"] and os.path.exists(row["Evidance After"]):
-                        img_row.append(RLImage(row["Evidance After"], width=3*inch, height=2.5*inch))
-                        caption_row.append(Paragraph("After", styles["Center"]))
-                    else:
-                        img_row.append(Spacer(3*inch, 2.5*inch))
-                        caption_row.append(Spacer(3*inch, 0.2*inch))
-
-                    img_table = Table([img_row, caption_row], colWidths=[3*inch, 3*inch])
-                    img_table.setStyle(TableStyle([
-                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-                    ]))
-                    elements.append(img_table)
+                if row["Evidance"] and os.path.exists(row["Evidance"]):
+                    elements.append(Paragraph("Evidence Before:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance"], width=4*inch, height=3*inch))
+                    elements.append(Spacer(1, 6))
+                if row["Evidance After"] and os.path.exists(row["Evidance After"]):
+                    elements.append(Paragraph("Evidence After:", styles["Italic"]))
+                    elements.append(RLImage(row["Evidance After"], width=4*inch, height=3*inch))
                     elements.append(Spacer(1, 10))
 
                 elements.append(PageBreak())
@@ -245,7 +223,6 @@ elif menu == "Export PDF":
 
             with open(file_path, "rb") as f:
                 st.download_button("Unduh PDF", f, file_name=file_path)
-
 
 # ================== Preview Evidence ==================
 st.markdown("### Preview Evidence")
