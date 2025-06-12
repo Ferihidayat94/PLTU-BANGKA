@@ -62,7 +62,7 @@ def save_data(df):
 
 def logout():
     for key in list(st.session_state.keys()):
-        if key != 'data': # Keep data on logout for potential future features
+        if key != 'data':
             del st.session_state[key]
     st.session_state.logged_in = False
     st.rerun()
@@ -73,7 +73,6 @@ def generate_next_id(df, jenis):
     if relevant_ids.empty:
         return f"{prefix}-001"
     
-    # Filter out non-numeric parts and find the max
     numeric_parts = relevant_ids['ID'].str.split('-').str[1].dropna().astype(int)
     if numeric_parts.empty:
         return f"{prefix}-001"
@@ -95,11 +94,9 @@ def fix_image_orientation(image):
         pass
     return image
 
-# --- FUNGSI BARU DAN KRUSIAL: Menyimpan gambar dari byte data ---
 def save_image_from_bytes(image_bytes):
-    """Menyimpan data byte gambar ke file fisik dan mengembalikan path-nya."""
     if not isinstance(image_bytes, bytes):
-        return None # Bukan unggahan baru
+        return None
     try:
         image = Image.open(io.BytesIO(image_bytes))
         image = fix_image_orientation(image)
@@ -124,7 +121,7 @@ def create_pdf_report(filtered_data):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.6*inch)
             header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
@@ -180,7 +177,7 @@ def create_pdf_report(filtered_data):
             elements.append(Spacer(1, 20))
         elements.append(PageBreak())
 
-    if len(elements) > 2: # Check if there is more than just the header
+    if len(elements) > 2:
         doc.build(elements)
         return file_path
     return None
@@ -282,57 +279,52 @@ elif menu == "Manajemen & Laporan Data":
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
     st.markdown("---")
-    st.info("Anda dapat mengedit data langsung di tabel di bawah. Perubahan akan disimpan otomatis jika Anda adalah admin.")
     
     column_config = { "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"), "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance"]), "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), "Evidance": st.column_config.ImageColumn("Evidence Before"), "Evidance After": st.column_config.ImageColumn("Evidence After"), "ID": st.column_config.TextColumn("ID", disabled=True), }
     
+    st.info("Edit data langsung di tabel. Tekan tombol 'Simpan Perubahan' di bawah untuk menyimpan.")
     edited_data = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic", key="data_editor", use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
     # --- LOGIKA PENYIMPANAN DATA EDITOR YANG PALING ANDAL ---
-    if st.session_state["data_editor"]["edited_rows"] or st.session_state["data_editor"]["added_rows"] or st.session_state["data_editor"]["deleted_rows"]:
+    if st.button("Simpan Perubahan", type="primary"):
         if st.session_state.user == 'admin':
             # Salin data utama untuk dimodifikasi
-            current_data = st.session_state.data.copy()
-
-            # 1. Hapus baris yang ditandai untuk dihapus
-            deleted_indices = [data_to_display.index[i] for i in st.session_state["data_editor"]["deleted_rows"]]
-            if deleted_indices:
-                current_data = current_data.drop(deleted_indices)
-
-            # 2. Perbarui baris yang diedit
-            for row_index, changes in st.session_state["data_editor"]["edited_rows"].items():
-                original_df_index = data_to_display.index[row_index]
-                for col_name, new_value in changes.items():
-                    if col_name in ['Evidance', 'Evidance After'] and isinstance(new_value, bytes):
-                        path = save_image_from_bytes(new_value)
-                        current_data.loc[original_df_index, col_name] = path
-                    else:
-                        current_data.loc[original_df_index, col_name] = new_value
-
-            # 3. Tambahkan baris baru
-            new_rows_list = []
-            for new_row_dict in st.session_state["data_editor"]["added_rows"]:
-                if any(new_row_dict.values()): # Hanya tambah jika tidak kosong
-                    new_row_dict['ID'] = generate_next_id(current_data, new_row_dict.get('Jenis', 'CM'))
-                    for col in ['Evidance', 'Evidance After']:
-                        if isinstance(new_row_dict.get(col), bytes):
-                            new_row_dict[col] = save_image_from_bytes(new_row_dict[col])
-                    new_rows_list.append(new_row_dict)
+            updated_data = st.session_state.data.copy().set_index('ID')
             
-            if new_rows_list:
-                new_rows_df = pd.DataFrame(new_rows_list)
-                current_data = pd.concat([current_data, new_rows_df], ignore_index=True)
+            # Ubah dataframe yang diedit menjadi format yang mudah diolah
+            edited_df = edited_data.copy().set_index('ID')
+
+            # 1. Hapus baris
+            original_ids = set(st.session_state.data['ID'])
+            edited_ids = set(edited_data['ID'].dropna())
+            deleted_ids = original_ids - edited_ids
+            if deleted_ids:
+                updated_data.drop(labels=list(deleted_ids), inplace=True)
+            
+            # 2. Perbarui baris yang ada dan tambahkan baris baru
+            for id, row in edited_df.iterrows():
+                # Proses gambar untuk setiap baris
+                for col in ['Evidance', 'Evidance After']:
+                    if isinstance(row[col], bytes):
+                        row[col] = save_image_from_bytes(row[col])
+                
+                if pd.isna(id): # Baris baru
+                    new_id = generate_next_id(updated_data.reset_index(), row.get('Jenis', 'CM'))
+                    row['ID'] = new_id
+                    new_row_df = pd.DataFrame([row.values], columns=row.index, index=[new_id])
+                    updated_data = pd.concat([updated_data, new_row_df])
+                else: # Baris yang diedit
+                    updated_data.update(pd.DataFrame(row).T)
 
             # 4. Simpan state akhir
-            st.session_state.data = current_data
+            st.session_state.data = updated_data.reset_index()
             save_data(st.session_state.data)
-            st.session_state["data_editor"] = {"edited_rows": {}, "added_rows": [], "deleted_rows": []} # Reset state editor
             st.toast("Perubahan telah disimpan!", icon="✅")
             st.rerun()
         else:
-            st.warning("Hanya 'admin' yang dapat mengedit atau menghapus data.")
-            st.session_state["data_editor"] = {"edited_rows": {}, "added_rows": [], "deleted_rows": []}
+            st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
             st.rerun()
+
 
     st.markdown("---"); st.subheader("📄 Laporan & Unduh Data")
     with st.expander("**Export Laporan ke PDF**"):
