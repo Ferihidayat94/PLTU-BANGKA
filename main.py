@@ -85,9 +85,10 @@ st.markdown(
             border-bottom: none;
         }
         
-        /* --- PERUBAHAN: Menyeragamkan semua tombol --- */
+        /* --- PERUBAHAN: Menyeragamkan semua jenis tombol --- */
         div[data-testid="stButton"] > button,
-        div[data-testid="stDownloadButton"] > button {
+        div[data-testid="stDownloadButton"] > button,
+        div[data-testid="stForm"] button { /* Target SEMUA button di dalam form */
             font-weight: 600;
             border-radius: 8px;
             border: 1px solid #3498DB !important;
@@ -95,15 +96,18 @@ st.markdown(
             color: #FFFFFF !important;
             transition: all 0.3s ease-in-out;
             padding: 10px 24px;
+            width: 100%; /* Membuat tombol selebar kontainernya */
         }
         div[data-testid="stButton"] > button:hover,
-        div[data-testid="stDownloadButton"] > button:hover {
+        div[data-testid="stDownloadButton"] > button:hover,
+        div[data-testid="stForm"] button:hover {
             background-color: #3498DB !important;
             border-color: #3498DB !important;
             color: #FFFFFF !important;
         }
         div[data-testid="stButton"] > button:focus,
-        div[data-testid="stDownloadButton"] > button:focus {
+        div[data-testid="stDownloadButton"] > button:focus,
+        div[data-testid="stForm"] button:focus {
             box-shadow: 0 0 0 2px #021021, 0 0 0 4px #5dade2 !important;
         }
         /* --- AKHIR PERUBAHAN --- */
