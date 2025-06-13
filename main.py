@@ -16,7 +16,7 @@ import io
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom untuk Tampilan (Tema Biru Elegan) ==================
+# ================== CSS Kustom untuk Tampilan (Tema Futuristik) ==================
 st.markdown(
     """
     <style>
@@ -26,27 +26,31 @@ st.markdown(
             font-family: 'Inter', sans-serif;
         }
 
-        /* --- Warna & Layout Utama --- */
+        /* --- Latar Belakang Utama (Terinspirasi Gambar) --- */
         .stApp {
-            background-color: #ECF0F1; /* Latar belakang abu-abu lembut (Clouds) */
-            color: #34495E; /* Teks abu-abu gelap (Wet Asphalt) */
+            background-color: #021021; /* Fallback */
+            background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
+                              linear-gradient(to top, #062b54, #021021);
+            background-attachment: fixed;
+            color: #ECF0F1; /* Warna teks utama menjadi putih keabuan */
         }
 
         /* --- Tipografi / Teks --- */
         .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
-            color: #2C3E50; /* Biru Dongker Gelap (Midnight Blue) untuk semua judul */
+            color: #FFFFFF; /* Semua judul menjadi putih bersih */
         }
         
         h1 {
-            border-bottom: 2px solid #3498DB; /* Aksen biru cerah */
+            border-bottom: 2px solid #3498DB;
             padding-bottom: 12px;
             margin-bottom: 20px;
         }
 
         /* --- Sidebar --- */
         [data-testid="stSidebar"] {
-            background-color: #2C3E50; /* Sidebar dengan warna biru dongker */
-            border-right: none;
+            background-color: rgba(2, 16, 33, 0.8); /* Biru sangat gelap semi-transparan */
+            backdrop-filter: blur(5px);
+            border-right: 1px solid rgba(52, 152, 219, 0.3);
         }
         [data-testid="stSidebar"] .stMarkdown, 
         [data-testid="stSidebar"] .stRadio > label {
@@ -67,8 +71,9 @@ st.markdown(
 
         /* --- Halaman Login --- */
         .login-container [data-testid="stForm"] {
-            background-color: #2C3E50;
-            border: 1px solid #2C3E50;
+            background-color: rgba(44, 62, 80, 0.7); /* Latar form login semi-transparan */
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(52, 152, 219, 0.5);
             padding: 2rem;
             border-radius: 10px;
         }
@@ -76,8 +81,8 @@ st.markdown(
             color: #FFFFFF;
             text-align: center;
             border-bottom: none;
-            font-size: 2.2rem; /* PERUBAHAN: Ukuran font diperkecil */
-            white-space: nowrap; /* PERUBAHAN: Memastikan tidak menjadi 2 baris */
+            font-size: 1.9rem; /* PERUBAHAN: Ukuran font diperkecil lagi */
+            white-space: nowrap;
         }
         .login-container h3 {
             color: #FFFFFF;
@@ -88,44 +93,59 @@ st.markdown(
             color: #ECF0F1;
         }
 
-
         /* --- Tombol (Buttons) Utama --- */
         .stButton>button {
             font-weight: 600;
             border-radius: 8px;
-            border: 1px solid #3498DB; /* Border biru cerah (Peter River) */
+            border: 1px solid #3498DB;
             background-color: #3498DB;
             color: #FFFFFF;
             transition: all 0.2s ease-in-out;
             padding: 10px 24px;
         }
         .stButton>button:hover {
-            background-color: #2980B9; /* Biru yang lebih gelap saat disentuh (Belize Hole) */
+            background-color: #2980B9;
             border-color: #2980B9;
             color: #FFFFFF;
         }
         .stButton>button:focus {
-            box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #3498DB;
+            box-shadow: 0 0 0 2px #021021, 0 0 0 4px #3498DB; /* Disesuaikan dengan background gelap */
         }
 
         /* --- Kontainer (Form, Expander) --- */
         [data-testid="stForm"], 
         [data-testid="stExpander"] {
-            border: 1px solid #BDC3C7; /* Border abu-abu (Silver) */
+            border: 1px solid rgba(52, 152, 219, 0.4);
             border-radius: 10px;
-            background-color: #FFFFFF; /* Latar belakang putih agar menonjol */
-            box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+            background-color: rgba(44, 62, 80, 0.6); /* Warna semi-transparan */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
         
+        /* --- Input Widgets (Text, Select, etc.) --- */
+        div[data-baseweb="input"] > div,
+        div[data-baseweb="textarea"] > div,
+        div[data-baseweb="select"] > div {
+             background-color: rgba(10, 30, 50, 0.5) !important;
+             border-color: rgba(52, 152, 219, 0.4) !important;
+             color: #FFFFFF !important;
+        }
+        
+        /* Mengubah warna teks placeholder */
+        ::placeholder { 
+            color: rgba(236, 240, 241, 0.5) !important;
+            opacity: 1; /* Firefox */
+        }
+
         /* --- Data Editor / Tabel --- */
         [data-testid="stDataGridContainer"] {
             border-radius: 10px;
             overflow: hidden;
+            border: 1px solid rgba(52, 152, 219, 0.4);
         }
 
         /* --- Elemen Lainnya --- */
         hr {
-            border-top: 1px solid #BDC3C7;
+            border-top: 1px solid rgba(52, 152, 219, 0.4);
         }
     </style>
     """,
@@ -166,8 +186,8 @@ def logout():
     st.rerun()
 
 def generate_next_id(df, jenis):
-    if jenis == 'FLM':
-        prefix = 'First Line Maintenance'
+    if jenis == 'First Line Maintenance':
+        prefix = 'FLM'
     elif jenis == 'Corrective Maintenance':
         prefix = 'CM'
     elif jenis == 'Preventive Maintenance':
@@ -253,7 +273,7 @@ def create_pdf_report(filtered_data, report_type):
     for i, row in filtered_data.iterrows():
         data = [
             ["ID", str(row.get('ID', ''))],
-            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%Y-%m-%d')],
+            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%d-%m-%Y')],
             ["Jenis", str(row.get('Jenis', ''))],
             ["Area", str(row.get('Area', ''))],
             ["Nomor SR", str(row.get('Nomor SR', ''))],
@@ -324,7 +344,6 @@ else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        # PERUBAHAN: Mengganti st.title dengan st.markdown untuk styling khusus
         st.markdown('<h1 class="login-title">Sistem Monitoring O&M</h1>', unsafe_allow_html=True)
         try: 
             st.image(Image.open("logo.png"), width=150)
@@ -368,12 +387,12 @@ if menu == "Input Data":
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
-            jenis = st.selectbox("Jenis Pekerjaan", ["FLM", "Corrective Maintenance", "Preventive Maintenance"])
+            jenis = st.selectbox("Jenis Pekerjaan", ["First Line Maintenance", "Corrective Maintenance", "Preventive Maintenance"])
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
             nama_pelaksana = st.text_input("Nama Pelaksana")
-            status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
+            status = st.selectbox("Status", ["Finish", "On Progress", "Open"])
             keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
         st.markdown("---"); st.subheader("Upload Bukti Pekerjaan (Evidence)")
         col_ev1, col_ev2 = st.columns(2)
@@ -402,7 +421,7 @@ elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
     with st.container():
-        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
+        st.write("filter data spesifik.")
         data_to_display = st.session_state.data.copy()
         col1, col2, col3 = st.columns(3)
         with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
@@ -445,7 +464,7 @@ elif menu == "Manajemen & Laporan Data":
     st.markdown("---")
     
     column_config = { 
-        "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"), 
+        "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"), 
         "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance", "Preventive Maintenance"]), 
         "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), 
         "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), 
