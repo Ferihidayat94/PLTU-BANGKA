@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, date
 import uuid
 from PIL import Image, ExifTags
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak, Flowable
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -17,19 +17,70 @@ import io
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== CSS Kustom untuk Tampilan ==================
+# --- PERUBAHAN: Skema Warna Korporat PLN ---
 st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
-        .stApp { background-color: #F8F9FA; color: #212529; }
-        .stApp h1, .stApp h2, .stApp h3 { color: #0d3b66; }
-        [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #DEE2E6; }
-        [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] .stRadio > label { color: #495057; }
-        .stButton>button { font-weight: 600; border-radius: 8px; border: 1px solid #0d3b66; background-color: #0d3b66; color: #FFFFFF; transition: all 0.2s ease-in-out; padding: 10px 24px; }
-        .stButton>button:hover { background-color: #FFFFFF; color: #0d3b66; }
-        [data-testid="stForm"], [data-testid="stExpander"] { border: 1px solid #DEE2E6; border-radius: 10px; background-color: #FFFFFF; }
-        hr { border-top: 1px solid #DEE2E6; }
+        
+        :root {
+            --pln-blue: #005E9D;
+            --pln-light-blue: #00A2E8;
+            --background-color: #f0f2f5;
+            --text-color: #333333;
+            --sidebar-background: #FFFFFF;
+            --card-background: #FFFFFF;
+            --border-color: #E0E0E0;
+        }
+
+        html, body, [class*="st-"] { 
+            font-family: 'Inter', sans-serif; 
+        }
+
+        .stApp { 
+            background-color: var(--background-color); 
+            color: var(--text-color); 
+        }
+
+        .stApp h1, .stApp h2, .stApp h3 { 
+            color: var(--pln-blue); 
+        }
+        
+        [data-testid="stSidebar"] { 
+            background-color: var(--sidebar-background); 
+            border-right: 1px solid var(--border-color); 
+        }
+        
+        [data-testid="stSidebar"] .stMarkdown, 
+        [data-testid="stSidebar"] .stRadio > label { 
+            color: var(--text-color); 
+        }
+
+        .stButton>button { 
+            font-weight: 600; 
+            border-radius: 8px; 
+            border: 1px solid var(--pln-blue); 
+            background-color: var(--pln-blue); 
+            color: #FFFFFF; 
+            transition: all 0.2s ease-in-out; 
+            padding: 10px 24px; 
+        }
+        
+        .stButton>button:hover { 
+            background-color: #FFFFFF; 
+            color: var(--pln-blue); 
+        }
+
+        [data-testid="stForm"], [data-testid="stExpander"] { 
+            border: 1px solid var(--border-color); 
+            border-radius: 10px; 
+            background-color: var(--card-background);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        hr { 
+            border-top: 1px solid var(--border-color); 
+        }
     </style>
     """,
     unsafe_allow_html=True
@@ -39,6 +90,18 @@ st.markdown(
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATA_FILE = "monitoring_data.csv"
+
+# Kelas untuk garis pemisah
+class Line(Flowable):
+    def __init__(self, width, color=colors.grey):
+        Flowable.__init__(self)
+        self.width = width
+        self.color = color
+
+    def draw(self):
+        self.canv.setStrokeColor(self.color)
+        self.canv.setLineWidth(1)
+        self.canv.line(0, 0, self.width, 0)
 
 # ================== Fungsi-Fungsi Helper ==================
 
@@ -115,16 +178,16 @@ def save_image_from_bytes(image_bytes):
         st.error(f"Gagal memproses gambar: {e}")
         return ""
 
-# --- PERUBAHAN: Menghapus spasi ekstra di antara foto PDF ---
 def create_pdf_report(filtered_data, report_type):
     file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(file_path, pagesize=A4,
-                            rightMargin=30, leftMargin=30,
-                            topMargin=40, bottomMargin=30)
+                            rightMargin=inch*0.5, leftMargin=inch*0.5,
+                            topMargin=inch*0.5, bottomMargin=inch*0.5)
 
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
-    styles.add(ParagraphStyle(name='ImageTitle', fontSize=10, spaceBefore=6, spaceAfter=2))
+    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=16, leading=22, spaceAfter=20, fontName='Helvetica-Bold'))
+    styles.add(ParagraphStyle(name='SubTitle', alignment=TA_CENTER, fontSize=11, fontName='Helvetica-Bold', spaceAfter=5))
+    styles.add(ParagraphStyle(name='NormalLeft', alignment=TA_LEFT, fontSize=10, leading=14, fontName='Helvetica'))
 
     elements = []
     
@@ -133,67 +196,71 @@ def create_pdf_report(filtered_data, report_type):
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
             logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
-            header_data = [[logo_img, Paragraph(header_text, styles['Normal'])]]
+            header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
             elements.append(header_table)
-            elements.append(Spacer(1, 20))
-    except Exception:
-        pass
-
+            elements.append(Spacer(1, 15))
+    except Exception as e:
+        st.warning(f"Logo tidak bisa dimuat ke PDF: {e}")
+    
     if report_type == "Semua":
         title_text = "LAPORAN MONITORING FLM, CM, & PM"
     else:
         title_text = f"LAPORAN MONITORING {report_type.upper()}"
         
-    elements.append(Paragraph(title_text, styles["TitleCenter"]))
-    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(title_text, styles['TitleCenter']))
+    elements.append(Line(doc.width))
+    elements.append(Spacer(1, 20))
 
     for i, row in filtered_data.iterrows():
         data = [
-            ["ID", str(row.get('ID', ''))],
-            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%Y-%m-%d')],
-            ["Jenis", str(row.get('Jenis', ''))],
-            ["Area", str(row.get('Area', ''))],
-            ["Nomor SR", str(row.get('Nomor SR', ''))],
-            ["Nama Pelaksana", str(row.get('Nama Pelaksana', ''))],
-            ["Status", str(row.get('Status', ''))],
-            ["Keterangan", Paragraph(str(row.get('Keterangan', '')), styles['Normal'])],
+            ["ID Laporan", f": {row.get('ID', 'N/A')}"], ["Tanggal", f": {pd.to_datetime(row.get('Tanggal')).strftime('%d %B %Y')}"],
+            ["Jenis Pekerjaan", f": {row.get('Jenis', 'N/A')}"], ["Area", f": {row.get('Area', 'N/A')}"],
+            ["Nomor SR", f": {row.get('Nomor SR', 'N/A')}"], ["Nama Pelaksana", f": {row.get('Nama Pelaksana', 'N/A')}"],
+            ["Status", f": {row.get('Status', 'N/A')}"], ["Keterangan", Paragraph(f": {str(row.get('Keterangan', ''))}", styles['NormalLeft'])],
         ]
-
-        table = Table(data, colWidths=[100, 380])
+        table = Table(data, colWidths=[1.5*inch, 5.5*inch])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('BOX', (0, 0), (-1, -1), 1, colors.black),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (0, 0), (0, -1), 'LEFT'), ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'), ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 2), ('LEFTPADDING', (0,0), (-1,-1), 0),
         ]))
-
         elements.append(table)
-        elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 15))
         
-        evidance_path = row.get("Evidance")
-        if evidance_path and isinstance(evidance_path, str) and os.path.exists(evidance_path):
-            elements.append(Paragraph("Evidence Before:", styles['ImageTitle']))
-            try:
-                elements.append(RLImage(evidance_path, width=4*inch, height=3*inch, kind='bound'))
-            except Exception as e:
-                print(f"Gagal memuat gambar ke PDF (Before): {e}")
-            # Spasi ekstra di sini dihilangkan agar jarak lebih dekat
+        def process_image_for_pdf(path):
+            if isinstance(path, str) and os.path.exists(path):
+                try:
+                    pil_image = Image.open(path)
+                    pil_image = fix_image_orientation(pil_image)
+                    return RLImage(pil_image, width=3.4*inch, height=2.55*inch, kind='bound')
+                except Exception:
+                    return None
+            return None
+
+        img_before = process_image_for_pdf(row.get("Evidance"))
+        img_after = process_image_for_pdf(row.get("Evidance After"))
+
+        if img_before or img_after:
+            evidence_data = [
+                [Paragraph("<b>Evidence Before</b>", styles['SubTitle']), Paragraph("<b>Evidence After</b>", styles['SubTitle'])],
+                [img_before if img_before else "", img_after if img_after else ""]
+            ]
+            
+            evidence_table = Table(evidence_data, colWidths=[doc.width/2.05, doc.width/2.05])
+            evidence_table.setStyle(TableStyle([
+                ('ALIGN', (0,0), (-1,-1), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('BOX', (0,0), (-1,-1), 1, colors.lightgrey), ('GRID', (0,0), (-1,-1), 1, colors.lightgrey),
+                ('BOTTOMPADDING', (0,1), (-1,-1), 10)
+            ]))
+            elements.append(evidence_table)
         
-        evidance_after_path = row.get("Evidance After")
-        if evidance_after_path and isinstance(evidance_after_path, str) and os.path.exists(evidance_after_path):
-            elements.append(Paragraph("Evidence After:", styles['ImageTitle']))
-            try:
-                elements.append(RLImage(evidance_after_path, width=4*inch, height=3*inch, kind='bound'))
-            except Exception as e:
-                print(f"Gagal memuat gambar ke PDF (After): {e}")
-            elements.append(Spacer(1, 10))
+        elements.append(Spacer(1, 20))
+        elements.append(Line(doc.width, color=colors.black))
+        elements.append(Spacer(1, 20))
 
-        elements.append(PageBreak())
-
-    if len(elements) > 2:
+    if len(elements) > 4:
         doc.build(elements)
         return file_path
     return None
@@ -214,7 +281,7 @@ if st.session_state.get("logged_in"):
 else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        st.title("Sistem Monitoring Pekerjaan O&M PLTU Bangka")
+        st.title("Sistem Monitoring Pekerjaan O&M Pltu Bangka")
         try: st.image(Image.open("logo.png"), width=150)
         except FileNotFoundError: st.error("File `logo.png` tidak ditemukan.")
         ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
@@ -240,10 +307,10 @@ with st.sidebar:
     menu = st.radio("Pilih Menu:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
-    st.markdown("<hr>"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
+    st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
 st.title("MONITORING FLM, CM, & PM")
-st.write("#### Produksi A PLTU Bangka")
+st.write("#### PLTU Bangka")
 st.markdown("---")
 
 if menu == "Input Data":
@@ -296,7 +363,7 @@ elif menu == "Manajemen & Laporan Data":
         
     st.markdown("---")
 
-    with st.expander("✅ **Update Status Pekerjaan**"):
+    with st.expander("✅ **Update Status Pekerjaan** (Cara yang disarankan)"):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
             job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row['Keterangan'])[:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
@@ -305,7 +372,7 @@ elif menu == "Manajemen & Laporan Data":
             
             uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai (Evidence After)", type=["png", "jpg", "jpeg"], key="quick_upload")
 
-            if st.button("Submit"):
+            if st.button("Selesaikan Pekerjaan Ini"):
                 if selected_job_display and uploaded_evidence_after:
                     job_id_to_update = job_options[selected_job_display]
                     
