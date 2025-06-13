@@ -43,7 +43,11 @@ st.markdown(
         h1 {
             border-bottom: 2px solid #3498DB;
             padding-bottom: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 1rem; /* Jarak bawah judul utama dikurangi */
+        }
+        h2, h3 {
+             margin-bottom: 0.5rem;
+             margin-top: 1rem;
         }
 
         /* --- Sidebar --- */
@@ -55,15 +59,6 @@ st.markdown(
         [data-testid="stSidebar"] .stMarkdown, 
         [data-testid="stSidebar"] .stRadio > label {
             color: #FFFFFF; 
-        }
-        [data-testid="stSidebar"] .stButton > button {
-            color: #ECF0F1; 
-            border-color: #3498DB;
-            background-color: transparent;
-        }
-        [data-testid="stSidebar"] .stButton>button:hover {
-            background-color: #3498DB;
-            color: #FFFFFF;
         }
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
              color: #FFFFFF;
@@ -90,35 +85,35 @@ st.markdown(
             border-bottom: none;
         }
         
-        /* --- PERUBAHAN: Tombol (Buttons) dengan Efek Cahaya --- */
+        /* --- Menyeragamkan semua tombol --- */
         .stButton>button {
             font-weight: 600;
             border-radius: 8px;
             border: 1px solid #3498DB;
-            background-color: rgba(52, 152, 219, 0.2); /* Biru semi-transparan */
+            background-color: transparent; /* Latar transparan seperti tombol logout */
             color: #FFFFFF;
             transition: all 0.3s ease-in-out;
             padding: 10px 24px;
-            box-shadow: 0 0 8px rgba(52, 152, 219, 0.4); /* Efek cahaya awal */
         }
         .stButton>button:hover {
             background-color: #3498DB; /* Menjadi solid saat disentuh */
             border-color: #3498DB;
             color: #FFFFFF;
-            box-shadow: 0 0 20px rgba(52, 152, 219, 0.7); /* Cahaya lebih terang */
         }
         .stButton>button:focus {
             box-shadow: 0 0 0 2px #021021, 0 0 0 4px #5dade2; /* Disesuaikan dengan background gelap */
         }
-        /* --- AKHIR PERUBAHAN --- */
 
-        /* --- Kontainer (Form, Expander) --- */
+        /* --- Kontainer (Form, Expander, Bordered Container) --- */
         [data-testid="stForm"], 
-        [data-testid="stExpander"] {
+        [data-testid="stExpander"],
+        [data-testid="stVerticalBlock"] [data-testid="stVerticalBlock"] [data-testid="stContainer"] {
             border: 1px solid rgba(52, 152, 219, 0.4);
             border-radius: 10px;
             background-color: rgba(44, 62, 80, 0.6); /* Warna semi-transparan */
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 1rem 1rem 1.5rem 1rem; /* Padding diseragamkan */
+            margin-bottom: 1rem; /* Jarak antar kontainer */
         }
         
         /* --- Input Widgets (Text, Select, etc.) --- */
@@ -160,7 +155,7 @@ st.markdown(
 
         /* --- Elemen Lainnya --- */
         hr {
-            border-top: 1px solid rgba(52, 152, 219, 0.4);
+            display: none; /* Sembunyikan semua garis horizontal */
         }
     </style>
     """,
@@ -371,7 +366,7 @@ else:
             st.markdown("### User Login")
             username = st.text_input("Username", placeholder="e.g., admin")
             password = st.text_input("Password", type="password", placeholder="••••••••")
-            st.markdown("---")
+            # st.markdown("---") # Dihapus
             if st.form_submit_button("Login"):
                 if username in ADMIN_CREDENTIALS and ADMIN_CREDENTIALS[username] == hash_password(password):
                     st.session_state.logged_in = True
@@ -394,7 +389,7 @@ with st.sidebar:
 
 st.title("MONITORING FLM, CM, & PM")
 st.write("#### PLTU Bangka")
-st.markdown("---")
+# st.markdown("---") # Dihapus
 
 if menu == "Input Data":
     st.header("📋 Input Data Pekerjaan Baru")
@@ -409,7 +404,8 @@ if menu == "Input Data":
             nama_pelaksana = st.text_input("Nama Pelaksana")
             status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
             keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
-        st.markdown("---"); st.subheader("Upload Bukti Pekerjaan (Evidence)")
+        
+        st.subheader("Upload Bukti Pekerjaan (Evidence)")
         col_ev1, col_ev2 = st.columns(2)
         with col_ev1: evidance_file = st.file_uploader("Upload Evidence (Before)", type=["png", "jpg", "jpeg"])
         with col_ev2: evidance_after_file = st.file_uploader("Upload Evidence (After)", type=["png", "jpg", "jpeg"])
@@ -435,7 +431,7 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
-    with st.container():
+    with st.container(border=True):
         st.write("Gunakan filter di bawah untuk mencari data spesifik.")
         data_to_display = st.session_state.data.copy()
         col1, col2, col3 = st.columns(3)
@@ -444,9 +440,7 @@ elif menu == "Manajemen & Laporan Data":
         if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
-    st.markdown("---")
-
-    with st.expander("✅ **Update Status Pekerjaan**"):
+    with st.expander("✅ **Update Status Pekerjaan**", expanded=False):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
             job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row['Keterangan'])[:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
@@ -476,57 +470,61 @@ elif menu == "Manajemen & Laporan Data":
         else:
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
     
-    st.markdown("---")
-    
-    column_config = { 
-        "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"), 
-        "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance", "Preventive Maintenance"]), 
-        "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), 
-        "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), 
-        "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), 
-        "Evidance": st.column_config.ImageColumn("Evidence Before"), 
-        "Evidance After": st.column_config.ImageColumn("Evidence After"), 
-        "ID": st.column_config.TextColumn("ID", disabled=True), 
-    }
-    
-    st.info("Untuk mengedit detail lainnya (selain foto), gunakan tabel di bawah dan tekan 'Simpan Perubahan Tabel'.")
-    edited_data = st.data_editor(data_to_display, key="data_editor", disabled=["Evidance", "Evidance After"], use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
+    with st.container(border=True):
+        column_config = { 
+            "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"), 
+            "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance", "Preventive Maintenance"]), 
+            "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), 
+            "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), 
+            "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), 
+            "Evidance": st.column_config.ImageColumn("Evidence Before"), 
+            "Evidance After": st.column_config.ImageColumn("Evidence After"), 
+            "ID": st.column_config.TextColumn("ID", disabled=True), 
+        }
+        
+        st.info("Untuk mengedit detail lainnya (selain foto), gunakan tabel di bawah dan tekan 'Simpan Perubahan Tabel'.")
+        edited_data = st.data_editor(data_to_display, key="data_editor", disabled=["Evidance", "Evidance After"], use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
-    if st.button("Simpan Perubahan Tabel", type="primary"):
-        if st.session_state.user == 'admin':
-            updated_df = st.session_state.data.set_index('ID')
-            edited_df = edited_data.set_index('ID')
-            updated_df.update(edited_df)
-            st.session_state.data = updated_df.reset_index()
-            save_data(st.session_state.data)
-            st.toast("Perubahan data teks telah disimpan!", icon="✅")
-            st.rerun()
-        else:
-            st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
-
-    st.markdown("---"); st.subheader("📄 Laporan & Unduh Data")
-    csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
-    st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv")
-
-    with st.expander("**Export Laporan ke PDF**"):
-        col1, col2, col3 = st.columns(3)
-        with col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
-        with col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
-        with col3: export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance", "Preventive Maintenance"], key="pdf_export_type")
-
-        if st.button("Buat Laporan PDF"):
-            report_data = st.session_state.data.copy()
-            report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
-            mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
-            if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
-            final_data_to_export = report_data[mask]
-
-            if final_data_to_export.empty:
-                st.warning("Tidak ada data yang ditemukan.")
+        if st.button("Simpan Perubahan Tabel", type="primary"):
+            if st.session_state.user == 'admin':
+                updated_df = st.session_state.data.set_index('ID')
+                edited_df = edited_data.set_index('ID')
+                updated_df.update(edited_df)
+                st.session_state.data = updated_df.reset_index()
+                save_data(st.session_state.data)
+                st.toast("Perubahan data teks telah disimpan!", icon="✅")
+                st.rerun()
             else:
-                with st.spinner("Membuat file PDF..."):
-                    pdf_file = create_pdf_report(final_data_to_export, export_type)
-                if pdf_file:
-                    st.success("Laporan PDF berhasil dibuat!")
-                    with open(pdf_file, "rb") as f:
-                        st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
+                st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
+
+    with st.container(border=True):
+        st.subheader("📄 Laporan & Unduh Data")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+             csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
+             st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv", use_container_width=True)
+
+        with col2:
+            with st.expander("**Export Laporan ke PDF**"):
+                pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
+                with pdf_col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
+                with pdf_col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
+                with pdf_col3: export_type = st.selectbox("Pilih Jenis", ["Semua", "FLM", "Corrective Maintenance", "Preventive Maintenance"], key="pdf_export_type")
+
+                if st.button("Buat Laporan PDF"):
+                    report_data = st.session_state.data.copy()
+                    report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
+                    mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
+                    if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
+                    final_data_to_export = report_data[mask]
+
+                    if final_data_to_export.empty:
+                        st.warning("Tidak ada data yang ditemukan.")
+                    else:
+                        with st.spinner("Membuat file PDF..."):
+                            pdf_file = create_pdf_report(final_data_to_export, export_type)
+                        if pdf_file:
+                            st.success("Laporan PDF berhasil dibuat!")
+                            with open(pdf_file, "rb") as f:
+                                st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
