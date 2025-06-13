@@ -136,12 +136,11 @@ st.markdown(
         div[data-baseweb="input"] > div,
         div[data-baseweb="textarea"] > div,
         div[data-baseweb="select"] > div {
-             background-color: rgba(44, 62, 80, 0.8) !important; /* PERUBAHAN: Latar input lebih terang */
+             background-color: rgba(236, 240, 241, 0.1) !important;
              border-color: rgba(52, 152, 219, 0.4) !important;
              color: #FFFFFF !important;
         }
         
-        /* PERUBAHAN: Memperkecil ikon mata pada input password */
         [data-testid="stPasswordInput"] svg {
             width: 1.25rem;
             height: 1.25rem;
@@ -450,7 +449,7 @@ if menu == "Input Data":
                 st.success(f"Data dengan ID '{new_id}' berhasil disimpan!")
 
 elif menu == "Manajemen & Laporan Data":
-    st.header("📊 Manajemen & Laporan Data")
+    st.header("📊 Data Report")
 
     with st.expander("✅ **Update Status Pekerjaan**", expanded=False):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
@@ -483,7 +482,7 @@ elif menu == "Manajemen & Laporan Data":
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
 
     with st.container(border=True):
-        st.info("Centang baris untuk menghapus, atau edit langsung sel di tabel, lalu tekan tombol di bawah.")
+        # PERUBAHAN: Teks info dihilangkan
         
         data_to_display = st.session_state.data.copy()
         filter_col1, filter_col2 = st.columns(2)
