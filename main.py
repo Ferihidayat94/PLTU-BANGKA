@@ -81,7 +81,7 @@ def logout():
 
 def generate_next_id(df, jenis):
     if jenis == 'FLM':
-        prefix = 'First Line Maintenance'
+        prefix = 'FLM'
     elif jenis == 'Corrective Maintenance':
         prefix = 'CM'
     elif jenis == 'Preventive Maintenance':
@@ -127,6 +127,7 @@ def save_image_from_bytes(image_bytes):
         st.error(f"Gagal memproses gambar: {e}")
         return ""
 
+# --- FUNGSI PDF DENGAN LAYOUT EVIDENCE HORIZONTAL ---
 def create_pdf_report(filtered_data, report_type):
     file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(file_path, pagesize=A4,
@@ -230,7 +231,7 @@ if st.session_state.get("logged_in"):
 else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        st.title("SISTEM MONITORING PEKERJAAN 0PERASI DAN PEMELIHARAAN")
+        st.title("Sistem Monitoring O&M PLTU Bangka")
         try: st.image(Image.open("logo.png"), width=150)
         except FileNotFoundError: st.error("File `logo.png` tidak ditemukan.")
         ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
