@@ -124,7 +124,7 @@ def create_pdf_report(filtered_data):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.5*inch)
+            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
             header_data = [[logo_img, Paragraph(header_text, styles['Normal'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
@@ -272,10 +272,21 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
+    with st.container():
+        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
+        data_to_display = st.session_state.data.copy()
+        col1, col2, col3 = st.columns(3)
+        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
+        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].dropna().unique()))
+        if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
+        if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
+        
+    st.markdown("---")
+
+    # --- PERUBAHAN: Memindahkan posisi "Upload Cepat" ---
     with st.expander("✅ **Upload Cepat Evidence After & Selesaikan Pekerjaan** (Cara yang disarankan)"):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
-            # --- PERUBAHAN: Menambahkan Nama Pelaksana pada pilihan ---
             job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row['Keterangan'])[:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
             
             selected_job_display = st.selectbox("Pilih Pekerjaan yang Selesai:", list(job_options.keys()))
@@ -303,17 +314,6 @@ elif menu == "Manajemen & Laporan Data":
         else:
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
     
-    st.markdown("---")
-
-    with st.container():
-        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
-        data_to_display = st.session_state.data.copy()
-        col1, col2, col3 = st.columns(3)
-        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
-        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].dropna().unique()))
-        if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
-        if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
-        
     st.markdown("---")
     
     st.info("Untuk mengedit detail lainnya (selain foto), gunakan tabel di bawah dan tekan 'Simpan Perubahan Tabel'.")
