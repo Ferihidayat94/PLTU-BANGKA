@@ -446,26 +446,6 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
-    with st.container(border=True):
-        # --- PERUBAHAN: Tata letak kontrol ---
-        col1, col2 = st.columns([2, 1]) # Kolom untuk filter dan aksi
-        with col1:
-            st.write("Gunakan filter di bawah untuk mencari data spesifik.")
-            filter_col1, filter_col2 = st.columns(2)
-            with filter_col1:
-                filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(st.session_state.data["Jenis"].dropna().unique()))
-            with filter_col2:
-                filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(st.session_state.data["Status"].dropna().unique()))
-
-        with col2:
-            st.write("\u00A0") # Spasi untuk mensejajarkan
-            csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
-            st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv", use_container_width=True)
-            
-    data_to_display = st.session_state.data.copy()
-    if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
-    if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
-        
     with st.expander("✅ **Update Status Pekerjaan**", expanded=False):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
@@ -497,6 +477,16 @@ elif menu == "Manajemen & Laporan Data":
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
 
     with st.container(border=True):
+        data_to_display = st.session_state.data.copy()
+        filter_col1, filter_col2, filter_col3 = st.columns([2, 2, 1])
+        with filter_col1:
+            filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(st.session_state.data["Jenis"].dropna().unique()))
+        with filter_col2:
+            filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(st.session_state.data["Status"].dropna().unique()))
+
+        if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
+        if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
+        
         st.info("Centang baris untuk menghapus, atau edit langsung sel di tabel, lalu tekan tombol di bawah.")
         data_to_display_with_delete = data_to_display.copy()
         if not data_to_display_with_delete.empty:
@@ -521,8 +511,26 @@ elif menu == "Manajemen & Laporan Data":
             column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
         )
 
-        col1, col2 = st.columns([3, 1])
-        with col1:
+        action_col1, action_col2 = st.columns([1, 4])
+        with action_col1:
+            st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+            if st.button("🗑️ Hapus", use_container_width=True):
+                if st.session_state.user == 'admin':
+                    rows_to_delete = edited_data[edited_data['Hapus']]
+                    if not rows_to_delete.empty:
+                        ids_to_delete = rows_to_delete['ID'].tolist()
+                        # ... logika hapus ...
+                        st.session_state.data = st.session_state.data[~st.session_state.data['ID'].isin(ids_to_delete)]
+                        save_data(st.session_state.data)
+                        st.success(f"{len(ids_to_delete)} data berhasil dihapus.")
+                        st.rerun()
+                    else:
+                        st.warning("Tidak ada baris yang dipilih untuk dihapus.")
+                else:
+                    st.warning("Hanya 'admin' yang dapat menghapus data.")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with action_col2:
             if st.button("Simpan Perubahan Tabel", use_container_width=True):
                 if st.session_state.user == 'admin':
                     df_to_save = edited_data.drop(columns=['Hapus'])
@@ -535,50 +543,35 @@ elif menu == "Manajemen & Laporan Data":
                     st.rerun()
                 else:
                     st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
+
+    with st.container(border=True):
+        st.subheader("📄 Laporan & Unduh Data")
         
-        with col2:
-            st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-            if st.button("🗑️ Hapus", use_container_width=True):
-                if st.session_state.user == 'admin':
-                    rows_to_delete = edited_data[edited_data['Hapus']]
-                    if not rows_to_delete.empty:
-                        ids_to_delete = rows_to_delete['ID'].tolist()
-                        for an_id in ids_to_delete:
-                            row_to_delete = st.session_state.data[st.session_state.data['ID'] == an_id]
-                            if not row_to_delete.empty:
-                                for col in ['Evidance', 'Evidance After']:
-                                    img_path = row_to_delete[col].iloc[0]
-                                    if img_path and isinstance(img_path, str) and os.path.exists(img_path):
-                                        os.remove(img_path)
-                        st.session_state.data = st.session_state.data[~st.session_state.data['ID'].isin(ids_to_delete)]
-                        save_data(st.session_state.data)
-                        st.success(f"{len(ids_to_delete)} data berhasil dihapus.")
-                        st.rerun()
-                    else:
-                        st.warning("Tidak ada baris yang dipilih untuk dihapus.")
+        report_col1, report_col2 = st.columns(2)
+        with report_col1:
+             csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
+             st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv", use_container_width=True)
+
+        with report_col2:
+            st.write("**Export Laporan ke PDF**")
+            pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
+            with pdf_col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
+            with pdf_col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
+            with pdf_col3: export_type = st.selectbox("Pilih Jenis", ["Semua", "FLM", "Corrective Maintenance", "Preventive Maintenance"], key="pdf_export_type")
+
+            if st.button("Buat Laporan PDF", use_container_width=True):
+                report_data = st.session_state.data.copy()
+                report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
+                mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
+                if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
+                final_data_to_export = report_data[mask]
+
+                if final_data_to_export.empty:
+                    st.warning("Tidak ada data yang ditemukan.")
                 else:
-                    st.warning("Hanya 'admin' yang dapat menghapus data.")
-            st.markdown('</div>', unsafe_allow_html=True)
-            
-    with st.expander("Laporan PDF", expanded=False):
-        pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
-        with pdf_col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
-        with pdf_col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
-        with pdf_col3: export_type = st.selectbox("Pilih Jenis", ["Semua", "FLM", "Corrective Maintenance", "Preventive Maintenance"], key="pdf_export_type")
-
-        if st.button("Buat Laporan PDF", use_container_width=True):
-            report_data = st.session_state.data.copy()
-            report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
-            mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
-            if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
-            final_data_to_export = report_data[mask]
-
-            if final_data_to_export.empty:
-                st.warning("Tidak ada data yang ditemukan.")
-            else:
-                with st.spinner("Membuat file PDF..."):
-                    pdf_file = create_pdf_report(final_data_to_export, export_type)
-                if pdf_file:
-                    st.success("Laporan PDF berhasil dibuat!")
-                    with open(pdf_file, "rb") as f:
-                        st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
+                    with st.spinner("Membuat file PDF..."):
+                        pdf_file = create_pdf_report(final_data_to_export, export_type)
+                    if pdf_file:
+                        st.success("Laporan PDF berhasil dibuat!")
+                        with open(pdf_file, "rb") as f:
+                            st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
