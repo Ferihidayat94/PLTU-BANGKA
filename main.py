@@ -446,9 +446,37 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
+    # --- PERBAIKAN: Mengembalikan expander Update Status ---
     with st.expander("✅ **Update Status Pekerjaan**", expanded=False):
-        # ... (kode update status tidak berubah) ...
-        pass
+        open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
+        if not open_jobs.empty:
+            job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row['Keterangan'])[:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
+            
+            selected_job_display = st.selectbox("Pilih Pekerjaan yang Selesai:", list(job_options.keys()))
+            
+            uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai (Evidence After)", type=["png", "jpg", "jpeg"], key="quick_upload")
+
+            if st.button("Submit"):
+                if selected_job_display and uploaded_evidence_after:
+                    job_id_to_update = job_options[selected_job_display]
+                    
+                    evidence_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}{os.path.splitext(uploaded_evidence_after.name)[1]}")
+                    with open(evidence_path, "wb") as f:
+                        f.write(uploaded_evidence_after.getbuffer())
+                    
+                    job_index = st.session_state.data.index[st.session_state.data['ID'] == job_id_to_update].tolist()
+                    if job_index:
+                        st.session_state.data.loc[job_index[0], 'Evidance After'] = evidence_path
+                        st.session_state.data.loc[job_index[0], 'Status'] = 'Finish'
+                        
+                        save_data(st.session_state.data)
+                        st.success(f"Pekerjaan dengan ID {job_id_to_update} telah diselesaikan!")
+                        st.rerun()
+                else:
+                    st.warning("Mohon pilih pekerjaan dan upload bukti selesai.")
+        else:
+            st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
+    # --- AKHIR PERBAIKAN ---
 
     with st.container(border=True):
         st.info("Centang baris untuk menghapus, atau edit langsung sel di tabel, lalu tekan tombol di bawah.")
@@ -486,40 +514,27 @@ elif menu == "Manajemen & Laporan Data":
             column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
         )
 
-        # --- PERBAIKAN LOGIKA: Tombol hapus hanya muncul jika ada yang dicentang ---
+        rows_to_delete_df = pd.DataFrame()
         if not edited_data.empty and 'Hapus' in edited_data.columns:
             rows_to_delete_df = edited_data[edited_data['Hapus']]
             
-            if not rows_to_delete_df.empty:
-                action_col1, action_col2 = st.columns([1, 4]) 
-                with action_col1:
-                    st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-                    if st.button(f"🗑️ Hapus ({len(rows_to_delete_df)})", use_container_width=True, help=f"Hapus {len(rows_to_delete_df)} baris terpilih"):
-                        if st.session_state.user == 'admin':
-                            ids_to_delete = rows_to_delete_df['ID'].tolist()
-                            st.session_state.data = st.session_state.data[~st.session_state.data['ID'].isin(ids_to_delete)]
-                            save_data(st.session_state.data)
-                            st.success(f"{len(ids_to_delete)} data berhasil dihapus.")
-                            st.rerun()
-                        else:
-                            st.warning("Hanya 'admin' yang dapat menghapus data.")
-                    st.markdown('</div>', unsafe_allow_html=True)
+        if not rows_to_delete_df.empty:
+            action_col1, action_col2 = st.columns([1, 4]) 
+            with action_col1:
+                st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                if st.button(f"🗑️ Hapus ({len(rows_to_delete_df)})", use_container_width=True, help=f"Hapus {len(rows_to_delete_df)} baris terpilih"):
+                    if st.session_state.user == 'admin':
+                        ids_to_delete = rows_to_delete_df['ID'].tolist()
+                        st.session_state.data = st.session_state.data[~st.session_state.data['ID'].isin(ids_to_delete)]
+                        save_data(st.session_state.data)
+                        st.success(f"{len(ids_to_delete)} data berhasil dihapus.")
+                        st.rerun()
+                    else:
+                        st.warning("Hanya 'admin' yang dapat menghapus data.")
+                st.markdown('</div>', unsafe_allow_html=True)
 
-                with action_col2:
-                    if st.button("Simpan Perubahan Tabel", use_container_width=True):
-                        if st.session_state.user == 'admin':
-                            df_to_save = edited_data.drop(columns=['Hapus'])
-                            updated_df = st.session_state.data.set_index('ID')
-                            edited_df_no_delete = df_to_save.set_index('ID')
-                            updated_df.update(edited_df_no_delete)
-                            st.session_state.data = updated_df.reset_index()
-                            save_data(st.session_state.data)
-                            st.toast("Perubahan data teks telah disimpan!", icon="✅")
-                            st.rerun()
-                        else:
-                            st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
-            else:
-                 if st.button("Simpan Perubahan Tabel", use_container_width=True):
+            with action_col2:
+                if st.button("Simpan Perubahan Tabel", use_container_width=True):
                     if st.session_state.user == 'admin':
                         df_to_save = edited_data.drop(columns=['Hapus'])
                         updated_df = st.session_state.data.set_index('ID')
@@ -531,10 +546,20 @@ elif menu == "Manajemen & Laporan Data":
                         st.rerun()
                     else:
                         st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
-        elif edited_data.empty:
-            st.write("Tidak ada data untuk ditampilkan atau diedit.")
-            
-
+        else:
+             if st.button("Simpan Perubahan Tabel", use_container_width=True):
+                if st.session_state.user == 'admin':
+                    df_to_save = edited_data.drop(columns=['Hapus'], errors='ignore')
+                    updated_df = st.session_state.data.set_index('ID')
+                    edited_df_no_delete = df_to_save.set_index('ID')
+                    updated_df.update(edited_df_no_delete)
+                    st.session_state.data = updated_df.reset_index()
+                    save_data(st.session_state.data)
+                    st.toast("Perubahan data teks telah disimpan!", icon="✅")
+                    st.rerun()
+                else:
+                    st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
+    
     with st.container(border=True):
         st.subheader("📄 Laporan & Unduh Data")
         
