@@ -81,7 +81,7 @@ def logout():
 
 def generate_next_id(df, jenis):
     if jenis == 'FLM':
-        prefix = 'FLM'
+        prefix = 'First Line Maintenance'
     elif jenis == 'Corrective Maintenance':
         prefix = 'CM'
     elif jenis == 'Preventive Maintenance':
@@ -144,7 +144,7 @@ def create_pdf_report(filtered_data, report_type):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
+            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
             header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
@@ -230,12 +230,12 @@ if st.session_state.get("logged_in"):
 else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        st.title("Login Sistem Monitoring")
+        st.title("SISTEM MONITORING PEKERJAAN 0PERASI DAN PEMELIHARAAN")
         try: st.image(Image.open("logo.png"), width=150)
         except FileNotFoundError: st.error("File `logo.png` tidak ditemukan.")
         ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
         with st.form("login_form"):
-            st.markdown("### Silakan Masuk")
+            st.markdown("### LOGIN")
             username = st.text_input("Username", placeholder="e.g., admin")
             password = st.text_input("Password", type="password", placeholder="••••••••")
             st.markdown("---")
@@ -312,7 +312,6 @@ elif menu == "Manajemen & Laporan Data":
         
     st.markdown("---")
 
-    # --- PERUBAHAN: Memindahkan posisi & mengganti judul "Upload Cepat" ---
     with st.expander("✅ **Update Status & Evidence Pekerjaan** (Cara yang disarankan)"):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
