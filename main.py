@@ -42,12 +42,12 @@ st.markdown(
         
         h1 {
             border-bottom: 2px solid #3498DB;
-            padding-bottom: 10px;      /* PERUBAHAN: Jarak dikurangi */
-            margin-bottom: 0.8rem;     /* PERUBAHAN: Jarak dikurangi */
+            padding-bottom: 10px;
+            margin-bottom: 0.8rem;
         }
         h2, h3, h4 {
-             margin-bottom: 0.4rem;     /* PERUBAHAN: Jarak dikurangi */
-             margin-top: 0.8rem;        /* PERUBAHAN: Jarak dikurangi */
+             margin-bottom: 0.4rem;
+             margin-top: 0.8rem;
         }
 
         /* --- Sidebar --- */
@@ -128,17 +128,23 @@ st.markdown(
             border-radius: 10px;
             background-color: rgba(44, 62, 80, 0.6); /* Warna semi-transparan */
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 0.75rem 1rem; /* Padding diseragamkan */
-            margin-bottom: 0.75rem; /* Jarak antar kontainer */
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
         }
         
         /* --- Input Widgets (Text, Select, etc.) --- */
         div[data-baseweb="input"] > div,
         div[data-baseweb="textarea"] > div,
         div[data-baseweb="select"] > div {
-             background-color: rgba(10, 30, 50, 0.5) !important;
+             background-color: rgba(44, 62, 80, 0.8) !important; /* PERUBAHAN: Latar input lebih terang */
              border-color: rgba(52, 152, 219, 0.4) !important;
              color: #FFFFFF !important;
+        }
+        
+        /* PERUBAHAN: Memperkecil ikon mata pada input password */
+        [data-testid="stPasswordInput"] svg {
+            width: 1.25rem;
+            height: 1.25rem;
         }
         
         label,
@@ -151,7 +157,7 @@ st.markdown(
         [data-testid="stMarkdownContainer"] p,
         .stAlert p {
              color: #ECF0F1 !important;
-             line-height: 1.4; /* Merapatkan jarak baris */
+             line-height: 1.4;
         }
         
         ::placeholder { 
@@ -213,7 +219,7 @@ def logout():
     st.rerun()
 
 def generate_next_id(df, jenis):
-    if jenis == 'FLM':
+    if jenis == 'First Line Maintenance':
         prefix = 'FLM'
     elif jenis == 'Corrective Maintenance':
         prefix = 'CM'
@@ -277,8 +283,8 @@ def create_pdf_report(filtered_data, report_type):
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
-            header_text = "<b>PT PLN (Persero)</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.8*inch, height=0.9*inch)
+            header_text = "<b>PT PLN NUSANTARA POWER SERVICES</b><br/>Unit PLTU Bangka"
+            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
             logo_img.hAlign = 'LEFT'
 
             header_data = [[logo_img, Paragraph(header_text, styles['Header'])]]
@@ -377,7 +383,7 @@ else:
         except FileNotFoundError: 
             st.error("File `logo.png` tidak ditemukan.")
         
-        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
+        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("12345")}
         
         with st.form("login_form"):
             st.markdown("### User Login")
@@ -398,26 +404,26 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image(Image.open("logo.png"), use_container_width=True) 
     except FileNotFoundError: st.info("logo.png tidak ditemukan.")
-    menu = st.radio("Pilih Halaman:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
+    menu = st.radio("Pilih Halaman:", ["Input Data", "Report Data"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
-    st.markdown("<hr>"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
+    st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-st.title("MONITORING FLM, CM, & PM")
+st.title("DASHBOARD")
 st.write("#### PLTU Bangka")
 
 if menu == "Input Data":
-    st.header("📋 Input Data Pekerjaan Baru")
+    st.header("Input Data Pekerjaan Baru")
     with st.form("input_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
-            jenis = st.selectbox("Jenis Pekerjaan", ["FLM", "Corrective Maintenance", "Preventive Maintenance"])
+            jenis = st.selectbox("Jenis Pekerjaan", ["First Line Maintenance", "Corrective Maintenance", "Preventive Maintenance"])
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
             nama_pelaksana = st.text_input("Nama Pelaksana")
-            status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
+            status = st.selectbox("Status", ["Finish", "On Progress", "Open"])
             keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
         
         st.subheader("Upload Bukti Pekerjaan (Evidence)")
@@ -443,10 +449,9 @@ if menu == "Input Data":
                 save_data(st.session_state.data)
                 st.success(f"Data dengan ID '{new_id}' berhasil disimpan!")
 
-elif menu == "Manajemen & Laporan Data":
-    st.header("📊 Manajemen & Laporan Data")
+elif menu == "Data Report":
+    st.header("Integrated Data & Report")
 
-    # --- PERBAIKAN: Mengembalikan expander Update Status ---
     with st.expander("✅ **Update Status Pekerjaan**", expanded=False):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
@@ -476,10 +481,8 @@ elif menu == "Manajemen & Laporan Data":
                     st.warning("Mohon pilih pekerjaan dan upload bukti selesai.")
         else:
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
-    # --- AKHIR PERBAIKAN ---
 
-    with st.container(border=True):
-        st.info("Centang baris untuk menghapus, atau edit langsung sel di tabel, lalu tekan tombol di bawah.")
+
         
         data_to_display = st.session_state.data.copy()
         filter_col1, filter_col2 = st.columns(2)
