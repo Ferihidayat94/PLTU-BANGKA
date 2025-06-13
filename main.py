@@ -271,7 +271,40 @@ if menu == "Input Data":
 
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
+
+    with st.expander("✅ **Upload Cepat Evidence After & Selesaikan Pekerjaan** (Cara yang disarankan)"):
+        open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
+        if not open_jobs.empty:
+            # --- PERUBAHAN: Menambahkan Nama Pelaksana pada pilihan ---
+            job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row['Keterangan'])[:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
+            
+            selected_job_display = st.selectbox("Pilih Pekerjaan yang Selesai:", list(job_options.keys()))
+            
+            uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai (Evidence After)", type=["png", "jpg", "jpeg"], key="quick_upload")
+
+            if st.button("Selesaikan Pekerjaan Ini"):
+                if selected_job_display and uploaded_evidence_after:
+                    job_id_to_update = job_options[selected_job_display]
+                    
+                    evidence_path = os.path.join(UPLOAD_FOLDER, f"{uuid.uuid4()}{os.path.splitext(uploaded_evidence_after.name)[1]}")
+                    with open(evidence_path, "wb") as f:
+                        f.write(uploaded_evidence_after.getbuffer())
+                    
+                    job_index = st.session_state.data.index[st.session_state.data['ID'] == job_id_to_update].tolist()
+                    if job_index:
+                        st.session_state.data.loc[job_index[0], 'Evidance After'] = evidence_path
+                        st.session_state.data.loc[job_index[0], 'Status'] = 'Finish'
+                        
+                        save_data(st.session_state.data)
+                        st.success(f"Pekerjaan dengan ID {job_id_to_update} telah diselesaikan!")
+                        st.rerun()
+                else:
+                    st.warning("Mohon pilih pekerjaan dan upload bukti selesai.")
+        else:
+            st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
     
+    st.markdown("---")
+
     with st.container():
         st.write("Gunakan filter di bawah untuk mencari data spesifik.")
         data_to_display = st.session_state.data.copy()
@@ -283,37 +316,17 @@ elif menu == "Manajemen & Laporan Data":
         
     st.markdown("---")
     
-    column_config = { "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"), "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance"]), "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), "Evidance": st.column_config.ImageColumn("Evidence Before"), "Evidance After": st.column_config.ImageColumn("Evidence After"), "ID": st.column_config.TextColumn("ID", disabled=True), }
-    
-    st.info("Edit data langsung di tabel. Tekan tombol 'Simpan Perubahan Tabel' di bawah untuk menyimpan.")
-    edited_data = st.data_editor(data_to_display, column_config=column_config, num_rows="dynamic", key="data_editor", use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
+    st.info("Untuk mengedit detail lainnya (selain foto), gunakan tabel di bawah dan tekan 'Simpan Perubahan Tabel'.")
+    edited_data = st.data_editor(data_to_display, key="data_editor", disabled=["Evidance", "Evidance After"], use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
 
     if st.button("Simpan Perubahan Tabel", type="primary"):
         if st.session_state.user == 'admin':
-            final_df = edited_data.copy()
-            
-            for i, row in final_df.iterrows():
-                for col in ['Evidance', 'Evidance After']:
-                    if isinstance(row[col], bytes):
-                        path = save_image_from_bytes(row[col])
-                        final_df.loc[i, col] = path
-
-            new_rows_mask = final_df['ID'].isna()
-            if new_rows_mask.any():
-                temp_data_for_id_gen = pd.concat([st.session_state.data, final_df[new_rows_mask]], ignore_index=True)
-                for i in final_df[new_rows_mask].index:
-                    jenis = final_df.loc[i, 'Jenis']
-                    final_df.loc[i, 'ID'] = generate_next_id(temp_data_for_id_gen, jenis)
-            
-            main_data = st.session_state.data.copy()
-            combined_data = pd.concat([main_data, final_df]).drop_duplicates(subset=['ID'], keep='last')
-            
-            final_ids = set(final_df['ID'].dropna())
-            combined_data = combined_data[combined_data['ID'].isin(final_ids)]
-
-            st.session_state.data = combined_data.reset_index(drop=True)
+            updated_df = st.session_state.data.set_index('ID')
+            edited_df = edited_data.set_index('ID')
+            updated_df.update(edited_df)
+            st.session_state.data = updated_df.reset_index()
             save_data(st.session_state.data)
-            st.toast("Perubahan tabel telah disimpan!", icon="✅")
+            st.toast("Perubahan data teks telah disimpan!", icon="✅")
             st.rerun()
         else:
             st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
