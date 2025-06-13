@@ -81,7 +81,7 @@ st.markdown(
             color: #FFFFFF;
             text-align: center;
             border-bottom: none;
-            font-size: 1.9rem; /* PERUBAHAN: Ukuran font diperkecil lagi */
+            font-size: 1.9rem; 
             white-space: nowrap;
         }
         .login-container h3 {
@@ -89,28 +89,28 @@ st.markdown(
             text-align: center;
             border-bottom: none;
         }
-        .login-container label {
-            color: #ECF0F1;
-        }
-
-        /* --- Tombol (Buttons) Utama --- */
+        
+        /* --- PERUBAHAN: Tombol (Buttons) dengan Efek Cahaya --- */
         .stButton>button {
             font-weight: 600;
             border-radius: 8px;
             border: 1px solid #3498DB;
-            background-color: #3498DB;
+            background-color: rgba(52, 152, 219, 0.2); /* Biru semi-transparan */
             color: #FFFFFF;
-            transition: all 0.2s ease-in-out;
+            transition: all 0.3s ease-in-out;
             padding: 10px 24px;
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.4); /* Efek cahaya awal */
         }
         .stButton>button:hover {
-            background-color: #2980B9;
-            border-color: #2980B9;
+            background-color: #3498DB; /* Menjadi solid saat disentuh */
+            border-color: #3498DB;
             color: #FFFFFF;
+            box-shadow: 0 0 20px rgba(52, 152, 219, 0.7); /* Cahaya lebih terang */
         }
         .stButton>button:focus {
-            box-shadow: 0 0 0 2px #021021, 0 0 0 4px #3498DB; /* Disesuaikan dengan background gelap */
+            box-shadow: 0 0 0 2px #021021, 0 0 0 4px #5dade2; /* Disesuaikan dengan background gelap */
         }
+        /* --- AKHIR PERUBAHAN --- */
 
         /* --- Kontainer (Form, Expander) --- */
         [data-testid="stForm"], 
@@ -130,10 +130,25 @@ st.markdown(
              color: #FFFFFF !important;
         }
         
-        /* Mengubah warna teks placeholder */
+        label,
+        div[data-testid="stWidgetLabel"] label,
+        .st-emotion-cache-1kyxreq e1i5pmia1 { /* Selector untuk teks file uploader */
+            color: #FFFFFF !important;
+            font-weight: 500;
+        }
+        
+        [data-testid="stMarkdownContainer"] p,
+        .stAlert p {
+             color: #ECF0F1 !important;
+        }
+        
         ::placeholder { 
-            color: rgba(236, 240, 241, 0.5) !important;
+            color: rgba(236, 240, 241, 0.7) !important;
             opacity: 1; /* Firefox */
+        }
+        
+        [data-testid="stExpander"] summary p {
+            color: #FFFFFF;
         }
 
         /* --- Data Editor / Tabel --- */
@@ -186,7 +201,7 @@ def logout():
     st.rerun()
 
 def generate_next_id(df, jenis):
-    if jenis == 'First Line Maintenance':
+    if jenis == 'FLM':
         prefix = 'FLM'
     elif jenis == 'Corrective Maintenance':
         prefix = 'CM'
@@ -251,7 +266,7 @@ def create_pdf_report(filtered_data, report_type):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN (Persero)</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.9*inch)
             logo_img.hAlign = 'LEFT'
 
             header_data = [[logo_img, Paragraph(header_text, styles['Header'])]]
@@ -350,7 +365,7 @@ else:
         except FileNotFoundError: 
             st.error("File `logo.png` tidak ditemukan.")
         
-        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("123456")}
+        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
         
         with st.form("login_form"):
             st.markdown("### User Login")
@@ -375,7 +390,7 @@ with st.sidebar:
     menu = st.radio("Pilih Menu:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
-    st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
+    st.markdown("<hr>"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
 st.title("MONITORING FLM, CM, & PM")
 st.write("#### PLTU Bangka")
@@ -387,12 +402,12 @@ if menu == "Input Data":
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
-            jenis = st.selectbox("Jenis Pekerjaan", ["First Line Maintenance", "Corrective Maintenance", "Preventive Maintenance"])
+            jenis = st.selectbox("Jenis Pekerjaan", ["FLM", "Corrective Maintenance", "Preventive Maintenance"])
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
             nama_pelaksana = st.text_input("Nama Pelaksana")
-            status = st.selectbox("Status", ["Finish", "On Progress", "Open"])
+            status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
             keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
         st.markdown("---"); st.subheader("Upload Bukti Pekerjaan (Evidence)")
         col_ev1, col_ev2 = st.columns(2)
@@ -421,7 +436,7 @@ elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
     with st.container():
-        st.write("filter data spesifik.")
+        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
         data_to_display = st.session_state.data.copy()
         col1, col2, col3 = st.columns(3)
         with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
