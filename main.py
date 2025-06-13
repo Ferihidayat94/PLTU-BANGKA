@@ -219,7 +219,7 @@ def logout():
     st.rerun()
 
 def generate_next_id(df, jenis):
-    if jenis == 'First Line Maintenance':
+    if jenis == 'FLM':
         prefix = 'FLM'
     elif jenis == 'Corrective Maintenance':
         prefix = 'CM'
@@ -283,8 +283,8 @@ def create_pdf_report(filtered_data, report_type):
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
-            header_text = "<b>PT PLN NUSANTARA POWER SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
+            header_text = "<b>PT PLN (Persero)</b><br/>Unit PLTU Bangka"
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.9*inch)
             logo_img.hAlign = 'LEFT'
 
             header_data = [[logo_img, Paragraph(header_text, styles['Header'])]]
@@ -383,7 +383,7 @@ else:
         except FileNotFoundError: 
             st.error("File `logo.png` tidak ditemukan.")
         
-        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("12345")}
+        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
         
         with st.form("login_form"):
             st.markdown("### User Login")
@@ -404,26 +404,26 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image(Image.open("logo.png"), use_container_width=True) 
     except FileNotFoundError: st.info("logo.png tidak ditemukan.")
-    menu = st.radio("Pilih Halaman:", ["Input Data", "Report Data"], label_visibility="collapsed")
+    menu = st.radio("Pilih Halaman:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
-    st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
+    st.markdown("<hr>"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-st.title("DASHBOARD")
+st.title("MONITORING FLM, CM, & PM")
 st.write("#### PLTU Bangka")
 
 if menu == "Input Data":
-    st.header("Input Data Pekerjaan Baru")
+    st.header("📋 Input Data Pekerjaan Baru")
     with st.form("input_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
-            jenis = st.selectbox("Jenis Pekerjaan", ["First Line Maintenance", "Corrective Maintenance", "Preventive Maintenance"])
+            jenis = st.selectbox("Jenis Pekerjaan", ["FLM", "Corrective Maintenance", "Preventive Maintenance"])
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
             nama_pelaksana = st.text_input("Nama Pelaksana")
-            status = st.selectbox("Status", ["Finish", "On Progress", "Open"])
+            status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
             keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
         
         st.subheader("Upload Bukti Pekerjaan (Evidence)")
@@ -449,8 +449,8 @@ if menu == "Input Data":
                 save_data(st.session_state.data)
                 st.success(f"Data dengan ID '{new_id}' berhasil disimpan!")
 
-elif menu == "Data Report":
-    st.header("Integrated Data & Report")
+elif menu == "Manajemen & Laporan Data":
+    st.header("📊 Manajemen & Laporan Data")
 
     with st.expander("✅ **Update Status Pekerjaan**", expanded=False):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
@@ -482,7 +482,8 @@ elif menu == "Data Report":
         else:
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
 
-
+    with st.container(border=True):
+        st.info("Centang baris untuk menghapus, atau edit langsung sel di tabel, lalu tekan tombol di bawah.")
         
         data_to_display = st.session_state.data.copy()
         filter_col1, filter_col2 = st.columns(2)
