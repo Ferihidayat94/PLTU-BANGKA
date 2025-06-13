@@ -113,10 +113,11 @@ st.markdown(
         /* Tombol Hapus khusus */
         .delete-button button {
             border-color: #E74C3C !important;
+            background-color: #E74C3C !important;
         }
         .delete-button button:hover {
-            background-color: #E74C3C !important;
-            border-color: #E74C3C !important;
+            background-color: #C0392B !important;
+            border-color: #C0392B !important;
         }
 
         /* --- Kontainer (Form, Expander, Bordered Container) --- */
@@ -397,7 +398,6 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image(Image.open("logo.png"), use_container_width=True) 
     except FileNotFoundError: st.info("logo.png tidak ditemukan.")
-    # PERUBAHAN: Mengembalikan menu radio di sidebar
     menu = st.radio("Pilih Halaman:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
@@ -405,9 +405,7 @@ with st.sidebar:
 
 st.title("MONITORING FLM, CM, & PM")
 st.write("#### PLTU Bangka")
-# st.markdown("---") # Dihapus
 
-# PERUBAHAN: Menggunakan if/elif untuk mengatur tampilan halaman
 if menu == "Input Data":
     st.header("📋 Input Data Pekerjaan Baru")
     with st.form("input_form", clear_on_submit=True):
@@ -488,53 +486,47 @@ elif menu == "Manajemen & Laporan Data":
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
 
     with st.container(border=True):
-        data_with_delete = data_to_display.copy()
-        data_with_delete.insert(0, "Hapus", False)
-        
-        column_config = { 
-            "Hapus": st.column_config.CheckboxColumn("Hapus", help="Centang untuk memilih baris yang akan dihapus."),
-            "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"), 
-            "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance", "Preventive Maintenance"]), 
-            "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), 
-            "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), 
-            "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), 
-            "Evidance": st.column_config.ImageColumn("Evidence Before"), 
-            "Evidance After": st.column_config.ImageColumn("Evidence After"), 
-            "ID": st.column_config.TextColumn("ID", disabled=True), 
-        }
-        
-        st.info("Centang baris untuk menghapus, atau edit langsung sel di tabel, lalu tekan tombol di bawah.")
+        st.info("Edit langsung sel di tabel, lalu tekan 'Simpan Perubahan Tabel' di bawah.")
         edited_data = st.data_editor(
-            data_with_delete, 
+            data_to_display, 
             key="data_editor", 
             disabled=["ID", "Evidance", "Evidance After"], 
-            use_container_width=True, 
-            column_config=column_config,
-            column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
+            use_container_width=True,
+            column_config={ 
+                "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"), 
+                "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance", "Preventive Maintenance"]), 
+                "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), 
+                "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), 
+                "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), 
+                "Evidance": st.column_config.ImageColumn("Evidence Before"), 
+                "Evidance After": st.column_config.ImageColumn("Evidence After"), 
+                "ID": st.column_config.TextColumn("ID", disabled=True), 
+            },
+            column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
         )
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Simpan Perubahan Tabel", use_container_width=True):
-                if st.session_state.user == 'admin':
-                    df_to_save = edited_data.drop(columns=['Hapus'])
-                    updated_df = st.session_state.data.set_index('ID')
-                    edited_df_no_delete = df_to_save.set_index('ID')
-                    updated_df.update(edited_df_no_delete)
-                    st.session_state.data = updated_df.reset_index()
-                    save_data(st.session_state.data)
-                    st.toast("Perubahan data teks telah disimpan!", icon="✅")
-                    st.rerun()
-                else:
-                    st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
-        
-        with col2:
-            st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-            if st.button("Hapus Baris Terpilih", use_container_width=True):
-                if st.session_state.user == 'admin':
-                    rows_to_delete = edited_data[edited_data['Hapus']]
-                    if not rows_to_delete.empty:
-                        ids_to_delete = rows_to_delete['ID'].tolist()
+        if st.button("Simpan Perubahan Tabel", use_container_width=True):
+            if st.session_state.user == 'admin':
+                updated_df = st.session_state.data.set_index('ID')
+                edited_df_no_delete = edited_data.set_index('ID')
+                updated_df.update(edited_df_no_delete)
+                st.session_state.data = updated_df.reset_index()
+                save_data(st.session_state.data)
+                st.toast("Perubahan data teks telah disimpan!", icon="✅")
+                st.rerun()
+            else:
+                st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
+    
+    with st.expander("❌ **Hapus Data Pekerjaan**"):
+        if st.session_state.user == 'admin':
+            if not st.session_state.data.empty:
+                ids_to_delete = st.multiselect(
+                    "Pilih ID pekerjaan yang akan dihapus:",
+                    options=st.session_state.data["ID"].tolist()
+                )
+                st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                if st.button("HAPUS DATA TERPILIH PERMANEN", use_container_width=True):
+                    if ids_to_delete:
                         for an_id in ids_to_delete:
                             row_to_delete = st.session_state.data[st.session_state.data['ID'] == an_id]
                             if not row_to_delete.empty:
@@ -547,11 +539,12 @@ elif menu == "Manajemen & Laporan Data":
                         st.success(f"{len(ids_to_delete)} data berhasil dihapus.")
                         st.rerun()
                     else:
-                        st.warning("Tidak ada baris yang dipilih untuk dihapus.")
-                else:
-                    st.warning("Hanya 'admin' yang dapat menghapus data.")
-            st.markdown('</div>', unsafe_allow_html=True)
-
+                        st.warning("Mohon pilih data yang akan dihapus.")
+                st.markdown('</div>', unsafe_allow_html=True)
+            else:
+                st.info("Tidak ada data untuk dihapus.")
+        else:
+            st.warning("Hanya 'admin' yang dapat menghapus data.")
 
     with st.container(border=True):
         st.subheader("📄 Laporan & Unduh Data")
