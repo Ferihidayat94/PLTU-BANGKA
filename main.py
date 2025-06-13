@@ -49,11 +49,11 @@ st.markdown(
             border-right: none;
         }
         [data-testid="stSidebar"] .stMarkdown, 
-        [data-testid="stSidebar"] .stRadio > label,
-        [data-testid="stSidebar"] .stButton > button {
-            color: #ECF0F1; /* Teks dan tombol di sidebar berwarna putih keabuan */
+        [data-testid="stSidebar"] .stRadio > label {
+            color: #FFFFFF; 
         }
-        [data-testid="stSidebar"] .stButton>button {
+        [data-testid="stSidebar"] .stButton > button {
+            color: #ECF0F1; 
             border-color: #3498DB;
             background-color: transparent;
         }
@@ -63,6 +63,29 @@ st.markdown(
         }
         [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
              color: #FFFFFF;
+        }
+
+        /* --- Halaman Login --- */
+        .login-container [data-testid="stForm"] {
+            background-color: #2C3E50;
+            border: 1px solid #2C3E50;
+            padding: 2rem;
+            border-radius: 10px;
+        }
+        .login-title {
+            color: #FFFFFF;
+            text-align: center;
+            border-bottom: none;
+            font-size: 2.2rem; /* PERUBAHAN: Ukuran font diperkecil */
+            white-space: nowrap; /* PERUBAHAN: Memastikan tidak menjadi 2 baris */
+        }
+        .login-container h3 {
+            color: #FFFFFF;
+            text-align: center;
+            border-bottom: none;
+        }
+        .login-container label {
+            color: #ECF0F1;
         }
 
 
@@ -144,7 +167,7 @@ def logout():
 
 def generate_next_id(df, jenis):
     if jenis == 'FLM':
-        prefix = 'FLM'
+        prefix = 'First Line Maintenance'
     elif jenis == 'Corrective Maintenance':
         prefix = 'CM'
     elif jenis == 'Preventive Maintenance':
@@ -207,9 +230,8 @@ def create_pdf_report(filtered_data, report_type):
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
-            # Menggunakan nama perusahaan yang lebih umum, bisa disesuaikan jika perlu
             header_text = "<b>PT PLN (Persero)</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.8*inch, height=0.9*inch)
+            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
             logo_img.hAlign = 'LEFT'
 
             header_data = [[logo_img, Paragraph(header_text, styles['Header'])]]
@@ -242,7 +264,7 @@ def create_pdf_report(filtered_data, report_type):
 
         table = Table(data, colWidths=[100, 380])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ECF0F1')), # Latar header kolom abu-abu lembut
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ECF0F1')), 
             ('TEXTCOLOR', (0,0), (0, -1), colors.HexColor('#2C3E50')),
             ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')),
             ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#BDC3C7')),
@@ -279,7 +301,6 @@ def create_pdf_report(filtered_data, report_type):
         elements.append(PageBreak())
 
     if len(elements) > 2:
-        # Hapus PageBreak terakhir jika ada
         if isinstance(elements[-1], PageBreak):
             elements.pop()
         doc.build(elements)
@@ -302,10 +323,16 @@ if st.session_state.get("logged_in"):
 else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        st.title("Job Monitoring System")
-        try: st.image(Image.open("logo.png"), width=150)
-        except FileNotFoundError: st.error("File `logo.png` tidak ditemukan.")
+        st.markdown('<div class="login-container">', unsafe_allow_html=True)
+        # PERUBAHAN: Mengganti st.title dengan st.markdown untuk styling khusus
+        st.markdown('<h1 class="login-title">Sistem Monitoring O&M</h1>', unsafe_allow_html=True)
+        try: 
+            st.image(Image.open("logo.png"), width=150)
+        except FileNotFoundError: 
+            st.error("File `logo.png` tidak ditemukan.")
+        
         ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("123456")}
+        
         with st.form("login_form"):
             st.markdown("### User Login")
             username = st.text_input("Username", placeholder="e.g., admin")
@@ -317,6 +344,7 @@ else:
                     st.session_state.user = username
                     st.rerun()
                 else: st.error("Username atau password salah.")
+        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ================== Tampilan Utama Setelah Login ==================
