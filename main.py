@@ -85,24 +85,28 @@ st.markdown(
             border-bottom: none;
         }
         
-        /* --- Menyeragamkan semua tombol --- */
-        .stButton>button {
+        /* --- PERUBAHAN: Menyeragamkan semua tombol --- */
+        div[data-testid="stButton"] > button,
+        div[data-testid="stDownloadButton"] > button {
             font-weight: 600;
             border-radius: 8px;
-            border: 1px solid #3498DB;
-            background-color: transparent; /* Latar transparan seperti tombol logout */
-            color: #FFFFFF;
+            border: 1px solid #3498DB !important;
+            background-color: transparent !important;
+            color: #FFFFFF !important;
             transition: all 0.3s ease-in-out;
             padding: 10px 24px;
         }
-        .stButton>button:hover {
-            background-color: #3498DB; /* Menjadi solid saat disentuh */
-            border-color: #3498DB;
-            color: #FFFFFF;
+        div[data-testid="stButton"] > button:hover,
+        div[data-testid="stDownloadButton"] > button:hover {
+            background-color: #3498DB !important;
+            border-color: #3498DB !important;
+            color: #FFFFFF !important;
         }
-        .stButton>button:focus {
-            box-shadow: 0 0 0 2px #021021, 0 0 0 4px #5dade2; /* Disesuaikan dengan background gelap */
+        div[data-testid="stButton"] > button:focus,
+        div[data-testid="stDownloadButton"] > button:focus {
+            box-shadow: 0 0 0 2px #021021, 0 0 0 4px #5dade2 !important;
         }
+        /* --- AKHIR PERUBAHAN --- */
 
         /* --- Kontainer (Form, Expander, Bordered Container) --- */
         [data-testid="stForm"], 
