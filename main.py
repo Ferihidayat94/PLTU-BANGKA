@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, date
 import uuid
 from PIL import Image, ExifTags
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak, Flowable
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image as RLImage, Paragraph, Spacer, PageBreak
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
@@ -40,18 +40,6 @@ UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 DATA_FILE = "monitoring_data.csv"
 
-# Kelas untuk garis pemisah
-class Line(Flowable):
-    def __init__(self, width, color=colors.grey):
-        Flowable.__init__(self)
-        self.width = width
-        self.color = color
-
-    def draw(self):
-        self.canv.setStrokeColor(self.color)
-        self.canv.setLineWidth(1)
-        self.canv.line(0, 0, self.width, 0)
-
 # ================== Fungsi-Fungsi Helper ==================
 
 def hash_password(password):
@@ -79,7 +67,9 @@ def logout():
     st.session_state.logged_in = False
     st.rerun()
 
+# --- PERUBAHAN: Menambahkan handler untuk "Preventive Maintenance" ---
 def generate_next_id(df, jenis):
+    """Membuat ID unik berikutnya berdasarkan jenis pekerjaan."""
     if jenis == 'FLM':
         prefix = 'FLM'
     elif jenis == 'Corrective Maintenance':
@@ -87,7 +77,7 @@ def generate_next_id(df, jenis):
     elif jenis == 'Preventive Maintenance':
         prefix = 'PM'
     else:
-        prefix = 'JOB'
+        prefix = 'JOB' # Default prefix
 
     relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]
     if relevant_ids.empty:
@@ -127,17 +117,16 @@ def save_image_from_bytes(image_bytes):
         st.error(f"Gagal memproses gambar: {e}")
         return ""
 
-# --- FUNGSI PDF DENGAN LAYOUT EVIDENCE HORIZONTAL ---
-def create_pdf_report(filtered_data, report_type):
+def create_pdf_report(filtered_data):
     file_path = f"laporan_monitoring_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     doc = SimpleDocTemplate(file_path, pagesize=A4,
-                            rightMargin=inch*0.5, leftMargin=inch*0.5,
-                            topMargin=inch*0.5, bottomMargin=inch*0.5)
+                            rightMargin=30, leftMargin=30,
+                            topMargin=40, bottomMargin=30)
 
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=16, leading=22, spaceAfter=20, fontName='Helvetica-Bold'))
-    styles.add(ParagraphStyle(name='SubTitle', alignment=TA_CENTER, fontSize=11, fontName='Helvetica-Bold', spaceAfter=5))
-    styles.add(ParagraphStyle(name='NormalLeft', alignment=TA_LEFT, fontSize=10, leading=14, fontName='Helvetica'))
+    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
+    styles.add(ParagraphStyle(name='ImageTitle', fontSize=10, spaceBefore=6, spaceAfter=2))
+
 
     elements = []
     
@@ -145,72 +134,63 @@ def create_pdf_report(filtered_data, report_type):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
-            header_data = [[logo_img, Paragraph(header_text, styles['NormalLeft'])]]
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
+            header_data = [[logo_img, Paragraph(header_text, styles['Normal'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
             elements.append(header_table)
-            elements.append(Spacer(1, 15))
-    except Exception as e:
-        st.warning(f"Logo tidak bisa dimuat ke PDF: {e}")
-    
-    if report_type == "Semua":
-        title_text = "LAPORAN MONITORING FLM, CM, & PM"
-    else:
-        title_text = f"LAPORAN MONITORING {report_type.upper()}"
-        
-    elements.append(Paragraph(title_text, styles['TitleCenter']))
-    elements.append(Line(doc.width))
-    elements.append(Spacer(1, 20))
+            elements.append(Spacer(1, 20))
+    except Exception:
+        pass
+
+    elements.append(Paragraph("LAPORAN MONITORING FLM, CM, & PM", styles["TitleCenter"]))
+    elements.append(Spacer(1, 12))
 
     for i, row in filtered_data.iterrows():
         data = [
-            ["ID Laporan", f": {row.get('ID', 'N/A')}"], ["Tanggal", f": {pd.to_datetime(row.get('Tanggal')).strftime('%d %B %Y')}"],
-            ["Jenis Pekerjaan", f": {row.get('Jenis', 'N/A')}"], ["Area", f": {row.get('Area', 'N/A')}"],
-            ["Nomor SR", f": {row.get('Nomor SR', 'N/A')}"], ["Nama Pelaksana", f": {row.get('Nama Pelaksana', 'N/A')}"],
-            ["Status", f": {row.get('Status', 'N/A')}"], ["Keterangan", Paragraph(f": {str(row.get('Keterangan', ''))}", styles['NormalLeft'])],
+            ["ID", str(row.get('ID', ''))],
+            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%Y-%m-%d')],
+            ["Jenis", str(row.get('Jenis', ''))],
+            ["Area", str(row.get('Area', ''))],
+            ["Nomor SR", str(row.get('Nomor SR', ''))],
+            ["Nama Pelaksana", str(row.get('Nama Pelaksana', ''))],
+            ["Status", str(row.get('Status', ''))],
+            ["Keterangan", Paragraph(str(row.get('Keterangan', '')), styles['Normal'])],
         ]
-        table = Table(data, colWidths=[1.5*inch, 5.5*inch])
+
+        table = Table(data, colWidths=[100, 380])
         table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'), ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'), ('BOTTOMPADDING', (0,0), (-1,-1), 6),
-            ('TOPPADDING', (0,0), (-1,-1), 2), ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
         ]))
+
         elements.append(table)
-        elements.append(Spacer(1, 15))
+        elements.append(Spacer(1, 10))
         
-        def process_image_for_pdf(path):
-            if isinstance(path, str) and os.path.exists(path):
-                try:
-                    pil_image = Image.open(path)
-                    pil_image = fix_image_orientation(pil_image)
-                    return RLImage(pil_image, width=3.4*inch, height=2.55*inch, kind='bound')
-                except Exception:
-                    return None
-            return None
-
-        img_before = process_image_for_pdf(row.get("Evidance"))
-        img_after = process_image_for_pdf(row.get("Evidance After"))
-
-        if img_before or img_after:
-            evidence_data = [
-                [Paragraph("<b>Evidence Before</b>", styles['SubTitle']), Paragraph("<b>Evidence After</b>", styles['SubTitle'])],
-                [img_before if img_before else "", img_after if img_after else ""]
-            ]
-            
-            evidence_table = Table(evidence_data, colWidths=[doc.width/2.05, doc.width/2.05])
-            evidence_table.setStyle(TableStyle([
-                ('ALIGN', (0,0), (-1,-1), 'CENTER'), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-                ('BOX', (0,0), (-1,-1), 1, colors.lightgrey), ('GRID', (0,0), (-1,-1), 1, colors.lightgrey),
-                ('BOTTOMPADDING', (0,1), (-1,-1), 10)
-            ]))
-            elements.append(evidence_table)
+        evidance_path = row.get("Evidance")
+        if evidance_path and isinstance(evidance_path, str) and os.path.exists(evidance_path):
+            elements.append(Paragraph("Evidence Before:", styles['ImageTitle']))
+            try:
+                elements.append(RLImage(evidance_path, width=4*inch, height=3*inch, kind='bound'))
+            except Exception as e:
+                print(f"Gagal memuat gambar ke PDF (Before): {e}")
+            elements.append(Spacer(1, 6))
         
-        elements.append(Spacer(1, 20))
-        elements.append(Line(doc.width, color=colors.black))
-        elements.append(Spacer(1, 20))
+        evidance_after_path = row.get("Evidance After")
+        if evidance_after_path and isinstance(evidance_after_path, str) and os.path.exists(evidance_after_path):
+            elements.append(Paragraph("Evidence After:", styles['ImageTitle']))
+            try:
+                elements.append(RLImage(evidance_after_path, width=4*inch, height=3*inch, kind='bound'))
+            except Exception as e:
+                print(f"Gagal memuat gambar ke PDF (After): {e}")
+            elements.append(Spacer(1, 10))
 
-    if len(elements) > 4:
+        elements.append(PageBreak())
+
+    if len(elements) > 2:
         doc.build(elements)
         return file_path
     return None
@@ -231,12 +211,12 @@ if st.session_state.get("logged_in"):
 else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        st.title("Sistem Monitoring O&M PLTU Bangka")
+        st.title("Login Sistem Monitoring")
         try: st.image(Image.open("logo.png"), width=150)
         except FileNotFoundError: st.error("File `logo.png` tidak ditemukan.")
         ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
         with st.form("login_form"):
-            st.markdown("### LOGIN")
+            st.markdown("### Silakan Masuk")
             username = st.text_input("Username", placeholder="e.g., admin")
             password = st.text_input("Password", type="password", placeholder="••••••••")
             st.markdown("---")
@@ -269,6 +249,7 @@ if menu == "Input Data":
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
+            # --- PERUBAHAN: Menambahkan opsi "Preventive Maintenance" ---
             jenis = st.selectbox("Jenis Pekerjaan", ["FLM", "Corrective Maintenance", "Preventive Maintenance"])
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
@@ -302,18 +283,7 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
-    with st.container():
-        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
-        data_to_display = st.session_state.data.copy()
-        col1, col2, col3 = st.columns(3)
-        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
-        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].dropna().unique()))
-        if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
-        if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
-        
-    st.markdown("---")
-
-    with st.expander("✅ **Update Status & Evidence Pekerjaan** (Cara yang disarankan)"):
+    with st.expander("✅ **Upload Cepat Evidence After & Selesaikan Pekerjaan** (Cara yang disarankan)"):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
             job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row['Keterangan'])[:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
@@ -344,7 +314,19 @@ elif menu == "Manajemen & Laporan Data":
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
     
     st.markdown("---")
+
+    with st.container():
+        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
+        data_to_display = st.session_state.data.copy()
+        col1, col2, col3 = st.columns(3)
+        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
+        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].dropna().unique()))
+        if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
+        if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
+        
+    st.markdown("---")
     
+    # --- PERUBAHAN: Menambahkan opsi "Preventive Maintenance" pada kolom editor ---
     column_config = { 
         "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"), 
         "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance", "Preventive Maintenance"]), 
@@ -379,6 +361,7 @@ elif menu == "Manajemen & Laporan Data":
         col1, col2, col3 = st.columns(3)
         with col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
         with col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
+        # --- PERUBAHAN: Menambahkan opsi "Preventive Maintenance" pada filter PDF ---
         with col3: export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance", "Preventive Maintenance"], key="pdf_export_type")
 
         if st.button("Buat Laporan PDF"):
@@ -392,9 +375,8 @@ elif menu == "Manajemen & Laporan Data":
                 st.warning("Tidak ada data yang ditemukan.")
             else:
                 with st.spinner("Membuat file PDF..."):
-                    pdf_file = create_pdf_report(final_data_to_export, export_type)
+                    pdf_file = create_pdf_report(final_data_to_export)
                 if pdf_file:
                     st.success("Laporan PDF berhasil dibuat!")
                     with open(pdf_file, "rb") as f:
                         st.download_button("Unduh Laporan PDF", f, file_name=os.path.basename(pdf_file))
-
