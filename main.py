@@ -67,8 +67,18 @@ def logout():
     st.session_state.logged_in = False
     st.rerun()
 
+# --- PERUBAHAN: Menambahkan handler untuk "Preventive Maintenance" ---
 def generate_next_id(df, jenis):
-    prefix = 'FLM' if jenis == 'FLM' else 'CM'
+    """Membuat ID unik berikutnya berdasarkan jenis pekerjaan."""
+    if jenis == 'FLM':
+        prefix = 'FLM'
+    elif jenis == 'Corrective Maintenance':
+        prefix = 'CM'
+    elif jenis == 'Preventive Maintenance':
+        prefix = 'PM'
+    else:
+        prefix = 'JOB' # Default prefix
+
     relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]
     if relevant_ids.empty:
         return f"{prefix}-001"
@@ -124,7 +134,7 @@ def create_pdf_report(filtered_data):
         logo_path = "logo.png"
         if os.path.exists(logo_path):
             header_text = "<b>PT PLN NUSANTARA SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.8*inch)
             header_data = [[logo_img, Paragraph(header_text, styles['Normal'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
@@ -133,7 +143,7 @@ def create_pdf_report(filtered_data):
     except Exception:
         pass
 
-    elements.append(Paragraph("LAPORAN MONITORING FLM & CORRECTIVE MAINTENANCE", styles["TitleCenter"]))
+    elements.append(Paragraph("LAPORAN MONITORING FLM, CM, & PM", styles["TitleCenter"]))
     elements.append(Spacer(1, 12))
 
     for i, row in filtered_data.iterrows():
@@ -229,7 +239,7 @@ with st.sidebar:
     if st.button("Logout"): logout()
     st.markdown("<hr>"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-st.title("MONITORING FLM & CORRECTIVE MAINTENANCE")
+st.title("MONITORING FLM, CM, & PM")
 st.write("#### Produksi A PLTU Bangka")
 st.markdown("---")
 
@@ -239,7 +249,8 @@ if menu == "Input Data":
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
-            jenis = st.selectbox("Jenis Pekerjaan", ["FLM", "Corrective Maintenance"])
+            # --- PERUBAHAN: Menambahkan opsi "Preventive Maintenance" ---
+            jenis = st.selectbox("Jenis Pekerjaan", ["FLM", "Corrective Maintenance", "Preventive Maintenance"])
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
@@ -272,18 +283,6 @@ if menu == "Input Data":
 elif menu == "Manajemen & Laporan Data":
     st.header("📊 Manajemen & Laporan Data")
 
-    with st.container():
-        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
-        data_to_display = st.session_state.data.copy()
-        col1, col2, col3 = st.columns(3)
-        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
-        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].dropna().unique()))
-        if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
-        if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
-        
-    st.markdown("---")
-
-    # --- PERUBAHAN: Memindahkan posisi "Upload Cepat" ---
     with st.expander("✅ **Upload Cepat Evidence After & Selesaikan Pekerjaan** (Cara yang disarankan)"):
         open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
         if not open_jobs.empty:
@@ -315,6 +314,29 @@ elif menu == "Manajemen & Laporan Data":
             st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
     
     st.markdown("---")
+
+    with st.container():
+        st.write("Gunakan filter di bawah untuk mencari data spesifik.")
+        data_to_display = st.session_state.data.copy()
+        col1, col2, col3 = st.columns(3)
+        with col1: filter_jenis = st.selectbox("Saring berdasarkan Jenis:", ["Semua"] + list(data_to_display["Jenis"].dropna().unique()))
+        with col2: filter_status = st.selectbox("Saring berdasarkan Status:", ["Semua"] + list(data_to_display["Status"].dropna().unique()))
+        if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
+        if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
+        
+    st.markdown("---")
+    
+    # --- PERUBAHAN: Menambahkan opsi "Preventive Maintenance" pada kolom editor ---
+    column_config = { 
+        "Tanggal": st.column_config.DateColumn("Tanggal", format="YYYY-MM-DD"), 
+        "Jenis": st.column_config.SelectboxColumn("Jenis", options=["FLM", "Corrective Maintenance", "Preventive Maintenance"]), 
+        "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]), 
+        "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]), 
+        "Keterangan": st.column_config.TextColumn("Keterangan", width="large"), 
+        "Evidance": st.column_config.ImageColumn("Evidence Before"), 
+        "Evidance After": st.column_config.ImageColumn("Evidence After"), 
+        "ID": st.column_config.TextColumn("ID", disabled=True), 
+    }
     
     st.info("Untuk mengedit detail lainnya (selain foto), gunakan tabel di bawah dan tekan 'Simpan Perubahan Tabel'.")
     edited_data = st.data_editor(data_to_display, key="data_editor", disabled=["Evidance", "Evidance After"], use_container_width=True, column_order=["ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"])
@@ -339,7 +361,8 @@ elif menu == "Manajemen & Laporan Data":
         col1, col2, col3 = st.columns(3)
         with col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
         with col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
-        with col3: export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance"], key="pdf_export_type")
+        # --- PERUBAHAN: Menambahkan opsi "Preventive Maintenance" pada filter PDF ---
+        with col3: export_type = st.selectbox("Pilih Jenis Pekerjaan", ["Semua", "FLM", "Corrective Maintenance", "Preventive Maintenance"], key="pdf_export_type")
 
         if st.button("Buat Laporan PDF"):
             report_data = st.session_state.data.copy()
