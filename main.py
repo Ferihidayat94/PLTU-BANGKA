@@ -486,25 +486,40 @@ elif menu == "Manajemen & Laporan Data":
             column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
         )
 
-        rows_to_delete_df = edited_data[edited_data['Hapus']]
-        
-        if not rows_to_delete_df.empty:
-            action_col1, action_col2 = st.columns([1, 4]) 
-            with action_col1:
-                st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-                if st.button("🗑️ Hapus", use_container_width=True, help=f"Hapus {len(rows_to_delete_df)} baris terpilih"):
-                    if st.session_state.user == 'admin':
-                        ids_to_delete = rows_to_delete_df['ID'].tolist()
-                        st.session_state.data = st.session_state.data[~st.session_state.data['ID'].isin(ids_to_delete)]
-                        save_data(st.session_state.data)
-                        st.success(f"{len(ids_to_delete)} data berhasil dihapus.")
-                        st.rerun()
-                    else:
-                        st.warning("Hanya 'admin' yang dapat menghapus data.")
-                st.markdown('</div>', unsafe_allow_html=True)
+        # --- PERBAIKAN LOGIKA: Tombol hapus hanya muncul jika ada yang dicentang ---
+        if not edited_data.empty and 'Hapus' in edited_data.columns:
+            rows_to_delete_df = edited_data[edited_data['Hapus']]
+            
+            if not rows_to_delete_df.empty:
+                action_col1, action_col2 = st.columns([1, 4]) 
+                with action_col1:
+                    st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                    if st.button(f"🗑️ Hapus ({len(rows_to_delete_df)})", use_container_width=True, help=f"Hapus {len(rows_to_delete_df)} baris terpilih"):
+                        if st.session_state.user == 'admin':
+                            ids_to_delete = rows_to_delete_df['ID'].tolist()
+                            st.session_state.data = st.session_state.data[~st.session_state.data['ID'].isin(ids_to_delete)]
+                            save_data(st.session_state.data)
+                            st.success(f"{len(ids_to_delete)} data berhasil dihapus.")
+                            st.rerun()
+                        else:
+                            st.warning("Hanya 'admin' yang dapat menghapus data.")
+                    st.markdown('</div>', unsafe_allow_html=True)
 
-            with action_col2:
-                if st.button("Simpan Perubahan Tabel", use_container_width=True):
+                with action_col2:
+                    if st.button("Simpan Perubahan Tabel", use_container_width=True):
+                        if st.session_state.user == 'admin':
+                            df_to_save = edited_data.drop(columns=['Hapus'])
+                            updated_df = st.session_state.data.set_index('ID')
+                            edited_df_no_delete = df_to_save.set_index('ID')
+                            updated_df.update(edited_df_no_delete)
+                            st.session_state.data = updated_df.reset_index()
+                            save_data(st.session_state.data)
+                            st.toast("Perubahan data teks telah disimpan!", icon="✅")
+                            st.rerun()
+                        else:
+                            st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
+            else:
+                 if st.button("Simpan Perubahan Tabel", use_container_width=True):
                     if st.session_state.user == 'admin':
                         df_to_save = edited_data.drop(columns=['Hapus'])
                         updated_df = st.session_state.data.set_index('ID')
@@ -516,20 +531,9 @@ elif menu == "Manajemen & Laporan Data":
                         st.rerun()
                     else:
                         st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
-        else:
-             if st.button("Simpan Perubahan Tabel", use_container_width=True):
-                if st.session_state.user == 'admin':
-                    df_to_save = edited_data.drop(columns=['Hapus'])
-                    updated_df = st.session_state.data.set_index('ID')
-                    edited_df_no_delete = df_to_save.set_index('ID')
-                    updated_df.update(edited_df_no_delete)
-                    st.session_state.data = updated_df.reset_index()
-                    save_data(st.session_state.data)
-                    st.toast("Perubahan data teks telah disimpan!", icon="✅")
-                    st.rerun()
-                else:
-                    st.warning("Hanya 'admin' yang dapat menyimpan perubahan.")
-
+        elif edited_data.empty:
+            st.write("Tidak ada data untuk ditampilkan atau diedit.")
+            
 
     with st.container(border=True):
         st.subheader("📄 Laporan & Unduh Data")
