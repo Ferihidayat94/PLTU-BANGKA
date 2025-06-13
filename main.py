@@ -16,11 +16,11 @@ import io
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom untuk Tampilan (Tema PLN Modern) ==================
+# ================== CSS Kustom untuk Tampilan (Tema Biru Elegan) ==================
 st.markdown(
     """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
         html, body, [class*="st-"] {
             font-family: 'Inter', sans-serif;
@@ -28,65 +28,87 @@ st.markdown(
 
         /* --- Warna & Layout Utama --- */
         .stApp {
-            background-color: #F0F2F6; /* Latar belakang abu-abu muda untuk tampilan yang bersih */
-            color: #31333F;
+            background-color: #ECF0F1; /* Latar belakang abu-abu lembut (Clouds) */
+            color: #34495E; /* Teks abu-abu gelap (Wet Asphalt) */
         }
 
         /* --- Tipografi / Teks --- */
         .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
-            color: #0077C8; /* Biru korporat PLN untuk semua judul */
+            color: #2C3E50; /* Biru Dongker Gelap (Midnight Blue) untuk semua judul */
         }
         
         h1 {
-            border-bottom: 2px solid #ED1C24; /* Aksen merah PLN pada judul utama */
-            padding-bottom: 10px;
+            border-bottom: 2px solid #3498DB; /* Aksen biru cerah */
+            padding-bottom: 12px;
+            margin-bottom: 20px;
         }
 
         /* --- Sidebar --- */
         [data-testid="stSidebar"] {
-            background-color: #FFFFFF;
-            border-right: 1px solid #DEE2E6;
+            background-color: #2C3E50; /* Sidebar dengan warna biru dongker */
+            border-right: none;
         }
         [data-testid="stSidebar"] .stMarkdown, 
-        [data-testid="stSidebar"] .stRadio > label {
-            color: #495057;
+        [data-testid="stSidebar"] .stRadio > label,
+        [data-testid="stSidebar"] .stButton > button {
+            color: #ECF0F1; /* Teks dan tombol di sidebar berwarna putih keabuan */
+        }
+        [data-testid="stSidebar"] .stButton>button {
+            border-color: #3498DB;
+            background-color: transparent;
+        }
+        [data-testid="stSidebar"] .stButton>button:hover {
+            background-color: #3498DB;
+            color: #FFFFFF;
+        }
+        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+             color: #FFFFFF;
         }
 
-        /* --- Tombol (Buttons) --- */
+
+        /* --- Tombol (Buttons) Utama --- */
         .stButton>button {
             font-weight: 600;
             border-radius: 8px;
-            border: 1px solid #0077C8;
-            background-color: #0077C8; /* Warna biru solid khas PLN */
+            border: 1px solid #3498DB; /* Border biru cerah (Peter River) */
+            background-color: #3498DB;
             color: #FFFFFF;
             transition: all 0.2s ease-in-out;
             padding: 10px 24px;
         }
         .stButton>button:hover {
-            background-color: #005FA3; /* Biru yang lebih gelap saat disentuh */
-            border-color: #005FA3;
+            background-color: #2980B9; /* Biru yang lebih gelap saat disentuh (Belize Hole) */
+            border-color: #2980B9;
             color: #FFFFFF;
         }
         .stButton>button:focus {
-            box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #0077C8; /* Efek fokus untuk aksesibilitas */
+            box-shadow: 0 0 0 2px #FFFFFF, 0 0 0 4px #3498DB;
         }
 
         /* --- Kontainer (Form, Expander) --- */
         [data-testid="stForm"], 
         [data-testid="stExpander"] {
-            border: 1px solid #DEE2E6;
+            border: 1px solid #BDC3C7; /* Border abu-abu (Silver) */
             border-radius: 10px;
             background-color: #FFFFFF; /* Latar belakang putih agar menonjol */
+            box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+        }
+        
+        /* --- Data Editor / Tabel --- */
+        [data-testid="stDataGridContainer"] {
+            border-radius: 10px;
+            overflow: hidden;
         }
 
         /* --- Elemen Lainnya --- */
         hr {
-            border-top: 1px solid #DEE2E6;
+            border-top: 1px solid #BDC3C7;
         }
     </style>
     """,
     unsafe_allow_html=True
 )
+
 
 # ================== Inisialisasi Awal ==================
 UPLOAD_FOLDER = "uploads"
@@ -175,17 +197,22 @@ def create_pdf_report(filtered_data, report_type):
                             topMargin=40, bottomMargin=30)
 
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10))
+    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10, textColor=colors.HexColor('#2C3E50')))
     styles.add(ParagraphStyle(name='ImageTitle', fontSize=10, spaceBefore=6, spaceAfter=2))
+    styles.add(ParagraphStyle(name='Header', alignment=TA_LEFT, textColor=colors.HexColor('#2C3E50')))
+
 
     elements = []
     
     try:
         logo_path = "logo.png"
         if os.path.exists(logo_path):
-            header_text = "<b>PT PLN NUSANTARA POWER</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
-            header_data = [[logo_img, Paragraph(header_text, styles['Normal'])]]
+            # Menggunakan nama perusahaan yang lebih umum, bisa disesuaikan jika perlu
+            header_text = "<b>PT PLN (Persero)</b><br/>Unit PLTU Bangka"
+            logo_img = RLImage(logo_path, width=0.8*inch, height=0.9*inch)
+            logo_img.hAlign = 'LEFT'
+
+            header_data = [[logo_img, Paragraph(header_text, styles['Header'])]]
             header_table = Table(header_data, colWidths=[1*inch, 6*inch])
             header_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)]))
             elements.append(header_table)
@@ -194,9 +221,9 @@ def create_pdf_report(filtered_data, report_type):
         pass
 
     if report_type == "Semua":
-        title_text = "LAPORAN MONITORING FLM, CM, & PM"
+        title_text = "<b>LAPORAN MONITORING FLM, CM, & PM</b>"
     else:
-        title_text = f"LAPORAN MONITORING {report_type.upper()}"
+        title_text = f"<b>LAPORAN MONITORING {report_type.upper()}</b>"
         
     elements.append(Paragraph(title_text, styles["TitleCenter"]))
     elements.append(Spacer(1, 12))
@@ -215,36 +242,46 @@ def create_pdf_report(filtered_data, report_type):
 
         table = Table(data, colWidths=[100, 380])
         table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
-            ('BOX', (0, 0), (-1, -1), 1, colors.black),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ECF0F1')), # Latar header kolom abu-abu lembut
+            ('TEXTCOLOR', (0,0), (0, -1), colors.HexColor('#2C3E50')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#BDC3C7')),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
         ]))
 
         elements.append(table)
         elements.append(Spacer(1, 10))
         
+        image_data = []
         evidance_path = row.get("Evidance")
-        if evidance_path and isinstance(evidance_path, str) and os.path.exists(evidance_path):
-            elements.append(Paragraph("Evidence Before:", styles['ImageTitle']))
-            try:
-                elements.append(RLImage(evidance_path, width=4*inch, height=3*inch, kind='bound'))
-            except Exception as e:
-                print(f"Gagal memuat gambar ke PDF (Before): {e}")
-        
         evidance_after_path = row.get("Evidance After")
-        if evidance_after_path and isinstance(evidance_after_path, str) and os.path.exists(evidance_after_path):
-            elements.append(Paragraph("Evidence After:", styles['ImageTitle']))
+
+        img1, img2 = None, None
+
+        if evidance_path and isinstance(evidance_path, str) and os.path.exists(evidance_path):
             try:
-                elements.append(RLImage(evidance_after_path, width=4*inch, height=3*inch, kind='bound'))
-            except Exception as e:
-                print(f"Gagal memuat gambar ke PDF (After): {e}")
-            elements.append(Spacer(1, 10))
+                img1 = RLImage(evidance_path, width=3*inch, height=2.25*inch, kind='bound')
+            except Exception: pass
+
+        if evidance_after_path and isinstance(evidance_after_path, str) and os.path.exists(evidance_after_path):
+            try:
+                img2 = RLImage(evidance_after_path, width=3*inch, height=2.25*inch, kind='bound')
+            except Exception: pass
+        
+        if img1 or img2:
+            elements.append(Spacer(1, 5))
+            image_table = Table([[Paragraph("<b>Evidence Before:</b>", styles['Normal']), Paragraph("<b>Evidence After:</b>", styles['Normal'])], [img1, img2]], colWidths=[3.2*inch, 3.2*inch])
+            image_table.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'TOP')]))
+            elements.append(image_table)
 
         elements.append(PageBreak())
 
     if len(elements) > 2:
+        # Hapus PageBreak terakhir jika ada
+        if isinstance(elements[-1], PageBreak):
+            elements.pop()
         doc.build(elements)
         return file_path
     return None
@@ -265,10 +302,10 @@ if st.session_state.get("logged_in"):
 else:
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
-        st.title("Sistem Monitoring Pekerjaan O&M PLTU Bangka")
+        st.title("Job Monitoring System")
         try: st.image(Image.open("logo.png"), width=150)
         except FileNotFoundError: st.error("File `logo.png` tidak ditemukan.")
-        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("op123")}
+        ADMIN_CREDENTIALS = {"admin": hash_password("pltubangka"), "operator": hash_password("123456")}
         with st.form("login_form"):
             st.markdown("### User Login")
             username = st.text_input("Username", placeholder="e.g., admin")
@@ -291,7 +328,7 @@ with st.sidebar:
     menu = st.radio("Pilih Menu:", ["Input Data", "Manajemen & Laporan Data"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
-    st.markdown("<___>"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
+    st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
 st.title("MONITORING FLM, CM, & PM")
 st.write("#### PLTU Bangka")
