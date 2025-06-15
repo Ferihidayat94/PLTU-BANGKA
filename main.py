@@ -19,7 +19,7 @@ from supabase import create_client, Client
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom ==================
+# ================== CSS Kustom (Dengan Perbaikan Warna Teks) ==================
 st.markdown(
     """
     <style>
@@ -40,6 +40,16 @@ st.markdown(
         .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
             color: #FFFFFF;
         }
+        
+        /* === PERBAIKAN WARNA TEKS JUDUL & KONTEN === */
+        /* Memastikan header, subheader, dan teks biasa di area utama berwarna putih */
+        .stApp [data-testid="stHeading"] {
+            color: #FFFFFF !important;
+        }
+        .stApp p {
+            color: #ECF0F1 !important; /* Warna putih pudar agar tidak terlalu mencolok */
+        }
+        /* =========================================== */
         
         h1 {
             border-bottom: 2px solid #3498DB;
@@ -103,24 +113,22 @@ st.markdown(
             color: #FFFFFF !important; font-weight: 500;
         }
 
-        /* === PERUBAHAN UNTUK SIDEBAR v3 (LEBIH SPESIFIK) === */
+        /* --- Sidebar Specific Styles --- */
         [data-testid="stSidebar"] .stMarkdown p,
         [data-testid="stSidebar"] .stMarkdown strong,
         [data-testid="stSidebar"] .stRadio > label span,
         [data-testid="stSidebar"] .stCaption {
-            color: #FFFFFF !important; /* Membuat semua teks sidebar menjadi putih bersih */
-            opacity: 1; /* Memastikan tidak ada transparansi */
+            color: #FFFFFF !important;
+            opacity: 1;
         }
 
-        /* Warna biru terang untuk item menu yang aktif */
         [data-testid="stSidebar"] .st-bo:has(input:checked) + label span {
             color: #5DADE2 !important;
             font-weight: 700 !important;
         }
         
-        /* Tombol Logout */
         [data-testid="stSidebar"] .stButton > button {
-             color: #EAECEE !important; /* Warna abu-abu sangat terang */
+             color: #EAECEE !important;
              border-color: #EAECEE !important;
         }
         [data-testid="stSidebar"] .stButton > button:hover {
@@ -129,12 +137,9 @@ st.markdown(
              background-color: #E74C3C !important;
         }
 
-        /* Tombol untuk menutup sidebar (hamburger icon) */
         [data-testid="stSidebarNavCollapseButton"] svg {
-            fill: #FFFFFF !important; /* Mengubah warna ikon menjadi putih */
+            fill: #FFFFFF !important;
         }
-        /* ================================================= */
-
     </style>
     """,
     unsafe_allow_html=True
@@ -150,7 +155,7 @@ def init_connection():
 
 supabase = init_connection()
 
-# === PERUBAHAN: Daftar Jenis Pekerjaan terpusat ===
+# Daftar Jenis Pekerjaan terpusat
 JOB_TYPES = [
     "First Line Maintenance ( A )",
     "First Line Maintenance ( B )",
@@ -159,7 +164,6 @@ JOB_TYPES = [
     "Corrective Maintenance",
     "Preventive Maintenance"
 ]
-# ===============================================
 
 # ================== Fungsi-Fungsi Helper ==================
 
@@ -189,10 +193,8 @@ def logout():
 
 def generate_next_id(df, jenis):
     """Membuat ID unik baru berdasarkan jenis pekerjaan."""
-    # === PERUBAHAN: Logika untuk menangani semua varian FLM ===
     if jenis.startswith('First Line Maintenance'):
         prefix = 'FLM'
-    # =======================================================
     elif jenis == 'Corrective Maintenance': prefix = 'CM'
     elif jenis == 'Preventive Maintenance': prefix = 'PM'
     else: prefix = 'JOB'
@@ -363,6 +365,20 @@ with st.sidebar:
 
 st.title("DASHBOARD MONITORING")
 
+# ================== PERUBAHAN DI SINI ==================
+# Sembunyikan menu hamburger dan footer Streamlit untuk user 'operator'
+if st.session_state.get('user') == 'operator':
+    hide_streamlit_style = """
+        <style>
+        #MainMenu {visibility: hidden;}
+        header {visibility: hidden;}
+        footer {visibility: hidden;}
+        </style>
+        """
+    st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+# =======================================================
+
+
 # Muat data jika session state kosong (misalnya setelah login)
 if 'data' not in st.session_state or st.session_state.data.empty:
     st.session_state.data = load_data_from_db()
@@ -373,9 +389,7 @@ if menu == "Input Data":
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
-            # === PERUBAHAN: Gunakan daftar baru ===
             jenis = st.selectbox("Jenis Pekerjaan", JOB_TYPES)
-            # ======================================
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
@@ -432,9 +446,7 @@ elif menu == "Report Data":
                 data_to_display, key="data_editor", disabled=["ID", "Evidance", "Evidance After"], use_container_width=True,
                 column_config={
                     "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"),
-                    # === PERUBAHAN: Gunakan daftar baru ===
                     "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES),
-                    # ======================================
                     "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]),
                     "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]),
                     "Keterangan": st.column_config.TextColumn("Keterangan", width="large"),
@@ -483,7 +495,7 @@ elif menu == "Report Data":
     
     with col_func2:
         st.write("") 
-        st.write("Butuh data terbaru?")
+        st.write("Butuh data terbaru dari server?")
         if st.button("🔄 Refresh Data Tabel", use_container_width=True):
             st.session_state.data = load_data_from_db()
             st.toast("Data telah diperbarui!")
@@ -501,10 +513,8 @@ elif menu == "Report Data":
             with pdf_col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
             with pdf_col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
             with pdf_col3: 
-                # === PERUBAHAN: Gunakan daftar baru ===
                 pdf_export_options = ["Semua"] + JOB_TYPES
                 export_type = st.selectbox("Pilih Jenis", pdf_export_options, key="pdf_export_type")
-                # ======================================
             if st.button("Buat Laporan PDF", use_container_width=True):
                 report_data = st.session_state.data.copy()
                 if not report_data.empty:
@@ -514,7 +524,8 @@ elif menu == "Report Data":
                     final_data_to_export = report_data[mask]
                     if final_data_to_export.empty: st.warning("Tidak ada data yang ditemukan untuk periode dan jenis yang dipilih.")
                     else:
-                        with st.spinner("Membuat file PDF..."): pdf_bytes = create_pdf_report(final_data_to_export, export_type)
+                        with st.spinner("Membuat file PDF..."): 
+                            pdf_bytes = create_pdf_report(final_data_to_export, export_type)
                         if pdf_bytes:
                             st.success("Laporan PDF berhasil dibuat!")
                             st.download_button("Unduh Laporan PDF", data=pdf_bytes, file_name=f"laporan_{export_type.lower().replace(' ', '_')}.pdf", mime="application/pdf")
