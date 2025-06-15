@@ -103,19 +103,34 @@ st.markdown(
             color: #FFFFFF !important; font-weight: 500;
         }
 
-        /* === PERUBAHAN UNTUK SIDEBAR === */
-        [data-testid="stSidebar"] .stMarkdown p,
-        [data-testid="stSidebar"] .stRadio > label span,
+        /* === PERUBAHAN UNTUK SIDEBAR v2 === */
+        [data-testid="stSidebar"] .stMarkdown p {
+            color: #BDC3C7 !important; /* Warna abu-abu terang untuk teks biasa */
+        }
+        [data-testid="stSidebar"] .stMarkdown strong {
+            color: #FFFFFF !important; /* Membuat teks tebal (admin) menjadi putih bersih */
+        }
+        [data-testid="stSidebar"] .stRadio > label span {
+            color: #ECF0F1 !important; /* Warna pilihan radio menjadi putih keabuan */
+            font-size: 1.05em;
+        }
+        [data-testid="stSidebar"] .st-bo:has(input:checked) + label span {
+            color: #5DADE2 !important; /* Warna biru terang saat aktif */
+            font-weight: 700 !important;
+        }
         [data-testid="stSidebar"] .stCaption {
-            color: #FFFFFF !important; /* Membuat teks lebih putih dan terang */
-            text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); /* Memberi sedikit efek glow */
+            color: #95A5A6 !important; /* Warna abu-abu lebih redup untuk caption */
         }
-
         [data-testid="stSidebar"] .stButton > button {
-             color: #FFFFFF !important;
-             border-color: #FFFFFF !important;
+             color: #BDC3C7 !important;
+             border-color: #BDC3C7 !important;
         }
-        /* ================================ */
+        [data-testid="stSidebar"] .stButton > button:hover {
+             color: #FFFFFF !important;
+             border-color: #E74C3C !important;
+             background-color: #E74C3C !important;
+        }
+        /* =================================== */
 
     </style>
     """,
@@ -293,7 +308,7 @@ if not st.session_state.get("logged_in"):
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        st.markdown('<h1 class="login-title">Monitoring Service Request</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 class="login-title">Sistem Monitoring O&M</h1>', unsafe_allow_html=True)
         try: st.image(Image.open("logo.png"), width=150)
         except FileNotFoundError: st.warning("File `logo.png` tidak ditemukan.")
         
@@ -332,7 +347,7 @@ with st.sidebar:
 st.title("DASHBOARD MONITORING")
 
 # Muat data jika session state kosong (misalnya setelah login)
-if st.session_state.data.empty:
+if 'data' not in st.session_state or st.session_state.data.empty:
     st.session_state.data = load_data_from_db()
 
 if menu == "Input Data":
