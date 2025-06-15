@@ -20,7 +20,6 @@ from supabase import create_client, Client
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== CSS Kustom ==================
-# Pastikan semua CSS Anda yang sebelumnya ada di sini
 st.markdown(
     """
     <style>
@@ -103,6 +102,21 @@ st.markdown(
         label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
             color: #FFFFFF !important; font-weight: 500;
         }
+
+        /* === PERUBAHAN UNTUK SIDEBAR === */
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] .stRadio > label span,
+        [data-testid="stSidebar"] .stCaption {
+            color: #FFFFFF !important; /* Membuat teks lebih putih dan terang */
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.3); /* Memberi sedikit efek glow */
+        }
+
+        [data-testid="stSidebar"] .stButton > button {
+             color: #FFFFFF !important;
+             border-color: #FFFFFF !important;
+        }
+        /* ================================ */
+
     </style>
     """,
     unsafe_allow_html=True
