@@ -1,4 +1,4 @@
-# Salin dan ganti seluruh kode di file .py Anda dengan ini
+
 import streamlit as st
 import pandas as pd
 import os
