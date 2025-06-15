@@ -293,7 +293,7 @@ if not st.session_state.get("logged_in"):
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
-        st.markdown('<h1 class="login-title">Sistem Monitoring O&M</h1>', unsafe_allow_html=True)
+        st.markdown('<h1 class="login-title">Monitoring Service Request</h1>', unsafe_allow_html=True)
         try: st.image(Image.open("logo.png"), width=150)
         except FileNotFoundError: st.warning("File `logo.png` tidak ditemukan.")
         
