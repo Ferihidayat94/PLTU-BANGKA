@@ -103,34 +103,37 @@ st.markdown(
             color: #FFFFFF !important; font-weight: 500;
         }
 
-        /* === PERUBAHAN UNTUK SIDEBAR v2 === */
-        [data-testid="stSidebar"] .stMarkdown p {
-            color: #BDC3C7 !important; /* Warna abu-abu terang untuk teks biasa */
+        /* === PERUBAHAN UNTUK SIDEBAR v3 (LEBIH SPESIFIK) === */
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] .stMarkdown strong,
+        [data-testid="stSidebar"] .stRadio > label span,
+        [data-testid="stSidebar"] .stCaption {
+            color: #FFFFFF !important; /* Membuat semua teks sidebar menjadi putih bersih */
+            opacity: 1; /* Memastikan tidak ada transparansi */
         }
-        [data-testid="stSidebar"] .stMarkdown strong {
-            color: #FFFFFF !important; /* Membuat teks tebal (admin) menjadi putih bersih */
-        }
-        [data-testid="stSidebar"] .stRadio > label span {
-            color: #ECF0F1 !important; /* Warna pilihan radio menjadi putih keabuan */
-            font-size: 1.05em;
-        }
+
+        /* Warna biru terang untuk item menu yang aktif */
         [data-testid="stSidebar"] .st-bo:has(input:checked) + label span {
-            color: #5DADE2 !important; /* Warna biru terang saat aktif */
+            color: #5DADE2 !important;
             font-weight: 700 !important;
         }
-        [data-testid="stSidebar"] .stCaption {
-            color: #95A5A6 !important; /* Warna abu-abu lebih redup untuk caption */
-        }
+        
+        /* Tombol Logout */
         [data-testid="stSidebar"] .stButton > button {
-             color: #BDC3C7 !important;
-             border-color: #BDC3C7 !important;
+             color: #EAECEE !important; /* Warna abu-abu sangat terang */
+             border-color: #EAECEE !important;
         }
         [data-testid="stSidebar"] .stButton > button:hover {
              color: #FFFFFF !important;
              border-color: #E74C3C !important;
              background-color: #E74C3C !important;
         }
-        /* =================================== */
+
+        /* Tombol untuk menutup sidebar (hamburger icon) */
+        [data-testid="stSidebarNavCollapseButton"] svg {
+            fill: #FFFFFF !important; /* Mengubah warna ikon menjadi putih */
+        }
+        /* ================================================= */
 
     </style>
     """,
