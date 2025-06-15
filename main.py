@@ -495,7 +495,7 @@ elif menu == "Report Data":
     
     with col_func2:
         st.write("") 
-        st.write("Butuh data terbaru dari server?")
+        st.write("Tekan refresh jika sudah upload evidance after!!")
         if st.button("🔄 Refresh Data Tabel", use_container_width=True):
             st.session_state.data = load_data_from_db()
             st.toast("Data telah diperbarui!")
