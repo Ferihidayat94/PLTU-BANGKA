@@ -150,6 +150,17 @@ def init_connection():
 
 supabase = init_connection()
 
+# === PERUBAHAN: Daftar Jenis Pekerjaan terpusat ===
+JOB_TYPES = [
+    "First Line Maintenance ( A )",
+    "First Line Maintenance ( B )",
+    "First Line Maintenance ( C )",
+    "First Line Maintenance ( D )",
+    "Corrective Maintenance",
+    "Preventive Maintenance"
+]
+# ===============================================
+
 # ================== Fungsi-Fungsi Helper ==================
 
 def hash_password(password):
@@ -178,7 +189,10 @@ def logout():
 
 def generate_next_id(df, jenis):
     """Membuat ID unik baru berdasarkan jenis pekerjaan."""
-    if jenis == 'First Line Maintenance': prefix = 'FLM'
+    # === PERUBAHAN: Logika untuk menangani semua varian FLM ===
+    if jenis.startswith('First Line Maintenance'):
+        prefix = 'FLM'
+    # =======================================================
     elif jenis == 'Corrective Maintenance': prefix = 'CM'
     elif jenis == 'Preventive Maintenance': prefix = 'PM'
     else: prefix = 'JOB'
@@ -359,7 +373,9 @@ if menu == "Input Data":
         col1, col2 = st.columns(2)
         with col1:
             tanggal = st.date_input("Tanggal", date.today())
-            jenis = st.selectbox("Jenis Pekerjaan", ["First Line Maintenance", "Corrective Maintenance", "Preventive Maintenance"])
+            # === PERUBAHAN: Gunakan daftar baru ===
+            jenis = st.selectbox("Jenis Pekerjaan", JOB_TYPES)
+            # ======================================
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
@@ -416,7 +432,9 @@ elif menu == "Report Data":
                 data_to_display, key="data_editor", disabled=["ID", "Evidance", "Evidance After"], use_container_width=True,
                 column_config={
                     "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"),
-                    "Jenis": st.column_config.SelectboxColumn("Jenis", options=["First Line Maintenance", "Corrective Maintenance", "Preventive Maintenance"]),
+                    # === PERUBAHAN: Gunakan daftar baru ===
+                    "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES),
+                    # ======================================
                     "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]),
                     "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]),
                     "Keterangan": st.column_config.TextColumn("Keterangan", width="large"),
@@ -437,9 +455,9 @@ elif menu == "Report Data":
                 st.markdown('</div>', unsafe_allow_html=True)
             elif not rows_to_delete_df.empty: st.warning("Hanya 'admin' yang dapat menghapus data.")
 
-    # === BAGIAN UPDATE & REFRESH (DIPINDAHKAN KE SINI) ===
-    st.subheader("Fungsionalitas Tambahan")
-    col_func1, col_func2 = st.columns([3, 1])
+    st.write("---") # Garis pemisah visual
+    
+    col_func1, col_func2 = st.columns([2, 1])
 
     with col_func1:
         with st.expander("✅ **Update Status Pekerjaan**", expanded=True):
@@ -464,13 +482,12 @@ elif menu == "Report Data":
             else: st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
     
     with col_func2:
-        st.write("") # Spacer
-        st.write("") # Spacer
+        st.write("") 
+        st.write("Butuh data terbaru?")
         if st.button("🔄 Refresh Data Tabel", use_container_width=True):
             st.session_state.data = load_data_from_db()
             st.toast("Data telah diperbarui!")
     
-    # BAGIAN LAPORAN & UNDUH
     with st.container(border=True):
         st.subheader("📄 Laporan & Unduh Data")
         report_col1, report_col2 = st.columns(2)
@@ -483,7 +500,11 @@ elif menu == "Report Data":
             pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
             with pdf_col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
             with pdf_col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
-            with pdf_col3: export_type = st.selectbox("Pilih Jenis", ["Semua", "First Line Maintenance", "Corrective Maintenance", "Preventive Maintenance"], key="pdf_export_type")
+            with pdf_col3: 
+                # === PERUBAHAN: Gunakan daftar baru ===
+                pdf_export_options = ["Semua"] + JOB_TYPES
+                export_type = st.selectbox("Pilih Jenis", pdf_export_options, key="pdf_export_type")
+                # ======================================
             if st.button("Buat Laporan PDF", use_container_width=True):
                 report_data = st.session_state.data.copy()
                 if not report_data.empty:
@@ -496,5 +517,5 @@ elif menu == "Report Data":
                         with st.spinner("Membuat file PDF..."): pdf_bytes = create_pdf_report(final_data_to_export, export_type)
                         if pdf_bytes:
                             st.success("Laporan PDF berhasil dibuat!")
-                            st.download_button("Unduh Laporan PDF", data=pdf_bytes, file_name=f"laporan_{export_type.lower()}_{datetime.now().strftime('%Y%m%d')}.pdf", mime="application/pdf")
+                            st.download_button("Unduh Laporan PDF", data=pdf_bytes, file_name=f"laporan_{export_type.lower().replace(' ', '_')}.pdf", mime="application/pdf")
                 else: st.warning("Tidak ada data untuk membuat laporan.")
