@@ -1,4 +1,4 @@
-# PRODUKSI A
+# APLIKASI PRODUKSI A
 import streamlit as st
 import pandas as pd
 import os
@@ -195,7 +195,6 @@ def create_pdf_report(filtered_data, report_type):
 def main():
     """Fungsi utama untuk menjalankan aplikasi Streamlit."""
     
-    # CSS harus menjadi salah satu perintah pertama setelah set_page_config
     st.markdown(
         """
         <style>
@@ -254,7 +253,6 @@ def main():
         unsafe_allow_html=True
     )
 
-    # Inisialisasi koneksi dan cookie di dalam main()
     supabase = init_connection()
     cookies = EncryptedCookieManager(password=st.secrets["COOKIE_ENCRYPTION_KEY"])
     if not cookies.ready():
@@ -263,7 +261,6 @@ def main():
     is_logged_in = login_manager(cookies)
 
     if not is_logged_in:
-        # Tampilkan halaman login
         col1, col2, col3 = st.columns([1, 1.5, 1])
         with col2:
             st.markdown('<div class="login-container">', unsafe_allow_html=True)
@@ -287,7 +284,6 @@ def main():
             st.markdown('</div>', unsafe_allow_html=True)
         return
 
-    # Jika sudah login, lanjutkan aplikasi
     if 'last_activity' not in st.session_state:
         st.session_state.last_activity = datetime.now()
     
@@ -312,7 +308,6 @@ def main():
 
     st.title("DASHBOARD MONITORING")
 
-    # Konten Utama Aplikasi
     if menu == "Input Data":
         st.header("Input Data Pekerjaan Baru")
         with st.form("input_form", clear_on_submit=True):
@@ -356,18 +351,70 @@ def main():
     elif menu == "Report Data":
         st.header("Integrated Data & Report")
         
-        # ... (Sisa kode Report Data sama persis seperti sebelumnya) ...
-        # Tambahkan semua logika dari halaman Report Data di sini
         with st.container(border=True):
             st.subheader("Filter & Edit Data")
-            # ...
-        
+            data_to_display = st.session_state.data.copy()
+            filter_col1, filter_col2 = st.columns(2)
+            with filter_col1:
+                all_jenis = ["Semua"] + list(data_to_display["Jenis"].dropna().unique())
+                filter_jenis = st.selectbox("Saring berdasarkan Jenis:", all_jenis)
+            with filter_col2:
+                all_status = ["Semua"] + list(data_to_display["Status"].dropna().unique())
+                filter_status = st.selectbox("Saring berdasarkan Status:", all_status)
+            if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
+            if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
+            
+            if not data_to_display.empty:
+                data_to_display.insert(0, "Hapus", False)
+                edited_data = st.data_editor(
+                    data_to_display, key="data_editor", disabled=["ID", "Evidance", "Evidance After"], use_container_width=True,
+                    column_config={
+                        "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"),
+                        "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES),
+                        "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]),
+                        "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]),
+                        "Keterangan": st.column_config.TextColumn("Keterangan", width="large"),
+                        "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat"), "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat"),
+                        "ID": st.column_config.TextColumn("ID", disabled=True),
+                    }, column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
+                )
+                rows_to_delete_df = edited_data[edited_data['Hapus']]
+                if not rows_to_delete_df.empty and st.session_state.user == 'admin':
+                    st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                    if st.button(f"🗑️ Hapus ({len(rows_to_delete_df)}) Baris Terpilih", use_container_width=True):
+                        with st.spinner("Menghapus data..."):
+                            ids_to_delete = rows_to_delete_df['ID'].tolist()
+                            supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
+                            st.session_state.data = load_data_from_db(supabase)
+                            st.success("Data terpilih berhasil dihapus.")
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+                elif not rows_to_delete_df.empty: st.warning("Hanya 'admin' yang dapat menghapus data.")
+
         st.write("---")
         
         col_func1, col_func2 = st.columns([2, 1])
         with col_func1:
             with st.expander("✅ **Update Status Pekerjaan**", expanded=True):
-                # ...
+                open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
+                if not open_jobs.empty:
+                    job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row.get('Keterangan',''))[:40]}...": row['ID'] for index, row in open_jobs.iterrows()}
+                    selected_job_display = st.selectbox("Pilih Pekerjaan yang akan diselesaikan:", list(job_options.keys()))
+                    uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai", type=["png", "jpg", "jpeg"], key="quick_upload")
+                    if st.button("Submit Update", use_container_width=True):
+                        if selected_job_display and uploaded_evidence_after:
+                            with st.spinner("Menyelesaikan pekerjaan..."):
+                                job_id_to_update = job_options[selected_job_display]
+                                evidence_url = upload_image_to_storage(supabase, uploaded_evidence_after)
+                                update_data = {"Status": "Finish", "Evidance After": evidence_url}
+                                try:
+                                    supabase.table("jobs").update(update_data).eq("ID", job_id_to_update).execute()
+                                    st.session_state.data = load_data_from_db(supabase)
+                                    st.success(f"Pekerjaan dengan ID {job_id_to_update} telah diselesaikan!")
+                                    st.rerun()
+                                except Exception as e: st.error(f"Gagal update pekerjaan: {e}")
+                        else: st.warning("Mohon pilih pekerjaan dan upload bukti selesai.")
+                else: st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
         
         with col_func2:
             st.write("") 
@@ -378,7 +425,33 @@ def main():
 
         with st.container(border=True):
             st.subheader("📄 Laporan & Unduh Data")
-            # ...
+            report_col1, report_col2 = st.columns(2)
+            with report_col1:
+                if not st.session_state.data.empty:
+                    csv_data = st.session_state.data.to_csv(index=False).encode('utf-8')
+                    st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv", use_container_width=True)
+            with report_col2:
+                st.write("**Export Laporan ke PDF**")
+                pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
+                with pdf_col1: export_start_date = st.date_input("Tanggal Mulai", date.today().replace(day=1))
+                with pdf_col2: export_end_date = st.date_input("Tanggal Akhir", date.today())
+                with pdf_col3: 
+                    pdf_export_options = ["Semua"] + JOB_TYPES
+                    export_type = st.selectbox("Pilih Jenis", pdf_export_options, key="pdf_export_type")
+                if st.button("Buat Laporan PDF", use_container_width=True):
+                    report_data = st.session_state.data.copy()
+                    if not report_data.empty:
+                        report_data["Tanggal"] = pd.to_datetime(report_data["Tanggal"])
+                        mask = (report_data["Tanggal"].dt.date >= export_start_date) & (report_data["Tanggal"].dt.date <= export_end_date)
+                        if export_type != "Semua": mask &= (report_data["Jenis"] == export_type)
+                        final_data_to_export = report_data[mask]
+                        if final_data_to_export.empty: st.warning("Tidak ada data yang ditemukan untuk periode dan jenis yang dipilih.")
+                        else:
+                            with st.spinner("Membuat file PDF..."): pdf_bytes = create_pdf_report(final_data_to_export, export_type)
+                            if pdf_bytes:
+                                st.success("Laporan PDF berhasil dibuat!")
+                                st.download_button("Unduh Laporan PDF", data=pdf_bytes, file_name=f"laporan_{export_type.lower().replace(' ', '_')}.pdf", mime="application/pdf")
+                    else: st.warning("Tidak ada data untuk membuat laporan.")
 
 # Menjalankan aplikasi
 if __name__ == "__main__":
