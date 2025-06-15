@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI A
+# Salin dan ganti seluruh kode di file .py Anda dengan ini
 import streamlit as st
 import pandas as pd
 import os
@@ -18,183 +18,13 @@ from supabase import create_client, Client
 from streamlit_cookies_manager import EncryptedCookieManager
 
 # ================== Konfigurasi Halaman Streamlit (HARUS PERTAMA) ==================
+# Perintah ini sekarang satu-satunya perintah Streamlit di luar fungsi main()
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== Daftar & Variabel Global ==================
-JOB_TYPES = [
-    "First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )",
-    "Corrective Maintenance", "Preventive Maintenance"
-]
-
-# ================== Fungsi-Fungsi Helper ==================
-
-@st.cache_resource
-def init_connection():
-    """Membuat dan mengembalikan koneksi ke database Supabase."""
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
-
-def hash_password(password):
-    """Membuat hash dari password menggunakan SHA256."""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def load_data_from_db(supabase_client):
-    """Mengambil semua data dari tabel 'jobs' di Supabase."""
-    try:
-        response = supabase_client.table('jobs').select('*').order('created_at', desc=True).execute()
-        df = pd.DataFrame(response.data)
-        if 'Tanggal' in df.columns and not df.empty:
-            df['Tanggal'] = pd.to_datetime(df['Tanggal'])
-        return df
-    except Exception as e:
-        st.error(f"Gagal mengambil data dari database: {e}")
-        return pd.DataFrame()
-
-def login_manager(cookies):
-    """Mengelola status login, memeriksa session state dan cookie."""
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-        st.session_state.user = None
-    
-    if st.session_state.logged_in:
-        return True
-
-    user_from_cookie = cookies.get('monitoring_app_user')
-    if user_from_cookie:
-        st.session_state.logged_in = True
-        st.session_state.user = user_from_cookie
-        return True
-    
-    return False
-
-def logout(cookies):
-    """Menghapus session state dan cookie untuk logout pengguna."""
-    for key in list(st.session_state.keys()):
-        if key in ['logged_in', 'user', 'last_activity']:
-            del st.session_state[key]
-    cookies.delete('monitoring_app_user')
-    st.rerun()
-
-def generate_next_id(df, jenis):
-    """Membuat ID unik baru berdasarkan jenis pekerjaan."""
-    if jenis.startswith('First Line Maintenance'): prefix = 'FLM'
-    elif jenis == 'Corrective Maintenance': prefix = 'CM'
-    elif jenis == 'Preventive Maintenance': prefix = 'PM'
-    else: prefix = 'JOB'
-
-    if df.empty: return f"{prefix}-001"
-    relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]
-    if relevant_ids.empty: return f"{prefix}-001"
-    
-    numeric_parts = relevant_ids['ID'].str.split('-').str[1].dropna().astype(int)
-    if numeric_parts.empty: return f"{prefix}-001"
-    
-    max_num = numeric_parts.max()
-    return f"{prefix}-{max_num + 1:03d}"
-
-def fix_image_orientation(image):
-    """Memperbaiki orientasi gambar berdasarkan data EXIF."""
-    try:
-        for orientation in ExifTags.TAGS.keys():
-            if ExifTags.TAGS[orientation] == 'Orientation': break
-        exif = image.getexif()
-        orientation_val = exif.get(orientation)
-        if orientation_val == 3: image = image.rotate(180, expand=True)
-        elif orientation_val == 6: image = image.rotate(270, expand=True)
-        elif orientation_val == 8: image = image.rotate(90, expand=True)
-    except Exception: pass
-    return image
-
-def upload_image_to_storage(supabase_client, uploaded_file):
-    """Mengupload file gambar ke Supabase Storage dan mengembalikan URL publik."""
-    if uploaded_file is None: return ""
-    try:
-        file_bytes = uploaded_file.getvalue()
-        image = Image.open(io.BytesIO(file_bytes))
-        image = fix_image_orientation(image)
-        output_buffer = io.BytesIO()
-        image.save(output_buffer, format="PNG", quality=85)
-        processed_bytes = output_buffer.getvalue()
-        file_name = f"{uuid.uuid4()}.png"
-        supabase_client.storage.from_("evidences").upload(file=processed_bytes, path=file_name, file_options={"content-type": "image/png"})
-        return supabase_client.storage.from_("evidences").get_public_url(file_name)
-    except Exception as e:
-        st.error(f"Gagal upload gambar: {e}")
-        return ""
-
-def create_pdf_report(filtered_data, report_type):
-    """Membuat laporan PDF dari data yang difilter."""
-    pdf_buffer = io.BytesIO()
-    doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10, textColor=colors.HexColor('#2C3E50')))
-    styles.add(ParagraphStyle(name='Header', alignment=TA_LEFT, textColor=colors.HexColor('#2C3E50')))
-    elements = []
-    
-    try:
-        logo_path = "logo.png"
-        if os.path.exists(logo_path):
-            header_text = "<b>PT PLN NUSANTARA POWER SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
-            logo_img.hAlign = 'LEFT'
-            header_data = [[logo_img, Paragraph(header_text, styles['Header'])]]
-            header_table = Table(header_data, colWidths=[1*inch, 6*inch], style=[('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)])
-            elements.append(header_table)
-            elements.append(Spacer(1, 20))
-    except Exception: pass
-
-    title_text = f"<b>LAPORAN MONITORING {'FLM, CM, & PM' if report_type == 'Semua' else report_type.upper()}</b>"
-    elements.append(Paragraph(title_text, styles["TitleCenter"]))
-    elements.append(Spacer(1, 12))
-
-    for i, row in filtered_data.iterrows():
-        data = [
-            ["ID", str(row.get('ID', ''))],
-            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%d-%m-%Y')],
-            ["Jenis", str(row.get('Jenis', ''))],
-            ["Area", str(row.get('Area', ''))],
-            ["Nomor SR", str(row.get('Nomor SR', ''))],
-            ["Nama Pelaksana", str(row.get('Nama Pelaksana', ''))],
-            ["Status", str(row.get('Status', ''))],
-            ["Keterangan", Paragraph(str(row.get('Keterangan', '')).replace('\n', '<br/>'), styles['Normal'])],
-        ]
-        table = Table(data, colWidths=[100, 380], style=[
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ECF0F1')), ('TEXTCOLOR', (0,0), (0, -1), colors.HexColor('#2C3E50')),
-            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')), ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#BDC3C7')),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ])
-        elements.append(table)
-        elements.append(Spacer(1, 10))
-        
-        img1, img2 = None, None
-        for img_url, position in [(row.get("Evidance"), 1), (row.get("Evidance After"), 2)]:
-            if img_url and isinstance(img_url, str):
-                try:
-                    response = requests.get(img_url, stream=True)
-                    response.raise_for_status()
-                    img_data = io.BytesIO(response.content)
-                    image_element = RLImage(img_data, width=3*inch, height=2.25*inch, kind='bound')
-                    if position == 1: img1 = image_element
-                    else: img2 = image_element
-                except Exception as e: print(f"Gagal memuat gambar dari URL {img_url}: {e}")
-        
-        if img1 or img2:
-            elements.append(Spacer(1, 5))
-            image_table = Table([[Paragraph("<b>Evidence Before:</b>", styles['Normal']), Paragraph("<b>Evidence After:</b>", styles['Normal'])], [img1, img2]], colWidths=[3.2*inch, 3.2*inch], style=[('VALIGN', (0,0), (-1,-1), 'TOP')])
-            elements.append(image_table)
-        elements.append(PageBreak())
-
-    if len(elements) > 2 and isinstance(elements[-1], PageBreak): elements.pop()
-    doc.build(elements)
-    pdf_buffer.seek(0)
-    return pdf_buffer.getvalue()
-
-# ================== Logika Utama Aplikasi ==================
-
 def main():
-    """Fungsi utama untuk menjalankan aplikasi Streamlit."""
-    
+    """Fungsi utama untuk menjalankan seluruh aplikasi Streamlit."""
+
+    # ================== CSS Kustom ==================
     st.markdown(
         """
         <style>
@@ -253,6 +83,167 @@ def main():
         unsafe_allow_html=True
     )
 
+    # ================== Definisi Fungsi-Fungsi ==================
+    JOB_TYPES = [
+        "First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )",
+        "Corrective Maintenance", "Preventive Maintenance"
+    ]
+    
+    @st.cache_resource
+    def init_connection():
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
+
+    def hash_password(password):
+        return hashlib.sha256(password.encode()).hexdigest()
+
+    def load_data_from_db(supabase_client):
+        try:
+            response = supabase_client.table('jobs').select('*').order('created_at', desc=True).execute()
+            df = pd.DataFrame(response.data)
+            if 'Tanggal' in df.columns and not df.empty:
+                df['Tanggal'] = pd.to_datetime(df['Tanggal'])
+            return df
+        except Exception as e:
+            st.error(f"Gagal mengambil data dari database: {e}")
+            return pd.DataFrame()
+
+    def login_manager(cookies):
+        if 'logged_in' not in st.session_state:
+            st.session_state.logged_in = False
+            st.session_state.user = None
+        
+        if st.session_state.logged_in:
+            return True
+
+        user_from_cookie = cookies.get('monitoring_app_user')
+        if user_from_cookie:
+            st.session_state.logged_in = True
+            st.session_state.user = user_from_cookie
+            return True
+        
+        return False
+
+    def logout(cookies):
+        for key in list(st.session_state.keys()):
+            if key in ['logged_in', 'user', 'last_activity']:
+                del st.session_state[key]
+        cookies.delete('monitoring_app_user')
+        st.rerun()
+
+    def generate_next_id(df, jenis):
+        if jenis.startswith('First Line Maintenance'): prefix = 'FLM'
+        elif jenis == 'Corrective Maintenance': prefix = 'CM'
+        elif jenis == 'Preventive Maintenance': prefix = 'PM'
+        else: prefix = 'JOB'
+
+        if df.empty: return f"{prefix}-001"
+        relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]
+        if relevant_ids.empty: return f"{prefix}-001"
+        
+        numeric_parts = relevant_ids['ID'].str.split('-').str[1].dropna().astype(int)
+        if numeric_parts.empty: return f"{prefix}-001"
+        
+        max_num = numeric_parts.max()
+        return f"{prefix}-{max_num + 1:03d}"
+
+    def fix_image_orientation(image):
+        try:
+            for orientation in ExifTags.TAGS.keys():
+                if ExifTags.TAGS[orientation] == 'Orientation': break
+            exif = image.getexif()
+            orientation_val = exif.get(orientation)
+            if orientation_val == 3: image = image.rotate(180, expand=True)
+            elif orientation_val == 6: image = image.rotate(270, expand=True)
+            elif orientation_val == 8: image = image.rotate(90, expand=True)
+        except Exception: pass
+        return image
+
+    def upload_image_to_storage(supabase_client, uploaded_file):
+        if uploaded_file is None: return ""
+        try:
+            file_bytes = uploaded_file.getvalue()
+            image = Image.open(io.BytesIO(file_bytes))
+            image = fix_image_orientation(image)
+            output_buffer = io.BytesIO()
+            image.save(output_buffer, format="PNG", quality=85)
+            processed_bytes = output_buffer.getvalue()
+            file_name = f"{uuid.uuid4()}.png"
+            supabase_client.storage.from_("evidences").upload(file=processed_bytes, path=file_name, file_options={"content-type": "image/png"})
+            return supabase_client.storage.from_("evidences").get_public_url(file_name)
+        except Exception as e:
+            st.error(f"Gagal upload gambar: {e}")
+            return ""
+
+    def create_pdf_report(filtered_data, report_type):
+        pdf_buffer = io.BytesIO()
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
+        styles = getSampleStyleSheet()
+        styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10, textColor=colors.HexColor('#2C3E50')))
+        styles.add(ParagraphStyle(name='Header', alignment=TA_LEFT, textColor=colors.HexColor('#2C3E50')))
+        elements = []
+        
+        try:
+            logo_path = "logo.png"
+            if os.path.exists(logo_path):
+                header_text = "<b>PT PLN NUSANTARA POWER SERVICES</b><br/>Unit PLTU Bangka"
+                logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch)
+                logo_img.hAlign = 'LEFT'
+                header_data = [[logo_img, Paragraph(header_text, styles['Header'])]]
+                header_table = Table(header_data, colWidths=[1*inch, 6*inch], style=[('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)])
+                elements.append(header_table)
+                elements.append(Spacer(1, 20))
+        except Exception: pass
+
+        title_text = f"<b>LAPORAN MONITORING {'FLM, CM, & PM' if report_type == 'Semua' else report_type.upper()}</b>"
+        elements.append(Paragraph(title_text, styles["TitleCenter"]))
+        elements.append(Spacer(1, 12))
+
+        for i, row in filtered_data.iterrows():
+            data = [
+                ["ID", str(row.get('ID', ''))],
+                ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%d-%m-%Y')],
+                ["Jenis", str(row.get('Jenis', ''))],
+                ["Area", str(row.get('Area', ''))],
+                ["Nomor SR", str(row.get('Nomor SR', ''))],
+                ["Nama Pelaksana", str(row.get('Nama Pelaksana', ''))],
+                ["Status", str(row.get('Status', ''))],
+                ["Keterangan", Paragraph(str(row.get('Keterangan', '')).replace('\n', '<br/>'), styles['Normal'])],
+            ]
+            table = Table(data, colWidths=[100, 380], style=[
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ECF0F1')), ('TEXTCOLOR', (0,0), (0, -1), colors.HexColor('#2C3E50')),
+                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')), ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#BDC3C7')),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ])
+            elements.append(table)
+            elements.append(Spacer(1, 10))
+            
+            img1, img2 = None, None
+            for img_url, position in [(row.get("Evidance"), 1), (row.get("Evidance After"), 2)]:
+                if img_url and isinstance(img_url, str):
+                    try:
+                        response = requests.get(img_url, stream=True)
+                        response.raise_for_status()
+                        img_data = io.BytesIO(response.content)
+                        image_element = RLImage(img_data, width=3*inch, height=2.25*inch, kind='bound')
+                        if position == 1: img1 = image_element
+                        else: img2 = image_element
+                    except Exception as e: print(f"Gagal memuat gambar dari URL {img_url}: {e}")
+            
+            if img1 or img2:
+                elements.append(Spacer(1, 5))
+                image_table = Table([[Paragraph("<b>Evidence Before:</b>", styles['Normal']), Paragraph("<b>Evidence After:</b>", styles['Normal'])], [img1, img2]], colWidths=[3.2*inch, 3.2*inch], style=[('VALIGN', (0,0), (-1,-1), 'TOP')])
+                elements.append(image_table)
+            elements.append(PageBreak())
+
+        if len(elements) > 2 and isinstance(elements[-1], PageBreak): elements.pop()
+        doc.build(elements)
+        pdf_buffer.seek(0)
+        return pdf_buffer.getvalue()
+
+    # ================== Alur Aplikasi Utama ==================
+    
     supabase = init_connection()
     cookies = EncryptedCookieManager(password=st.secrets["COOKIE_ENCRYPTION_KEY"])
     if not cookies.ready():
