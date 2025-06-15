@@ -395,31 +395,8 @@ if menu == "Input Data":
 
 elif menu == "Report Data":
     st.header("Integrated Data & Report")
-    if st.button("🔄 Refresh Data"):
-        st.session_state.data = load_data_from_db()
-        st.toast("Data telah diperbarui!")
-
-    with st.expander("✅ **Update Status Pekerjaan**", expanded=False):
-        open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
-        if not open_jobs.empty:
-            job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row.get('Keterangan',''))[:30]}...": row['ID'] for index, row in open_jobs.iterrows()}
-            selected_job_display = st.selectbox("Pilih Pekerjaan yang Selesai:", list(job_options.keys()))
-            uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai", type=["png", "jpg", "jpeg"], key="quick_upload")
-            if st.button("Submit Update"):
-                if selected_job_display and uploaded_evidence_after:
-                    with st.spinner("Menyelesaikan pekerjaan..."):
-                        job_id_to_update = job_options[selected_job_display]
-                        evidence_url = upload_image_to_storage(uploaded_evidence_after)
-                        update_data = {"Status": "Finish", "Evidance After": evidence_url}
-                        try:
-                            supabase.table("jobs").update(update_data).eq("ID", job_id_to_update).execute()
-                            st.session_state.data = load_data_from_db()
-                            st.success(f"Pekerjaan dengan ID {job_id_to_update} telah diselesaikan!")
-                            st.rerun()
-                        except Exception as e: st.error(f"Gagal update pekerjaan: {e}")
-                else: st.warning("Mohon pilih pekerjaan dan upload bukti selesai.")
-        else: st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
-            
+    
+    # BAGIAN TABEL DATA DAN FILTER
     with st.container(border=True):
         st.subheader("Filter & Edit Data")
         data_to_display = st.session_state.data.copy()
@@ -460,6 +437,40 @@ elif menu == "Report Data":
                 st.markdown('</div>', unsafe_allow_html=True)
             elif not rows_to_delete_df.empty: st.warning("Hanya 'admin' yang dapat menghapus data.")
 
+    # === BAGIAN UPDATE & REFRESH (DIPINDAHKAN KE SINI) ===
+    st.subheader("Fungsionalitas Tambahan")
+    col_func1, col_func2 = st.columns([3, 1])
+
+    with col_func1:
+        with st.expander("✅ **Update Status Pekerjaan**", expanded=True):
+            open_jobs = st.session_state.data[st.session_state.data['Status'].isin(['Open', 'On Progress'])]
+            if not open_jobs.empty:
+                job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row.get('Keterangan',''))[:40]}...": row['ID'] for index, row in open_jobs.iterrows()}
+                selected_job_display = st.selectbox("Pilih Pekerjaan yang akan diselesaikan:", list(job_options.keys()))
+                uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai", type=["png", "jpg", "jpeg"], key="quick_upload")
+                if st.button("Submit Update", use_container_width=True):
+                    if selected_job_display and uploaded_evidence_after:
+                        with st.spinner("Menyelesaikan pekerjaan..."):
+                            job_id_to_update = job_options[selected_job_display]
+                            evidence_url = upload_image_to_storage(uploaded_evidence_after)
+                            update_data = {"Status": "Finish", "Evidance After": evidence_url}
+                            try:
+                                supabase.table("jobs").update(update_data).eq("ID", job_id_to_update).execute()
+                                st.session_state.data = load_data_from_db()
+                                st.success(f"Pekerjaan dengan ID {job_id_to_update} telah diselesaikan!")
+                                st.rerun()
+                            except Exception as e: st.error(f"Gagal update pekerjaan: {e}")
+                    else: st.warning("Mohon pilih pekerjaan dan upload bukti selesai.")
+            else: st.info("Tidak ada pekerjaan yang berstatus 'Open' atau 'On Progress' saat ini.")
+    
+    with col_func2:
+        st.write("") # Spacer
+        st.write("") # Spacer
+        if st.button("🔄 Refresh Data Tabel", use_container_width=True):
+            st.session_state.data = load_data_from_db()
+            st.toast("Data telah diperbarui!")
+    
+    # BAGIAN LAPORAN & UNDUH
     with st.container(border=True):
         st.subheader("📄 Laporan & Unduh Data")
         report_col1, report_col2 = st.columns(2)
