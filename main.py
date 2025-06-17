@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP - FINAL VERSION DENGAN PERBAIKAN FUNGSI HAPUS
+# APLIKASI PRODUKSI LENGKAP - FINAL VERSION DENGAN SEMUA PERBAIKAN
 import streamlit as st
 import pandas as pd
 import os
@@ -330,23 +330,29 @@ elif menu == "Report Data":
     st.header("Integrated Data & Report")
     with st.container(border=True):
         st.subheader("Filter & Edit Data")
+        # Membuat salinan df yang akan dimodifikasi
         data_to_display = df.copy()
         
+        # Filter
         filter_col1, filter_col2 = st.columns(2)
         with filter_col1:
-            all_jenis = ["Semua"] + list(data_to_display["Jenis"].dropna().unique())
+            all_jenis = ["Semua"] + sorted(list(data_to_display["Jenis"].dropna().unique()))
             filter_jenis = st.selectbox("Saring berdasarkan Jenis:", all_jenis, key="report_filter_jenis")
         with filter_col2:
-            all_status = ["Semua"] + list(data_to_display["Status"].dropna().unique())
+            all_status = ["Semua"] + sorted(list(data_to_display["Status"].dropna().unique()))
             filter_status = st.selectbox("Saring berdasarkan Status:", all_status, key="report_filter_status")
         
+        # Terapkan filter ke dataframe
         if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
+        # Data Editor
         if not data_to_display.empty:
+            # Pastikan kolom "Hapus" ada di dataframe yang akan ditampilkan
             if 'Hapus' not in data_to_display.columns:
                 data_to_display.insert(0, "Hapus", False)
             
+            # Tampilkan data editor dan simpan hasilnya
             edited_df = st.data_editor(
                 data_to_display, 
                 key="data_editor", 
@@ -366,6 +372,7 @@ elif menu == "Report Data":
                 column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
             )
             
+            # Logika untuk menampilkan tombol Hapus
             rows_to_delete = edited_df[edited_df['Hapus'] == True]
             
             if not rows_to_delete.empty and st.session_state.user == 'admin':
@@ -375,8 +382,12 @@ elif menu == "Report Data":
                 if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
                     with st.spinner("Menghapus data..."):
                         supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
+                        # Hapus cache agar data baru bisa diambil
+                        st.cache_data.clear()
+                        # Muat ulang data dari session state
                         st.session_state.data = load_data_from_db()
                         st.success("Data terpilih berhasil dihapus.")
+                        # Rerun untuk me-refresh tampilan tabel
                         st.rerun()
 
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -401,6 +412,7 @@ elif menu == "Report Data":
                             update_data = {"Status": "Finish", "Evidance After": evidence_url}
                             try:
                                 supabase.table("jobs").update(update_data).eq("ID", job_id_to_update).execute()
+                                st.cache_data.clear()
                                 st.session_state.data = load_data_from_db()
                                 st.success(f"Pekerjaan '{job_id_to_update}' telah diselesaikan!")
                                 st.rerun()
@@ -411,6 +423,7 @@ elif menu == "Report Data":
     with col_func2:
         st.write("") 
         if st.button("🔄 Refresh Data Tabel", use_container_width=True):
+            st.cache_data.clear()
             st.session_state.data = load_data_from_db()
             st.toast("Data telah diperbarui!")
     
@@ -440,6 +453,7 @@ elif menu == "Report Data":
                     st.download_button("Unduh Laporan PDF", data=pdf_bytes, file_name=f"laporan_{export_type.lower().replace(' ', '_')}.pdf", mime="application/pdf")
 
 elif menu == "Analisis FLM":
+    # ... (Kode halaman ini tidak diubah)
     st.header("📊 Analisis FLM (Scoreboard)")
     st.markdown("Dashboard ini menganalisis jenis First Line Maintenance (FLM) yang paling sering dilaksanakan.")
     
@@ -514,6 +528,7 @@ elif menu == "Analisis FLM":
             st.info("Kolom 'Nama Pelaksana' kosong pada data yang difilter.")
 
 elif menu == "Dashboard Peringatan":
+    # ... (Kode halaman ini tidak diubah)
     st.header("⚠️ Peringatan Corrective Maintenance (Warning CM)")
     st.markdown("Dashboard ini menganalisis area dengan frekuensi Corrective Maintenance tertinggi.")
 
