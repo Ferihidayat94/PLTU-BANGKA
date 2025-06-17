@@ -21,6 +21,8 @@ import plotly.express as px
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== CSS Kustom ==================
+# GANTI SELURUH BLOK st.markdown CSS LAMA ANDA DENGAN INI
+
 st.markdown(
     """
     <style>
@@ -134,9 +136,27 @@ st.markdown(
         [data-testid="stSidebarNavCollapseButton"] svg {
             fill: #FFFFFF !important;
         }
+
+        /* === PERBAIKAN WARNA TEKS UNTUK st.metric === */
+        [data-testid="stMetricLabel"] {
+            color: #A9C5E1 !important; /* Warna biru pudar untuk label (Total Pelaksanaan FLM) */
+        }
+        [data-testid="stMetricValue"] {
+            color: #FFFFFF !important; /* Warna putih terang untuk nilai utama (Angka) */
+        }
+        [data-testid="stMetricDelta"] {
+            color: #2ECC71 !important; /* Warna hijau terang untuk teks delta (Paling Sering) */
+        }
+        /* Mengatur delta negatif (jika ada) */
+      	[data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] {
+          color: #FF4B4B !important; /* Warna merah terang untuk delta negatif */
+      	}
+        /* =========================================== */
+
     </style>
     """,
     unsafe_allow_html=True
+)
 )
 
 # ================== Koneksi & Konfigurasi Global ==================
