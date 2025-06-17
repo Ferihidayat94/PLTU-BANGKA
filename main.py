@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP - FINAL VERSION DENGAN SEMUA PERBAIKAN
+# APLIKASI PRODUKSI LENGKAP - FINAL VERSION 
 import streamlit as st
 import pandas as pd
 import os
@@ -320,6 +320,7 @@ if menu == "Input Data":
                     }
                     try:
                         supabase.table("jobs").insert(new_job_data).execute()
+                        st.cache_data.clear()
                         st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
                         st.rerun()
@@ -330,10 +331,8 @@ elif menu == "Report Data":
     st.header("Integrated Data & Report")
     with st.container(border=True):
         st.subheader("Filter & Edit Data")
-        # Membuat salinan df yang akan dimodifikasi
         data_to_display = df.copy()
         
-        # Filter
         filter_col1, filter_col2 = st.columns(2)
         with filter_col1:
             all_jenis = ["Semua"] + sorted(list(data_to_display["Jenis"].dropna().unique()))
@@ -342,22 +341,15 @@ elif menu == "Report Data":
             all_status = ["Semua"] + sorted(list(data_to_display["Status"].dropna().unique()))
             filter_status = st.selectbox("Saring berdasarkan Status:", all_status, key="report_filter_status")
         
-        # Terapkan filter ke dataframe
         if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
-        # Data Editor
         if not data_to_display.empty:
-            # Pastikan kolom "Hapus" ada di dataframe yang akan ditampilkan
             if 'Hapus' not in data_to_display.columns:
                 data_to_display.insert(0, "Hapus", False)
             
-            # Tampilkan data editor dan simpan hasilnya
             edited_df = st.data_editor(
-                data_to_display, 
-                key="data_editor", 
-                disabled=["ID", "Evidance", "Evidance After"], 
-                use_container_width=True,
+                data_to_display, key="data_editor", disabled=["ID", "Evidance", "Evidance After"], use_container_width=True,
                 column_config={
                     "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), 
                     "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"),
@@ -368,28 +360,21 @@ elif menu == "Report Data":
                     "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat"), 
                     "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat"),
                     "ID": st.column_config.TextColumn("ID", disabled=True),
-                }, 
-                column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
+                }, column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
             )
             
-            # Logika untuk menampilkan tombol Hapus
             rows_to_delete = edited_df[edited_df['Hapus'] == True]
             
             if not rows_to_delete.empty and st.session_state.user == 'admin':
                 st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-                
                 ids_to_delete = rows_to_delete['ID'].tolist()
                 if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
                     with st.spinner("Menghapus data..."):
                         supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
-                        # Hapus cache agar data baru bisa diambil
                         st.cache_data.clear()
-                        # Muat ulang data dari session state
                         st.session_state.data = load_data_from_db()
                         st.success("Data terpilih berhasil dihapus.")
-                        # Rerun untuk me-refresh tampilan tabel
                         st.rerun()
-
                 st.markdown('</div>', unsafe_allow_html=True)
             elif not rows_to_delete.empty:
                 st.warning("Hanya 'admin' yang dapat menghapus data.")
@@ -427,30 +412,61 @@ elif menu == "Report Data":
             st.session_state.data = load_data_from_db()
             st.toast("Data telah diperbarui!")
     
+    # === BAGIAN LAPORAN BARU YANG LEBIH SEDERHANA ===
     with st.container(border=True):
-        st.subheader("📄 Laporan & Unduh Data")
-        if not df.empty:
-            csv_data = df.to_csv(index=False).encode('utf-8')
-            st.download_button("Download Seluruh Data (CSV)", data=csv_data, file_name="monitoring_data_lengkap.csv", mime="text/csv", use_container_width=True)
+        st.subheader("📄 Unduh Laporan Kustom")
+
+        if df.empty:
+            st.info("Belum ada data untuk dibuat laporan.")
+        else:
+            df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
+            min_date, max_date = df['Tanggal'].min().date(), df['Tanggal'].max().date()
             
-            st.write("**Export Laporan ke PDF**")
-            pdf_col1, pdf_col2, pdf_col3 = st.columns(3)
-            with pdf_col1: export_start_date = st.date_input("Tanggal Mulai", df['Tanggal'].min().date())
-            with pdf_col2: export_end_date = st.date_input("Tanggal Akhir", df['Tanggal'].max().date())
-            with pdf_col3: 
-                pdf_export_options = ["Semua"] + JOB_TYPES
-                export_type = st.selectbox("Pilih Jenis", pdf_export_options, key="pdf_export_type")
-            if st.button("Buat Laporan PDF", use_container_width=True):
-                mask = (df["Tanggal"].dt.date >= export_start_date) & (df["Tanggal"].dt.date <= export_end_date)
-                if export_type != "Semua": mask &= (df["Jenis"] == export_type)
-                final_data_to_export = df[mask]
-                if final_data_to_export.empty: 
-                    st.warning("Tidak ada data untuk periode dan jenis yang dipilih.")
-                else:
-                    with st.spinner("Membuat file PDF..."): 
-                        pdf_bytes = create_pdf_report(final_data_to_export, export_type)
-                    st.success("Laporan PDF berhasil dibuat!")
-                    st.download_button("Unduh Laporan PDF", data=pdf_bytes, file_name=f"laporan_{export_type.lower().replace(' ', '_')}.pdf", mime="application/pdf")
+            st.write("**1. Pilih Filter Laporan**")
+            report_col1, report_col2, report_col3 = st.columns(3)
+            with report_col1:
+                start_date = st.date_input("Dari Tanggal", min_date, key="report_start_date")
+            with report_col2:
+                end_date = st.date_input("Sampai Tanggal", max_date, key="report_end_date")
+            with report_col3:
+                report_type = st.selectbox("Pilih Jenis (Opsional)", ["Semua"] + JOB_TYPES, key="report_type_select")
+            
+            mask = (df['Tanggal'].dt.date >= start_date) & (df['Tanggal'].dt.date <= end_date)
+            if report_type != "Semua":
+                mask &= (df["Jenis"] == report_type)
+            filtered_data = df[mask]
+
+            st.write("---")
+            st.write(f"**2. Hasil Filter: Ditemukan {len(filtered_data)} baris data**")
+
+            if filtered_data.empty:
+                st.warning("Tidak ada data yang cocok dengan filter yang Anda pilih.")
+            else:
+                dl_col1, dl_col2 = st.columns(2)
+                with dl_col1:
+                    csv_data = filtered_data.to_csv(index=False).encode('utf-8')
+                    csv_filename = f"laporan_csv_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+                    st.download_button("⬇️ Download Laporan (CSV)", data=csv_data, file_name=csv_filename, mime="text/csv", use_container_width=True)
+                
+                with dl_col2:
+                    pdf_filename = f"laporan_pdf_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
+                    # Generate PDF bytes when the button is clicked
+                    if st.button("📄 Buat & Siapkan PDF", use_container_width=True):
+                        with st.spinner("Membuat file PDF..."):
+                            pdf_bytes = create_pdf_report(filtered_data, report_type)
+                            st.session_state.pdf_bytes = pdf_bytes
+                            st.session_state.pdf_filename = pdf_filename
+                
+                # Show download button for PDF only after it has been generated
+                if 'pdf_bytes' in st.session_state and st.session_state.pdf_bytes:
+                    st.download_button(
+                        label="⬇️ Download Laporan (PDF)",
+                        data=st.session_state.pdf_bytes,
+                        file_name=st.session_state.pdf_filename,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key='download_pdf_button'
+                    )
 
 elif menu == "Analisis FLM":
     # ... (Kode halaman ini tidak diubah)
