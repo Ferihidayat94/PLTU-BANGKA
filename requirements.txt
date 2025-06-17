@@ -1,7 +1,7 @@
 streamlit
 pandas
-Pillow
+supabase
 reportlab
 requests
-supabase
-streamlit-cookies-manager
+Pillow
+plotly
