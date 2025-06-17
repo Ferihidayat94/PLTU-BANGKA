@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP DENGAN PERBAIKAN WARNA TEKS GRAFIK
+# APLIKASI PRODUKSI LENGKAP - FINAL VERSION
 import streamlit as st
 import pandas as pd
 import os
@@ -21,8 +21,6 @@ import plotly.express as px
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
 # ================== CSS Kustom ==================
-# GANTI SELURUH BLOK st.markdown CSS LAMA ANDA DENGAN INI
-
 st.markdown(
     """
     <style>
@@ -539,7 +537,7 @@ elif menu == "Analisis FLM":
         total_pelaksanaan = flm_counts['Jumlah'].sum()
         flm_teratas = flm_counts.iloc[0]
 
-        st.markdown("### Ringkasan Pelaksanaan FLM")
+        st.markdown("### Ringkasan Dominasi FLM")
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Pelaksanaan FLM", f"{total_pelaksanaan} Kali")
         col2.metric("FLM Paling Dominan", flm_teratas['Jenis FLM'].replace("First Line Maintenance ", ""))
@@ -556,9 +554,45 @@ elif menu == "Analisis FLM":
             fig_bar = px.bar(flm_counts.sort_values('Jumlah'), x='Jumlah', y='Jenis FLM', orientation='h', text='Jumlah', color='Jumlah', color_continuous_scale=px.colors.sequential.Blues_r, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
         
-        with st.expander("Lihat Detail Data per Jenis FLM"):
-            flm_to_inspect = st.selectbox("Pilih Jenis FLM:", options=flm_counts['Jenis FLM'].unique(), key="flm_drilldown")
-            st.dataframe(df_flm[df_flm['Jenis'] == flm_to_inspect], use_container_width=True)
+        # --- BAGIAN LEADERBOARD PELAKSANA (DENGAN LOGIKA TIM) ---
+        st.markdown("---") 
+        st.header("🏆 Skor Pelaksana FLM (Leaderboard)")
+        st.markdown("Menganalisis pelaksana berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
+
+        if 'Nama Pelaksana' in df_flm and not df_flm['Nama Pelaksana'].dropna().empty:
+            pelaksana_counts = df_flm['Nama Pelaksana'].str.split(',').explode().str.strip().value_counts().reset_index()
+            pelaksana_counts.columns = ['Nama Pelaksana', 'Jumlah FLM Dikerjakan']
+
+            if not pelaksana_counts.empty:
+                top_performer = pelaksana_counts.iloc[0]
+                
+                st.markdown("#### Performa Terbaik")
+                col_kpi1, col_kpi2 = st.columns(2)
+                with col_kpi1:
+                    st.success(f"**Top Performer:** {top_performer['Nama Pelaksana']}")
+                with col_kpi2:
+                    st.success(f"**Jumlah Pekerjaan:** {top_performer['Jumlah FLM Dikerjakan']} Kali")
+
+                st.markdown("---")
+                st.subheader("Peringkat Semua Pelaksana")
+                
+                fig_leaderboard = px.bar(
+                    pelaksana_counts.sort_values('Jumlah FLM Dikerjakan'),
+                    x='Jumlah FLM Dikerjakan',
+                    y='Nama Pelaksana',
+                    orientation='h',
+                    title='Leaderboard Pelaksana FLM',
+                    text='Jumlah FLM Dikerjakan',
+                    color='Jumlah FLM Dikerjakan',
+                    color_continuous_scale=px.colors.sequential.Greens_r,
+                    template='plotly_dark'
+                )
+                fig_leaderboard.update_yaxes(categoryorder="total ascending")
+                st.plotly_chart(fig_leaderboard, use_container_width=True)
+            else:
+                st.info("Tidak ada data pelaksana untuk dianalisis sesuai filter.")
+        else:
+            st.info("Kolom 'Nama Pelaksana' kosong pada data yang difilter.")
 
 elif menu == "Dashboard Peringatan":
     st.header("⚠️ Peringatan Corrective Maintenance (Warning CM)")
