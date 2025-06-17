@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI A
+# APLIKASI PRODUKSI LENGKAP DENGAN DASHBOARD
 import streamlit as st
 import pandas as pd
 import os
@@ -15,6 +15,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 import io
 import requests
 from supabase import create_client, Client
+import plotly.express as px # <--- IMPORT BARU
 
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
@@ -32,7 +33,7 @@ st.markdown(
         .stApp {
             background-color: #021021; /* Fallback */
             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
-                              linear-gradient(to top, #062b54, #021021);
+                                linear-gradient(to top, #062b54, #021021);
             background-attachment: fixed;
             color: #ECF0F1;
         }
@@ -165,7 +166,7 @@ JOB_TYPES = [
     "Preventive Maintenance"
 ]
 
-# ================== Fungsi-Fungsi Helper ==================
+# ================== Fungsi-Fungsi Helper (TIDAK DIUBAH) ==================
 
 def hash_password(password):
     """Membuat hash dari password menggunakan SHA256."""
@@ -358,14 +359,21 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image(Image.open("logo.png"), use_container_width=True) 
     except FileNotFoundError: pass
-    menu = st.radio("Pilih Halaman:", ["Input Data", "Report Data"], label_visibility="collapsed")
+
+    # === MENU NAVIGASI BARU ===
+    menu = st.radio(
+        "Pilih Halaman:", 
+        ["Dashboard Peringatan", "Analisis FLM", "Input Data", "Report Data"], 
+        label_visibility="collapsed"
+    )
+    # ==========================
+    
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
 st.title("DASHBOARD MONITORING")
 
-# ================== PERUBAHAN DI SINI ==================
 # Sembunyikan menu hamburger dan footer Streamlit untuk user 'operator'
 if st.session_state.get('user') == 'operator':
     hide_streamlit_style = """
@@ -376,14 +384,176 @@ if st.session_state.get('user') == 'operator':
         </style>
         """
     st.markdown(hide_streamlit_style, unsafe_allow_html=True)
-# =======================================================
-
 
 # Muat data jika session state kosong (misalnya setelah login)
 if 'data' not in st.session_state or st.session_state.data.empty:
     st.session_state.data = load_data_from_db()
 
-if menu == "Input Data":
+
+# =========================================================================
+# ================== HALAMAN-HALAMAN UTAMA APLIKASI =======================
+# =========================================================================
+
+# === HALAMAN 1: DASHBOARD PERINGATAN (BARU) ===
+if menu == "Dashboard Peringatan":
+    st.header("⚠️ Dashboard Analisis Interaktif")
+    st.markdown("Gunakan filter di sidebar untuk mengeksplorasi data Corrective Maintenance.")
+
+    # Ambil data dari session state
+    df = st.session_state.data.copy()
+
+    # --- SIDEBAR UNTUK FILTER ---
+    st.sidebar.header("Filter Interaktif")
+    
+    # FILTER RENTANG TANGGAL
+    if not df.empty:
+        df['Tanggal'] = pd.to_datetime(df['Tanggal'])
+        min_date = df['Tanggal'].min().date()
+        max_date = df['Tanggal'].max().date()
+    else:
+        min_date = date.today()
+        max_date = date.today()
+
+    start_date = st.sidebar.date_input("Tanggal Mulai", min_date, key="cm_start_date")
+    end_date = st.sidebar.date_input("Tanggal Akhir", max_date, key="cm_end_date")
+
+    # FILTER STATUS
+    all_status = df['Status'].unique() if not df.empty else []
+    selected_status = st.sidebar.multiselect("Filter berdasarkan Status:", options=all_status, default=all_status, key="cm_status_filter")
+
+    # --- PROSES FILTERISASI DATA ---
+    if not df.empty:
+        start_datetime = pd.to_datetime(start_date)
+        end_datetime = pd.to_datetime(end_date)
+        
+        df_selection = df[
+            (df['Jenis'] == 'Corrective Maintenance') &
+            (df['Tanggal'].between(start_datetime, end_datetime)) &
+            (df['Status'].isin(selected_status))
+        ]
+    else:
+        df_selection = pd.DataFrame()
+
+
+    # --- HALAMAN UTAMA DASHBOARD ---
+    if df_selection.empty:
+        st.warning("Tidak ada data 'Corrective Maintenance' yang cocok dengan filter Anda.")
+    else:
+        # ANALISIS FREKUENSI PER AREA
+        corrective_counts = df_selection['Area'].value_counts().reset_index()
+        corrective_counts.columns = ['Area', 'Jumlah Kasus']
+
+        st.markdown("### Ringkasan Berdasarkan Filter")
+        total_kasus = corrective_counts['Jumlah Kasus'].sum()
+        area_teratas = corrective_counts.iloc[0]
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Kasus Corrective", f"{total_kasus} Kasus")
+        col2.metric("Area Paling Bermasalah", area_teratas['Area'])
+        col3.metric("Jumlah Kasus di Area Tsb", f"{area_teratas['Jumlah Kasus']} Kasus", delta="Paling Tinggi", delta_color="inverse")
+
+        st.markdown("---")
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            st.subheader("Distribusi Kasus per Area")
+            fig_pie = px.pie(corrective_counts, names='Area', values='Jumlah Kasus', hole=0.4)
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        with chart_col2:
+            st.subheader("Peringkat Area Bermasalah")
+            fig_bar = px.bar(corrective_counts.sort_values('Jumlah Kasus', ascending=True), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds)
+            fig_bar.update_layout(showlegend=False, yaxis_title=None, xaxis_title="Jumlah Kasus")
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+        st.markdown("---")
+        st.subheader("🔍 Drill-Down: Lihat Detail per Area")
+        area_to_inspect = st.selectbox("Pilih Area untuk melihat detail pekerjaan:", options=corrective_counts['Area'].unique())
+        if area_to_inspect:
+            detail_df = df_selection[df_selection['Area'] == area_to_inspect]
+            st.dataframe(detail_df[['ID', 'Tanggal', 'Status', 'Nama Pelaksana', 'Keterangan']], use_container_width=True)
+
+        st.markdown("---")
+        st.subheader("📈 Tren Kasus Corrective Maintenance")
+        df_tren = df_selection.set_index('Tanggal').resample('D').size().reset_index(name='Jumlah Kasus')
+        fig_line = px.line(df_tren, x='Tanggal', y='Jumlah Kasus', title='Jumlah Kasus per Hari', markers=True)
+        fig_line.update_layout(xaxis_title="Tanggal", yaxis_title="Jumlah Kasus")
+        st.plotly_chart(fig_line, use_container_width=True)
+
+# === HALAMAN 2: ANALISIS FLM (BARU) ===
+elif menu == "Analisis FLM":
+    st.header("📊 Analisis Dominasi FLM")
+    st.markdown("Dashboard ini menganalisis jenis First Line Maintenance (FLM) yang paling sering dilaksanakan. Gunakan filter di sidebar untuk eksplorasi data.")
+
+    df = st.session_state.data.copy()
+
+    # --- Gunakan filter interaktif di sidebar ---
+    st.sidebar.header("Filter Interaktif")
+    if not df.empty:
+        df['Tanggal'] = pd.to_datetime(df['Tanggal'])
+        min_date = df['Tanggal'].min().date()
+        max_date = df['Tanggal'].max().date()
+    else:
+        min_date = date.today()
+        max_date = date.today()
+
+    start_date_flm = st.sidebar.date_input("Tanggal Mulai", min_date, key="flm_start_date")
+    end_date_flm = st.sidebar.date_input("Tanggal Akhir", max_date, key="flm_end_date")
+
+    all_status_flm = df['Status'].unique() if not df.empty else []
+    selected_status_flm = st.sidebar.multiselect("Filter berdasarkan Status:", options=all_status_flm, default=all_status_flm, key="flm_status_filter")
+
+    # --- Proses Filterisasi Data ---
+    if not df.empty:
+        start_datetime_flm = pd.to_datetime(start_date_flm)
+        end_datetime_flm = pd.to_datetime(end_date_flm)
+        
+        df_selection_flm = df[
+            (df['Tanggal'].between(start_datetime_flm, end_datetime_flm)) &
+            (df['Status'].isin(selected_status_flm))
+        ]
+        # Filter khusus FLM
+        df_flm = df_selection_flm[df_selection_flm['Jenis'].str.startswith('First Line Maintenance', na=False)]
+    else:
+        df_flm = pd.DataFrame()
+
+    if df_flm.empty:
+        st.warning("Tidak ada data FLM yang cocok dengan filter Anda.")
+    else:
+        flm_counts = df_flm['Jenis'].value_counts().reset_index()
+        flm_counts.columns = ['Jenis FLM', 'Jumlah Pelaksanaan']
+
+        st.markdown("### Ringkasan Pelaksanaan FLM")
+        total_pelaksanaan = flm_counts['Jumlah Pelaksanaan'].sum()
+        flm_teratas = flm_counts.iloc[0]
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Pelaksanaan FLM", f"{total_pelaksanaan} Kali")
+        col2.metric("FLM Paling Dominan", flm_teratas['Jenis FLM'].replace("First Line Maintenance ", ""))
+        col3.metric("Jumlah Pelaksanaan", f"{flm_teratas['Jumlah Pelaksanaan']} Kali", delta="Paling Sering", delta_color="off")
+
+        st.markdown("---")
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            st.subheader("Proporsi Setiap Jenis FLM")
+            fig_pie = px.pie(flm_counts, names='Jenis FLM', values='Jumlah Pelaksanaan', hole=0.4, title='Persentase Pelaksanaan FLM')
+            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_pie, use_container_width=True)
+
+        with chart_col2:
+            st.subheader("Peringkat Dominasi FLM")
+            fig_bar = px.bar(flm_counts.sort_values('Jumlah Pelaksanaan', ascending=True), x='Jumlah Pelaksanaan', y='Jenis FLM', orientation='h', text='Jumlah Pelaksanaan', color='Jumlah Pelaksanaan', color_continuous_scale=px.colors.sequential.Blues_r)
+            fig_bar.update_layout(showlegend=False, yaxis_title=None, xaxis_title="Jumlah Pelaksanaan")
+            st.plotly_chart(fig_bar, use_container_width=True)
+            
+        with st.expander("Lihat Detail Data per Jenis FLM"):
+            flm_to_inspect = st.selectbox("Pilih Jenis FLM untuk melihat detail pekerjaan:", options=flm_counts['Jenis FLM'].unique(), key="flm_drilldown_select")
+            if flm_to_inspect:
+                detail_df_flm = df_flm[df_flm['Jenis'] == flm_to_inspect]
+                st.dataframe(detail_df_flm, use_container_width=True)
+
+
+# === HALAMAN 3: INPUT DATA (FUNGSI ASLI, TIDAK DIUBAH) ===
+elif menu == "Input Data":
     st.header("Input Data Pekerjaan Baru")
     with st.form("input_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
@@ -423,6 +593,7 @@ if menu == "Input Data":
                     except Exception as e:
                         st.error(f"Gagal menyimpan data ke database: {e}")
 
+# === HALAMAN 4: REPORT DATA (FUNGSI ASLI, TIDAK DIUBAH) ===
 elif menu == "Report Data":
     st.header("Integrated Data & Report")
     
