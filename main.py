@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP DENGAN URUTAN HALAMAN BARU
+# APLIKASI PRODUKSI LENGKAP DENGAN PERBAIKAN WARNA TEKS GRAFIK
 import streamlit as st
 import pandas as pd
 import os
@@ -417,22 +417,24 @@ elif menu == "Report Data":
                     "ID": st.column_config.TextColumn("ID", disabled=True),
                 }, column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
             )
-            rows_to_delete_df = st.session_state.data_editor.get("edited_rows")
-            ids_to_delete = [
-                data_to_display.iloc[idx]["ID"]
-                for idx, row in rows_to_delete_df.items()
-                if row.get("Hapus")
-            ]
-            if ids_to_delete and st.session_state.user == 'admin':
-                st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-                if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
-                    with st.spinner("Menghapus data..."):
-                        supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
-                        st.session_state.data = load_data_from_db()
-                        st.success("Data terpilih berhasil dihapus.")
-                        st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-            elif ids_to_delete: st.warning("Hanya 'admin' yang dapat menghapus data.")
+            # Logika Hapus Baris
+            if 'data_editor' in st.session_state and 'edited_rows' in st.session_state.data_editor:
+                rows_to_delete_df = st.session_state.data_editor["edited_rows"]
+                ids_to_delete = [
+                    data_to_display.iloc[idx]["ID"]
+                    for idx, row in rows_to_delete_df.items()
+                    if row.get("Hapus")
+                ]
+                if ids_to_delete and st.session_state.user == 'admin':
+                    st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                    if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
+                        with st.spinner("Menghapus data..."):
+                            supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
+                            st.session_state.data = load_data_from_db()
+                            st.success("Data terpilih berhasil dihapus.")
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+                elif ids_to_delete: st.warning("Hanya 'admin' yang dapat menghapus data.")
 
     st.write("---")
     
@@ -528,11 +530,11 @@ elif menu == "Analisis FLM":
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
             st.subheader("Proporsi Jenis FLM")
-            fig_pie = px.pie(flm_counts, names='Jenis FLM', values='Jumlah', hole=0.4, title='Persentase Pelaksanaan FLM')
+            fig_pie = px.pie(flm_counts, names='Jenis FLM', values='Jumlah', hole=0.4, title='Persentase Pelaksanaan FLM', template='plotly_dark')
             st.plotly_chart(fig_pie, use_container_width=True)
         with chart_col2:
             st.subheader("Peringkat Dominasi FLM")
-            fig_bar = px.bar(flm_counts.sort_values('Jumlah'), x='Jumlah', y='Jenis FLM', orientation='h', text='Jumlah', color='Jumlah', color_continuous_scale=px.colors.sequential.Blues_r)
+            fig_bar = px.bar(flm_counts.sort_values('Jumlah'), x='Jumlah', y='Jenis FLM', orientation='h', text='Jumlah', color='Jumlah', color_continuous_scale=px.colors.sequential.Blues_r, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
         
         with st.expander("Lihat Detail Data per Jenis FLM"):
@@ -577,15 +579,15 @@ elif menu == "Dashboard Peringatan":
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
             st.subheader("Distribusi Kasus per Area")
-            fig_pie = px.pie(cm_counts, names='Area', values='Jumlah Kasus', hole=0.4)
+            fig_pie = px.pie(cm_counts, names='Area', values='Jumlah Kasus', hole=0.4, template='plotly_dark')
             st.plotly_chart(fig_pie, use_container_width=True)
         with chart_col2:
             st.subheader("Peringkat Area Bermasalah")
-            fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds)
+            fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
 
         st.markdown("---")
         st.subheader("📈 Tren Kasus Corrective Maintenance")
         df_tren = df_cm.set_index('Tanggal').resample('D').size().reset_index(name='Jumlah Kasus')
-        fig_line = px.line(df_tren, x='Tanggal', y='Jumlah Kasus', title='Jumlah Kasus per Hari', markers=True)
+        fig_line = px.line(df_tren, x='Tanggal', y='Jumlah Kasus', title='Jumlah Kasus per Hari', markers=True, template='plotly_dark')
         st.plotly_chart(fig_line, use_container_width=True)
