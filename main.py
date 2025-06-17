@@ -157,7 +157,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-)
 
 # ================== Koneksi & Konfigurasi Global ==================
 @st.cache_resource
