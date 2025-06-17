@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP - FINAL VERSION
+# APLIKASI PRODUKSI LENGKAP - FINAL VERSION DENGAN PERBAIKAN SIMPAN DATA
 import streamlit as st
 import pandas as pd
 import os
@@ -25,45 +25,24 @@ st.markdown(
     """
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        
-        html, body, [class*="st-"] {
-            font-family: 'Inter', sans-serif;
-        }
-
+        html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
         .stApp {
-            background-color: #021021; /* Fallback */
+            background-color: #021021;
             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
                                 linear-gradient(to top, #062b54, #021021);
             background-attachment: fixed;
             color: #ECF0F1;
         }
-
-        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 {
-            color: #FFFFFF;
-        }
-        
-        .stApp [data-testid="stHeading"] {
-            color: #FFFFFF !important;
-        }
-        .stApp p {
-            color: #ECF0F1 !important;
-        }
-        
-        h1 {
-            border-bottom: 2px solid #3498DB;
-            padding-bottom: 10px;
-            margin-bottom: 0.8rem;
-        }
-
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 { color: #FFFFFF; }
+        .stApp [data-testid="stHeading"] { color: #FFFFFF !important; }
+        .stApp p { color: #ECF0F1 !important; }
+        h1 { border-bottom: 2px solid #3498DB; padding-bottom: 10px; margin-bottom: 0.8rem; }
         [data-testid="stSidebar"] {
             background-color: rgba(2, 16, 33, 0.8);
             backdrop-filter: blur(5px);
             border-right: 1px solid rgba(52, 152, 219, 0.3);
         }
-        
-        .login-container [data-testid="stForm"],
-        [data-testid="stForm"],
-        [data-testid="stExpander"],
+        .login-container [data-testid="stForm"], [data-testid="stForm"], [data-testid="stExpander"],
         [data-testid="stVerticalBlock"] [data-testid="stVerticalBlock"] [data-testid="stContainer"] {
             background-color: rgba(44, 62, 80, 0.6);
             backdrop-filter: blur(5px);
@@ -72,34 +51,18 @@ st.markdown(
             border-radius: 10px;
             margin-bottom: 1rem;
         }
-        .login-title {
-            color: #FFFFFF; text-align: center; border-bottom: none; font-size: 1.9rem; white-space: nowrap;
+        .login-title { color: #FFFFFF; text-align: center; border-bottom: none; font-size: 1.9rem; white-space: nowrap; }
+        div[data-testid="stButton"] > button, div[data-testid="stDownloadButton"] > button, div[data-testid="stForm"] button {
+            font-weight: 600; border-radius: 8px; border: 1px solid #3498DB !important;
+            background-color: transparent !important; color: #FFFFFF !important;
+            transition: all 0.3s ease-in-out; padding: 10px 24px; width: 100%;
         }
-
-        div[data-testid="stButton"] > button,
-        div[data-testid="stDownloadButton"] > button,
-        div[data-testid="stForm"] button {
-            font-weight: 600;
-            border-radius: 8px;
-            border: 1px solid #3498DB !important;
-            background-color: transparent !important;
-            color: #FFFFFF !important;
-            transition: all 0.3s ease-in-out;
-            padding: 10px 24px;
-            width: 100%;
-        }
-        div[data-testid="stButton"] > button:hover,
-        div[data-testid="stDownloadButton"] > button:hover,
-        div[data-testid="stForm"] button:hover {
-            background-color: #3498DB !important;
-            border-color: #3498DB !important;
+        div[data-testid="stButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover, div[data-testid="stForm"] button:hover {
+            background-color: #3498DB !important; border-color: #3498DB !important;
         }
         .delete-button button { border-color: #E74C3C !important; }
         .delete-button button:hover { background-color: #C0392B !important; border-color: #C0392B !important; }
-
-        div[data-baseweb="input"] > div,
-        div[data-baseweb="textarea"] > div,
-        div[data-baseweb="select"] > div {
+        div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
             background-color: rgba(236, 240, 241, 0.1) !important;
             border-color: rgba(52, 152, 219, 0.4) !important;
             color: #FFFFFF !important;
@@ -107,50 +70,18 @@ st.markdown(
         label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
             color: #FFFFFF !important; font-weight: 500;
         }
-
-        [data-testid="stSidebar"] .stMarkdown p,
-        [data-testid="stSidebar"] .stMarkdown strong,
-        [data-testid="stSidebar"] .stRadio > label span,
-        [data-testid="stSidebar"] .stCaption {
-            color: #FFFFFF !important;
-            opacity: 1;
+        [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] .stMarkdown strong,
+        [data-testid="stSidebar"] .stRadio > label span, [data-testid="stSidebar"] .stCaption {
+            color: #FFFFFF !important; opacity: 1;
         }
-
-        [data-testid="stSidebar"] .st-bo:has(input:checked) + label span {
-            color: #5DADE2 !important;
-            font-weight: 700 !important;
-        }
-        
-        [data-testid="stSidebar"] .stButton > button {
-             color: #EAECEE !important;
-             border-color: #EAECEE !important;
-        }
-        [data-testid="stSidebar"] .stButton > button:hover {
-             color: #FFFFFF !important;
-             border-color: #E74C3C !important;
-             background-color: #E74C3C !important;
-        }
-
-        [data-testid="stSidebarNavCollapseButton"] svg {
-            fill: #FFFFFF !important;
-        }
-
-        /* === PERBAIKAN WARNA TEKS UNTUK st.metric === */
-        [data-testid="stMetricLabel"] {
-            color: #A9C5E1 !important; /* Warna biru pudar untuk label (Total Pelaksanaan FLM) */
-        }
-        [data-testid="stMetricValue"] {
-            color: #FFFFFF !important; /* Warna putih terang untuk nilai utama (Angka) */
-        }
-        [data-testid="stMetricDelta"] {
-            color: #2ECC71 !important; /* Warna hijau terang untuk teks delta (Paling Sering) */
-        }
-        /* Mengatur delta negatif (jika ada) */
-      	[data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] {
-          color: #FF4B4B !important; /* Warna merah terang untuk delta negatif */
-      	}
-        /* =========================================== */
-
+        [data-testid="stSidebar"] .st-bo:has(input:checked) + label span { color: #5DADE2 !important; font-weight: 700 !important; }
+        [data-testid="stSidebar"] .stButton > button { color: #EAECEE !important; border-color: #EAECEE !important; }
+        [data-testid="stSidebar"] .stButton > button:hover { color: #FFFFFF !important; border-color: #E74C3C !important; background-color: #E74C3C !important; }
+        [data-testid="stSidebarNavCollapseButton"] svg { fill: #FFFFFF !important; }
+        [data-testid="stMetricLabel"] { color: #A9C5E1 !important; }
+        [data-testid="stMetricValue"] { color: #FFFFFF !important; }
+        [data-testid="stMetricDelta"] { color: #2ECC71 !important; }
+        [data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] { color: #FF4B4B !important; }
     </style>
     """,
     unsafe_allow_html=True
@@ -162,17 +93,23 @@ def init_connection():
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
     return create_client(url, key)
-
 supabase = init_connection()
-
-JOB_TYPES = [
-    "First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )",
-    "First Line Maintenance ( D )", "Corrective Maintenance", "Preventive Maintenance"
-]
+JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )", "Corrective Maintenance", "Preventive Maintenance"]
 
 # ================== Fungsi-Fungsi Helper ==================
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_user(username, password):
+    try:
+        hashed_pass = hash_password(password)
+        result = supabase.table("users").select("*").eq("username", username).single().execute()
+        if result.data and result.data['hashed_password'] == hashed_pass:
+            return result.data
+    except Exception as e:
+        print(f"Authentication error: {e}")
+        return None
+    return None
 
 @st.cache_data(ttl=600)
 def load_data_from_db():
@@ -194,33 +131,23 @@ def logout():
     st.rerun()
 
 def generate_next_id(df, jenis):
-    prefix_map = {
-        'First Line Maintenance': 'FLM', 'Corrective Maintenance': 'CM', 'Preventive Maintenance': 'PM'
-    }
-    prefix = 'JOB'
-    for key, value in prefix_map.items():
-        if jenis.startswith(key):
-            prefix = value
-            break
+    prefix_map = {'First Line Maintenance': 'FLM', 'Corrective Maintenance': 'CM', 'Preventive Maintenance': 'PM'}
+    prefix = next((p for key, p in prefix_map.items() if jenis.startswith(key)), 'JOB')
     
     if df.empty: return f"{prefix}-001"
-    relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]
+    relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]['ID'].str.split('-').str[1].dropna().astype(int)
     if relevant_ids.empty: return f"{prefix}-001"
     
-    numeric_parts = relevant_ids['ID'].str.split('-').str[1].dropna().astype(int)
-    if numeric_parts.empty: return f"{prefix}-001"
-    
-    return f"{prefix}-{numeric_parts.max() + 1:03d}"
+    return f"{prefix}-{relevant_ids.max() + 1:03d}"
 
 def fix_image_orientation(image):
     try:
         exif = image.getexif()
-        orientation_tag = next((tag for tag, name in ExifTags.TAGS.items() if name == 'Orientation'), None)
-        if orientation_tag and orientation_tag in exif:
-            orientation = exif[orientation_tag]
-            if orientation == 3: image = image.rotate(180, expand=True)
-            elif orientation == 6: image = image.rotate(270, expand=True)
-            elif orientation == 8: image = image.rotate(90, expand=True)
+        orientation = next((tag for tag, name in ExifTags.TAGS.items() if name == 'Orientation'), None)
+        if orientation and orientation in exif:
+            actions = {3: 180, 6: 270, 8: 90}
+            if exif[orientation] in actions:
+                image = image.rotate(actions[exif[orientation]], expand=True)
     except Exception:
         pass
     return image
@@ -228,19 +155,19 @@ def fix_image_orientation(image):
 def upload_image_to_storage(uploaded_file):
     if uploaded_file is None: return ""
     try:
-        image = Image.open(uploaded_file)
+        image = Image.open(uploaded_file).convert("RGB")
         image = fix_image_orientation(image)
         output_buffer = io.BytesIO()
-        image.save(output_buffer, format="PNG", quality=85, optimize=True)
-        processed_bytes = output_buffer.getvalue()
-        file_name = f"{uuid.uuid4()}.png"
-        supabase.storage.from_("evidences").upload(file=processed_bytes, path=file_name, file_options={"content-type": "image/png"})
+        image.save(output_buffer, format="JPEG", quality=85, optimize=True)
+        file_name = f"{uuid.uuid4()}.jpeg"
+        supabase.storage.from_("evidences").upload(file=output_buffer.getvalue(), path=file_name, file_options={"content-type": "image/jpeg"})
         return supabase.storage.from_("evidences").get_public_url(file_name)
     except Exception as e:
         st.error(f"Gagal upload gambar: {e}")
         return ""
 
 def create_pdf_report(filtered_data, report_type):
+    # (Fungsi ini tidak diubah)
     pdf_buffer = io.BytesIO()
     doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
     styles = getSampleStyleSheet()
@@ -315,31 +242,31 @@ if not st.session_state.get("logged_in"):
         try: st.image("logo.png", width=150)
         except FileNotFoundError: pass
         
-        ADMIN_CREDENTIALS = {"admin": hash_password(st.secrets.get("ADMIN_PASS", "pltubangka")), "operator": hash_password(st.secrets.get("OPERATOR_PASS", "12345"))}
         with st.form("login_form"):
             st.markdown('<h3 style="color: #FFFFFF; text-align: center; border-bottom: none;">User Login</h3>', unsafe_allow_html=True)
             username = st.text_input("Username", placeholder="e.g., admin", key="login_username").lower()
             password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
+            
             if st.form_submit_button("Login"):
-                if username in ADMIN_CREDENTIALS and ADMIN_CREDENTIALS[username] == hash_password(password):
+                with st.spinner("Memverifikasi..."):
+                    user_data = verify_user(username, password)
+                
+                if user_data:
                     st.session_state.logged_in = True
-                    st.session_state.user = username
+                    st.session_state.user = user_data['role']
                     st.session_state.last_activity = datetime.now()
                     st.rerun()
-                else: st.error("Username atau password salah.")
+                else:
+                    st.error("Username atau password salah.")
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
-# Auto-logout
 if 'last_activity' not in st.session_state or datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
     logout()
 st.session_state.last_activity = datetime.now()
 
-# ================== Tampilan Utama Setelah Login ==================
-# Muat data utama
 if 'data' not in st.session_state:
     st.session_state.data = load_data_from_db()
-
 df = st.session_state.data.copy()
 
 with st.sidebar:
@@ -347,19 +274,11 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
-
-    # === MENU NAVIGASI DENGAN URUTAN BARU ===
-    menu = st.radio(
-        "Pilih Halaman:", 
-        ["Input Data", "Report Data", "Analisis FLM", "Dashboard Peringatan"], 
-        label_visibility="collapsed"
-    )
-    
+    menu = st.radio("Pilih Halaman:", ["Input Data", "Report Data", "Analisis FLM", "Dashboard Peringatan"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-# Sembunyikan menu hamburger dan footer Streamlit untuk user 'operator'
 if st.session_state.get('user') == 'operator':
     st.markdown("""<style>#MainMenu, header, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
@@ -388,9 +307,16 @@ if menu == "Input Data":
                 st.error("Mohon isi semua field yang wajib.")
             else:
                 with st.spinner("Menyimpan data..."):
+                    # === PERBAIKAN LOGIKA ID UNTUK MULTI-USER ===
+                    # 1. Ambil data ID terbaru langsung dari database untuk menghindari duplikat
+                    latest_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
+                    # 2. Hasilkan ID baru berdasarkan data terbaru
+                    new_id = generate_next_id(latest_ids_df, jenis)
+                    # ============================================
+
                     evidance_url = upload_image_to_storage(evidance_file)
                     evidance_after_url = upload_image_to_storage(evidance_after_file)
-                    new_id = generate_next_id(df, jenis)
+                    
                     new_job_data = {
                         "ID": new_id, "Tanggal": str(tanggal), "Jenis": jenis, "Area": area, "Nomor SR": nomor_sr, 
                         "Nama Pelaksana": nama_pelaksana, "Keterangan": keterangan, "Status": status, 
@@ -398,13 +324,18 @@ if menu == "Input Data":
                     }
                     try:
                         supabase.table("jobs").insert(new_job_data).execute()
-                        st.session_state.data = load_data_from_db() # Refresh data
+                        st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
+                        st.rerun() # Rerun untuk membersihkan form
                     except Exception as e:
                         st.error(f"Gagal menyimpan data: {e}")
 
+# ... Sisa kode untuk halaman lain (Report Data, Analisis FLM, Dashboard Peringatan) tetap sama ...
+# ... Letakkan kode untuk halaman-halaman tersebut di sini ...
+
 elif menu == "Report Data":
     st.header("Integrated Data & Report")
+    # ... (kode halaman Report Data tidak diubah)
     with st.container(border=True):
         st.subheader("Filter & Edit Data")
         data_to_display = df.copy()
@@ -420,7 +351,7 @@ elif menu == "Report Data":
         
         if not data_to_display.empty:
             data_to_display.insert(0, "Hapus", False)
-            st.data_editor(
+            edited_data = st.data_editor(
                 data_to_display, key="data_editor", disabled=["ID", "Evidance", "Evidance After"], use_container_width=True,
                 column_config={
                     "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), 
@@ -435,23 +366,21 @@ elif menu == "Report Data":
                 }, column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
             )
             # Logika Hapus Baris
-            if 'data_editor' in st.session_state and 'edited_rows' in st.session_state.data_editor:
-                rows_to_delete_df = st.session_state.data_editor["edited_rows"]
-                ids_to_delete = [
-                    data_to_display.iloc[idx]["ID"]
-                    for idx, row in rows_to_delete_df.items()
-                    if row.get("Hapus")
-                ]
-                if ids_to_delete and st.session_state.user == 'admin':
-                    st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-                    if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
-                        with st.spinner("Menghapus data..."):
-                            supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
-                            st.session_state.data = load_data_from_db()
-                            st.success("Data terpilih berhasil dihapus.")
-                            st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-                elif ids_to_delete: st.warning("Hanya 'admin' yang dapat menghapus data.")
+            if 'edited_rows' in edited_data:
+                rows_to_delete = [idx for idx, row in edited_data.get("edited_rows", {}).items() if row.get("Hapus")]
+                if rows_to_delete:
+                    ids_to_delete = data_to_display.iloc[rows_to_delete]["ID"].tolist()
+                    if ids_to_delete and st.session_state.user == 'admin':
+                        st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                        if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
+                            with st.spinner("Menghapus data..."):
+                                supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
+                                st.session_state.data = load_data_from_db()
+                                st.success("Data terpilih berhasil dihapus.")
+                                st.rerun()
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    elif ids_to_delete:
+                        st.warning("Hanya 'admin' yang dapat menghapus data.")
 
     st.write("---")
     
@@ -532,6 +461,7 @@ elif menu == "Analisis FLM":
     if df_flm.empty:
         st.warning("Tidak ada data FLM yang cocok dengan filter Anda.")
     else:
+        # Analisis Tipe FLM
         flm_counts = df_flm['Jenis'].value_counts().reset_index()
         flm_counts.columns = ['Jenis FLM', 'Jumlah']
         total_pelaksanaan = flm_counts['Jumlah'].sum()
@@ -542,8 +472,9 @@ elif menu == "Analisis FLM":
         col1.metric("Total Pelaksanaan FLM", f"{total_pelaksanaan} Kali")
         col2.metric("FLM Paling Dominan", flm_teratas['Jenis FLM'].replace("First Line Maintenance ", ""))
         col3.metric("Jumlahnya", f"{flm_teratas['Jumlah']} Kali", delta="Paling Sering", delta_color="off")
-
         st.markdown("---")
+        
+        # Visualisasi Tipe FLM
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
             st.subheader("Proporsi Jenis FLM")
@@ -554,7 +485,7 @@ elif menu == "Analisis FLM":
             fig_bar = px.bar(flm_counts.sort_values('Jumlah'), x='Jumlah', y='Jenis FLM', orientation='h', text='Jumlah', color='Jumlah', color_continuous_scale=px.colors.sequential.Blues_r, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
         
-        # --- BAGIAN LEADERBOARD PELAKSANA (DENGAN LOGIKA TIM) ---
+        # Analisis Leaderboard Pelaksana
         st.markdown("---") 
         st.header("🏆 Skor Pelaksana FLM (Leaderboard)")
         st.markdown("Menganalisis pelaksana berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
@@ -568,25 +499,12 @@ elif menu == "Analisis FLM":
                 
                 st.markdown("#### Performa Terbaik")
                 col_kpi1, col_kpi2 = st.columns(2)
-                with col_kpi1:
-                    st.success(f"**Top Performer:** {top_performer['Nama Pelaksana']}")
-                with col_kpi2:
-                    st.success(f"**Jumlah Pekerjaan:** {top_performer['Jumlah FLM Dikerjakan']} Kali")
-
+                with col_kpi1: st.success(f"**Top Performer:** {top_performer['Nama Pelaksana']}")
+                with col_kpi2: st.success(f"**Jumlah Pekerjaan:** {top_performer['Jumlah FLM Dikerjakan']} Kali")
                 st.markdown("---")
-                st.subheader("Peringkat Semua Pelaksana")
                 
-                fig_leaderboard = px.bar(
-                    pelaksana_counts.sort_values('Jumlah FLM Dikerjakan'),
-                    x='Jumlah FLM Dikerjakan',
-                    y='Nama Pelaksana',
-                    orientation='h',
-                    title='Leaderboard Pelaksana FLM',
-                    text='Jumlah FLM Dikerjakan',
-                    color='Jumlah FLM Dikerjakan',
-                    color_continuous_scale=px.colors.sequential.Greens_r,
-                    template='plotly_dark'
-                )
+                st.subheader("Peringkat Semua Pelaksana")
+                fig_leaderboard = px.bar(pelaksana_counts.sort_values('Jumlah FLM Dikerjakan'), x='Jumlah FLM Dikerjakan', y='Nama Pelaksana', orientation='h', title='Leaderboard Pelaksana FLM', text='Jumlah FLM Dikerjakan', color='Jumlah FLM Dikerjakan', color_continuous_scale=px.colors.sequential.Greens_r, template='plotly_dark')
                 fig_leaderboard.update_yaxes(categoryorder="total ascending")
                 st.plotly_chart(fig_leaderboard, use_container_width=True)
             else:
@@ -627,8 +545,8 @@ elif menu == "Dashboard Peringatan":
         col1.metric("Total Kasus Corrective", f"{total_kasus} Kasus")
         col2.metric("Area Paling Bermasalah", area_teratas['Area'])
         col3.metric("Jumlah Kasus di Area Tsb", f"{area_teratas['Jumlah Kasus']} Kasus", delta="Paling Tinggi", delta_color="inverse")
-
         st.markdown("---")
+
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
             st.subheader("Distribusi Kasus per Area")
@@ -638,8 +556,8 @@ elif menu == "Dashboard Peringatan":
             st.subheader("Peringkat Area Bermasalah")
             fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
-
         st.markdown("---")
+
         st.subheader("📈 Tren Kasus Corrective Maintenance")
         df_tren = df_cm.set_index('Tanggal').resample('D').size().reset_index(name='Jumlah Kasus')
         fig_line = px.line(df_tren, x='Tanggal', y='Jumlah Kasus', title='Jumlah Kasus per Hari', markers=True, template='plotly_dark')
