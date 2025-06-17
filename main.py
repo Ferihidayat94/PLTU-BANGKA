@@ -414,7 +414,7 @@ elif menu == "Report Data":
     
     # === BAGIAN LAPORAN BARU YANG LEBIH SEDERHANA ===
     with st.container(border=True):
-        st.subheader("📄 Unduh Laporan Kustom")
+        st.subheader("📄 Unduh Laporan")
 
         if df.empty:
             st.info("Belum ada data untuk dibuat laporan.")
