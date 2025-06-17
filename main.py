@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP - FINAL VERSION DENGAN PERBAIKAN SIMPAN DATA
+# APLIKASI PRODUKSI LENGKAP - FINAL VERSION DENGAN PERBAIKAN FUNGSI HAPUS
 import streamlit as st
 import pandas as pd
 import os
@@ -307,13 +307,9 @@ if menu == "Input Data":
                 st.error("Mohon isi semua field yang wajib.")
             else:
                 with st.spinner("Menyimpan data..."):
-                    # === PERBAIKAN LOGIKA ID UNTUK MULTI-USER ===
-                    # 1. Ambil data ID terbaru langsung dari database untuk menghindari duplikat
                     latest_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
-                    # 2. Hasilkan ID baru berdasarkan data terbaru
                     new_id = generate_next_id(latest_ids_df, jenis)
-                    # ============================================
-
+                    
                     evidance_url = upload_image_to_storage(evidance_file)
                     evidance_after_url = upload_image_to_storage(evidance_after_file)
                     
@@ -326,33 +322,36 @@ if menu == "Input Data":
                         supabase.table("jobs").insert(new_job_data).execute()
                         st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
-                        st.rerun() # Rerun untuk membersihkan form
+                        st.rerun()
                     except Exception as e:
                         st.error(f"Gagal menyimpan data: {e}")
 
-# ... Sisa kode untuk halaman lain (Report Data, Analisis FLM, Dashboard Peringatan) tetap sama ...
-# ... Letakkan kode untuk halaman-halaman tersebut di sini ...
-
 elif menu == "Report Data":
     st.header("Integrated Data & Report")
-    # ... (kode halaman Report Data tidak diubah)
     with st.container(border=True):
         st.subheader("Filter & Edit Data")
         data_to_display = df.copy()
+        
         filter_col1, filter_col2 = st.columns(2)
         with filter_col1:
             all_jenis = ["Semua"] + list(data_to_display["Jenis"].dropna().unique())
-            filter_jenis = st.selectbox("Saring berdasarkan Jenis:", all_jenis)
+            filter_jenis = st.selectbox("Saring berdasarkan Jenis:", all_jenis, key="report_filter_jenis")
         with filter_col2:
             all_status = ["Semua"] + list(data_to_display["Status"].dropna().unique())
-            filter_status = st.selectbox("Saring berdasarkan Status:", all_status)
+            filter_status = st.selectbox("Saring berdasarkan Status:", all_status, key="report_filter_status")
+        
         if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
         if not data_to_display.empty:
-            data_to_display.insert(0, "Hapus", False)
-            edited_data = st.data_editor(
-                data_to_display, key="data_editor", disabled=["ID", "Evidance", "Evidance After"], use_container_width=True,
+            if 'Hapus' not in data_to_display.columns:
+                data_to_display.insert(0, "Hapus", False)
+            
+            edited_df = st.data_editor(
+                data_to_display, 
+                key="data_editor", 
+                disabled=["ID", "Evidance", "Evidance After"], 
+                use_container_width=True,
                 column_config={
                     "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), 
                     "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"),
@@ -363,26 +362,28 @@ elif menu == "Report Data":
                     "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat"), 
                     "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat"),
                     "ID": st.column_config.TextColumn("ID", disabled=True),
-                }, column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
+                }, 
+                column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
             )
-            # Logika Hapus Baris
-            if 'edited_rows' in edited_data:
-                rows_to_delete = [idx for idx, row in edited_data.get("edited_rows", {}).items() if row.get("Hapus")]
-                if rows_to_delete:
-                    ids_to_delete = data_to_display.iloc[rows_to_delete]["ID"].tolist()
-                    if ids_to_delete and st.session_state.user == 'admin':
-                        st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-                        if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
-                            with st.spinner("Menghapus data..."):
-                                supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
-                                st.session_state.data = load_data_from_db()
-                                st.success("Data terpilih berhasil dihapus.")
-                                st.rerun()
-                        st.markdown('</div>', unsafe_allow_html=True)
-                    elif ids_to_delete:
-                        st.warning("Hanya 'admin' yang dapat menghapus data.")
+            
+            rows_to_delete = edited_df[edited_df['Hapus'] == True]
+            
+            if not rows_to_delete.empty and st.session_state.user == 'admin':
+                st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                
+                ids_to_delete = rows_to_delete['ID'].tolist()
+                if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
+                    with st.spinner("Menghapus data..."):
+                        supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
+                        st.session_state.data = load_data_from_db()
+                        st.success("Data terpilih berhasil dihapus.")
+                        st.rerun()
 
-    st.write("---")
+                st.markdown('</div>', unsafe_allow_html=True)
+            elif not rows_to_delete.empty:
+                st.warning("Hanya 'admin' yang dapat menghapus data.")
+
+    st.write("---") 
     
     col_func1, col_func2 = st.columns([2, 1])
     with col_func1:
