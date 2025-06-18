@@ -1,7 +1,10 @@
+
 streamlit
 pandas
-supabase
-reportlab
+openpyxl
 requests
 Pillow
+supabase
 plotly
+reportlab
+xlsxwriter
