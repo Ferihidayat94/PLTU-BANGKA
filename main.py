@@ -20,72 +20,85 @@ import plotly.express as px
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom (SELURUH BLOK INI DIKOMENTARI SEMENTARA UNTUK DEBUGGING) ==================
-# st.markdown(
-#     """
-#     <style>
-#         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-#         html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
-#         .stApp {
-#             background-color: #021021;
-#             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
-#                                  linear-gradient(to top, #062b54, #021021);
-#             background-attachment: fixed;
-#             color: #ECF0F1;
-#         }
-#         .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 { color: #FFFFFF; }
-#         .stApp [data-testid="stHeading"] { color: #FFFFFF !important; }
-#         .stApp p { color: #ECF0F1 !important; }
-#         h1 { border-bottom: 2px solid #3498DB; padding-bottom: 10px; margin-bottom: 0.8rem; }
-#         [data-testid="stSidebar"] {
-#             background-color: rgba(2, 16, 33, 0.8);
-#             backdrop-filter: blur(5px);
-#             border-right: 1px solid rgba(52, 152, 219, 0.3);
-#         }
-#         .login-container [data-testid="stForm"], [data-testid="stForm"], [data-testid="stExpander"],
-#         [data-testid="stVerticalBlock"] [data-testid="stVerticalBlock"] [data-testid="stContainer"] {
-#             background-color: rgba(44, 62, 80, 0.6);
-#             backdrop-filter: blur(5px);
-#             border: 1px solid rgba(52, 152, 219, 0.4);
-#             padding: 1.5rem;
-#             border-radius: 10px;
-#             margin-bottom: 1rem;
-#         }
-#         .login-title { color: #FFFFFF; text-align: center; border-bottom: none; font-size: 1.9rem; white-space: nowrap; }
-#         div[data-testid="stButton"] > button, div[data-testid="stDownloadButton"] > button, div[data-testid="stForm"] button {
-#             font-weight: 600; border-radius: 8px; border: 1px solid #3498DB !important;
-#             background-color: transparent !important; color: #FFFFFF !important;
-#             transition: all 0.3s ease-in-out; padding: 10px 24px; width: 100%;
-#         }
-#         div[data-testid="stButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover, div[data-testid="stForm"] button:hover {
-#             background-color: #3498DB !important; border-color: #3498DB !important;
-#         }
-#         .delete-button button { border-color: #E74C3C !important; }
-#         .delete-button button:hover { background-color: #C0392B !important; border-color: #C0392B !important; }
-#         div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
-#             background-color: rgba(236, 240, 241, 0.1) !important;
-#             border-color: rgba(52, 152, 219, 0.4) !important;
-#             color: #FFFFFF !important;
-#         }
-#         label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
-#             color: #FFFFFF !important; font-weight: 500;
-#         }
-#         [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] .stMarkdown strong,
-#         [data-testid="stSidebar"] .stRadio > label span, [data-testid="stSidebar"] .stCaption {
-#             color: #FFFFFF !important; opacity: 1;
-#         }
-#         [data-testid="stSidebar"] .st-bo:has(input:checked) + label span { color: #5DADE2 !important; font-weight: 700 !important; }
-#         [data-testid="stSidebar"] .stButton > button { color: #EAECEE !important; border-color: #EAECEE !important; }
-#         [data-testid="stSidebar"] .stButton > button:hover { color: #FFFFFF !important; border-color: #E74C3C !important; background-color: #E74C3C !important; }
-#         [data-testid="stSidebarNavCollapseButton"] svg { fill: #FFFFFF !important; }
-#         [data-testid="stMetricLabel"] { color: #A9C5E1 !important; }
-#         [data-testid="stMetricValue"] { color: #FFFFFF !important; }
-#         [data-testid="stMetricDelta"] { color: #2ECC71 !important; }
-#         [data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] { color: #FF4B4B !important; }
-#     </style>
-#     """,
-#     unsafe_allow_html=True
-# )
+# ================== CSS Kustom (Mulai diaktifkan kembali) ==================
+st.markdown(
+    """
+    <style>
+        /* Impor font eksternal, bisa jadi penyebab jika ada masalah koneksi */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        /* Font family dasar */
+        html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
+        
+        /* Background aplikasi */
+        .stApp {
+            background-color: #021021;
+            background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
+                                 linear-gradient(to top, #062b54, #021021);
+            background-attachment: fixed;
+            color: #ECF0F1; /* Warna teks utama */
+        }
+        
+        /* Warna heading */
+        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 { color: #FFFFFF; }
+        .stApp [data-testid="stHeading"] { color: #FFFFFF !important; }
+        .stApp p { color: #ECF0F1 !important; } /* Warna paragraf */
+        
+        /* Border bawah untuk h1 */
+        h1 { border-bottom: 2px solid #3498DB; padding-bottom: 10px; margin-bottom: 0.8rem; }
+        
+        /* BAGIAN DI BAWAH INI MASIH DIKOMENTARI DAN AKAN DIUJI BERTAHAP */
+        /*
+        [data-testid="stSidebar"] {
+            background-color: rgba(2, 16, 33, 0.8);
+            backdrop-filter: blur(5px);
+            border-right: 1px solid rgba(52, 152, 219, 0.3);
+        }
+        .login-container [data-testid="stForm"], [data-testid="stForm"], [data-testid="stExpander"],
+        [data-testid="stVerticalBlock"] [data-testid="stVerticalBlock"] [data-testid="stContainer"] {
+            background-color: rgba(44, 62, 80, 0.6);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(52, 152, 219, 0.4);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+        .login-title { color: #FFFFFF; text-align: center; border-bottom: none; font-size: 1.9rem; white-space: nowrap; }
+        div[data-testid="stButton"] > button, div[data-testid="stDownloadButton"] > button, div[data-testid="stForm"] button {
+            font-weight: 600; border-radius: 8px; border: 1px solid #3498DB !important;
+            background-color: transparent !important; color: #FFFFFF !important;
+            transition: all 0.3s ease-in-out; padding: 10px 24px; width: 100%;
+        }
+        div[data-testid="stButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover, div[data-testid="stForm"] button:hover {
+            background-color: #3498DB !important; border-color: #3498DB !important;
+        }
+        .delete-button button { border-color: #E74C3C !important; }
+        .delete-button button:hover { background-color: #C0392B !important; border-color: #C0392B !important; }
+        div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
+            background-color: rgba(236, 240, 241, 0.1) !important;
+            border-color: rgba(52, 152, 219, 0.4) !important;
+            color: #FFFFFF !important;
+        }
+        label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
+            color: #FFFFFF !important; font-weight: 500;
+        }
+        [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] .stMarkdown strong,
+        [data-testid="stSidebar"] .stRadio > label span, [data-testid="stSidebar"] .stCaption {
+            color: #FFFFFF !important; opacity: 1;
+        }
+        [data-testid="stSidebar"] .st-bo:has(input:checked) + label span { color: #5DADE2 !important; font-weight: 700 !important; }
+        [data-testid="stSidebar"] .stButton > button { color: #EAECEE !important; border-color: #EAECEE !important; }
+        [data-testid="stSidebar"] .stButton > button:hover { color: #FFFFFF !important; border-color: #E74C3C !important; background-color: #E74C3C !important; }
+        [data-testid="stSidebarNavCollapseButton"] svg { fill: #FFFFFF !important; }
+        [data-testid="stMetricLabel"] { color: #A9C5E1 !important; }
+        [data-testid="stMetricValue"] { color: #FFFFFF !important; }
+        [data-testid="stMetricDelta"] { color: #2ECC71 !important; }
+        [data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] { color: #FF4B4B !important; }
+        */
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ================== Koneksi & Konfigurasi Global ==================
 @st.cache_resource
