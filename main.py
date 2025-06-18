@@ -24,7 +24,7 @@ st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 st.markdown(
     """
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        /* BARIS INI DIHAPUS UNTUK DEBUGGING: @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); */
         html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
         .stApp {
             background-color: #021021;
@@ -166,65 +166,47 @@ def upload_image_to_storage(uploaded_file):
         st.error(f"Gagal upload gambar: {e}")
         return ""
 
-# --- FUNGSI BARU UNTUK EXCEL REPORT DENGAN GAMBAR ---
+# --- FUNGSI UNTUK EXCEL REPORT DENGAN GAMBAR (TIDAK BERUBAH DARI SEBELUMNYA) ---
 def create_excel_report_with_images(filtered_data):
     output = io.BytesIO()
-    # Gunakan Pandas ExcelWriter dengan engine 'xlsxwriter' untuk fitur gambar
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        # Tulis DataFrame ke sheet pertama
-        # Hapus kolom 'Hapus' jika ada, karena ini kolom sementara untuk UI
         data_to_write = filtered_data.drop(columns=['Hapus'], errors='ignore')
         data_to_write.to_excel(writer, sheet_name='Laporan Pekerjaan', index=False)
 
         workbook = writer.book
         worksheet = writer.sheets['Laporan Pekerjaan']
 
-        # Dapatkan indeks kolom untuk 'Evidance' dan 'Evidance After'
-        # Tambahkan error handling jika kolom tidak ada
         try:
             image_col_before = data_to_write.columns.get_loc("Evidance")
             image_col_after = data_to_write.columns.get_loc("Evidance After")
         except KeyError:
-            # Jika kolom tidak ada, mungkin tidak perlu menyematkan gambar
             image_col_before = -1 
             image_col_after = -1
 
-        # Atur lebar kolom untuk gambar (opsional, sesuaikan)
         if image_col_before != -1:
-            worksheet.set_column(image_col_before, image_col_before, 18) # Lebar 18 unit (sekitar 120px)
+            worksheet.set_column(image_col_before, image_col_before, 18)
         if image_col_after != -1:
-            worksheet.set_column(image_col_after, image_col_after, 18) # Lebar 18 unit (sekitar 120px)
+            worksheet.set_column(image_col_after, image_col_after, 18)
 
-        # Loop melalui baris data untuk menyematkan gambar
-        for row_num, row_data in filtered_data.iterrows(): # Gunakan filtered_data asli untuk akses URL
-            # Baris di Excel akan dimulai dari 1 (header), jadi tambahkan 1
+        for row_num, row_data in filtered_data.iterrows():
             excel_row = row_num + 1
+            worksheet.set_row(excel_row, 90)
 
-            # Atur tinggi baris untuk menampung gambar (opsional, sesuaikan)
-            worksheet.set_row(excel_row, 90) # Tinggi 90 pixels (sekitar 1.25 inci)
-
-            # --- Gambar Evidence (Before) ---
             img_url_before = row_data.get("Evidance")
             if img_url_before and isinstance(img_url_before, str) and image_col_before != -1:
                 try:
-                    response = requests.get(img_url_before, stream=True, timeout=10) # Perpanjang timeout
+                    response = requests.get(img_url_before, stream=True, timeout=10)
                     response.raise_for_status()
                     img_data = io.BytesIO(response.content)
 
-                    # Fix orientation dan resize jika perlu
                     img = Image.open(img_data).convert("RGB")
                     img = fix_image_orientation(img)
                     
-                    # Resize gambar agar pas di sel
-                    # Target lebar 120px, tinggi akan disesuaikan proporsional
                     width, height = img.size
-                    max_width = 120 # Sesuaikan dengan lebar kolom Excel
-                    max_height = 90 # Sesuaikan dengan tinggi baris Excel
-                    
-                    # Hitung rasio untuk scaling
+                    max_width = 120
+                    max_height = 90
                     aspect_ratio = width / height
                     
-                    # Sesuaikan ukuran berdasarkan batasan lebar dan tinggi
                     if width > max_width or height > max_height:
                         if width / max_width > height / max_height:
                             new_width = max_width
@@ -233,32 +215,27 @@ def create_excel_report_with_images(filtered_data):
                             new_height = max_height
                             new_width = int(new_height * aspect_ratio)
                     else:
-                        new_width, new_height = width, height # Jika gambar sudah kecil, tidak perlu resize
+                        new_width, new_height = width, height
 
                     img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     
                     resized_img_buffer = io.BytesIO()
-                    img_resized.save(resized_img_buffer, format="JPEG", quality=80) # Kompresi gambar
+                    img_resized.save(resized_img_buffer, format="JPEG", quality=80)
                     resized_img_buffer.seek(0)
 
-                    # Sisipkan gambar ke kolom "Evidance" di baris yang sesuai
-                    # x_offset, y_offset untuk memposisikan gambar di dalam sel
                     worksheet.insert_image(excel_row, image_col_before, "image_before.jpg",
                                            {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
-                                            'object_position': 3 # Posisi di dalam sel: 1=bergerak dengan sel, 3=tidak bergerak dengan sel
+                                            'object_position': 3
                                            })
-                    # Hapus URL dari sel dan gantikan dengan placeholder teks (opsional)
-                    worksheet.write(excel_row, image_col_before, "Lihat Gambar") # Tulis teks jika gambar berhasil disisipkan
+                    worksheet.write(excel_row, image_col_before, "Lihat Gambar")
                 except Exception as e:
                     print(f"Gagal memuat atau menyematkan gambar before dari URL {img_url_before}: {e}")
-                    # Jika gagal, setel sel ke URL saja atau pesan error
                     worksheet.write(excel_row, image_col_before, img_url_before if pd.notna(img_url_before) else "Tidak Ada Gambar")
 
-            # --- Gambar Evidence After --- (Lakukan hal yang sama untuk Evidance After)
             img_url_after = row_data.get("Evidance After")
             if img_url_after and isinstance(img_url_after, str) and image_col_after != -1:
                 try:
-                    response = requests.get(img_url_after, stream=True, timeout=10) # Perpanjang timeout
+                    response = requests.get(img_url_after, stream=True, timeout=10)
                     response.raise_for_status()
                     img_data = io.BytesIO(response.content)
 
@@ -577,10 +554,9 @@ elif menu == "Report Data":
             else:
                 dl_col1, dl_col2 = st.columns(2)
                 with dl_col1:
-                    # GANTI DARI CSV KE EXCEL
+                    # UNDUH EXCEL
                     if st.button("📊 Buat & Siapkan Excel", use_container_width=True, key='prepare_excel_button'):
                         with st.spinner("Membuat file Excel..."):
-                            # Pastikan `filtered_data` tidak mengandung kolom 'Hapus' saat dikirim ke fungsi excel
                             excel_bytes = create_excel_report_with_images(filtered_data) 
                             st.session_state.excel_bytes = excel_bytes
                             st.session_state.excel_filename = f"laporan_excel_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
