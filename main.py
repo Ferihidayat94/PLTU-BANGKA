@@ -561,4 +561,157 @@ elif menu == "Report Data":
                             st.session_state.excel_bytes = excel_bytes
                             st.session_state.excel_filename = f"laporan_excel_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
                     
-                    if 'excel_bytes' in st.session_state and st.session_
+                    if 'excel_bytes' in st.session_state and st.session_state.excel_bytes:
+                        st.download_button(
+                            label="⬇️ Download Laporan (Excel)",
+                            data=st.session_state.excel_bytes,
+                            file_name=st.session_state.excel_filename,
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                            key='download_excel_button'
+                        )
+                
+                with dl_col2:
+                    pdf_filename = f"laporan_pdf_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
+                    # Generate PDF bytes when the button is clicked
+                    if st.button("📄 Buat & Siapkan PDF", use_container_width=True):
+                        with st.spinner("Membuat file PDF..."):
+                            pdf_bytes = create_pdf_report(filtered_data, report_type)
+                            st.session_state.pdf_bytes = pdf_bytes
+                            st.session_state.pdf_filename = pdf_filename
+                
+                # Show download button for PDF only after it has been generated
+                if 'pdf_bytes' in st.session_state and st.session_state.pdf_bytes:
+                    st.download_button(
+                        label="⬇️ Download Laporan (PDF)",
+                        data=st.session_state.pdf_bytes,
+                        file_name=st.session_state.pdf_filename,
+                        mime="application/pdf",
+                        use_container_width=True,
+                        key='download_pdf_button'
+                    )
+
+elif menu == "Analisis FLM":
+    st.header("📊 Analisis FLM (Scoreboard)")
+    st.markdown("Dashboard ini menganalisis jenis First Line Maintenance (FLM) yang paling sering dilaksanakan.")
+    
+    st.sidebar.header("Filter Dashboard")
+    if not df.empty:
+        df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
+        min_date, max_date = df['Tanggal'].min().date(), df['Tanggal'].max().date()
+    else: min_date, max_date = date.today(), date.today()
+
+    start_date_flm = st.sidebar.date_input("Tanggal Mulai", min_date, key="flm_start_date")
+    end_date_flm = st.sidebar.date_input("Tanggal Akhir", max_date, key="flm_end_date")
+    all_status_flm = df['Status'].unique() if not df.empty else []
+    selected_status_flm = st.sidebar.multiselect("Filter Status:", options=all_status_flm, default=all_status_flm, key="flm_status_filter")
+
+    mask_flm = (df['Tanggal'].dt.date >= start_date_flm) & (df['Tanggal'].dt.date <= end_date_flm) & \
+               (df['Status'].isin(selected_status_flm)) & \
+               (df['Jenis'].str.startswith('First Line Maintenance', na=False))
+    df_flm = df[mask_flm]
+
+    if df_flm.empty:
+        st.warning("Tidak ada data FLM yang cocok dengan filter Anda.")
+    else:
+        # Analisis Tipe FLM
+        flm_counts = df_flm['Jenis'].value_counts().reset_index()
+        flm_counts.columns = ['Jenis FLM', 'Jumlah']
+        total_pelaksanaan = flm_counts['Jumlah'].sum()
+        flm_teratas = flm_counts.iloc[0]
+
+        st.markdown("### Ringkasan Dominasi FLM")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Pelaksanaan FLM", f"{total_pelaksanaan} Kali")
+        col2.metric("FLM Paling Dominan", flm_teratas['Jenis FLM'].replace("First Line Maintenance ", ""))
+        col3.metric("Jumlahnya", f"{flm_teratas['Jumlah']} Kali", delta="Paling Sering", delta_color="off")
+        st.markdown("---")
+        
+        # Visualisasi Tipe FLM
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            st.subheader("Proporsi Jenis FLM")
+            fig_pie = px.pie(flm_counts, names='Jenis FLM', values='Jumlah', hole=0.4, title='Persentase Pelaksanaan FLM', template='plotly_dark')
+            st.plotly_chart(fig_pie, use_container_width=True)
+        with chart_col2:
+            st.subheader("Peringkat Dominasi FLM")
+            fig_bar = px.bar(flm_counts.sort_values('Jumlah'), x='Jumlah', y='Jenis FLM', orientation='h', text='Jumlah', color='Jumlah', color_continuous_scale=px.colors.sequential.Blues_r, template='plotly_dark')
+            st.plotly_chart(fig_bar, use_container_width=True)
+        
+        # Analisis Leaderboard Pelaksana
+        st.markdown("---") 
+        st.header("🏆 Skor Pelaksana FLM (Leaderboard)")
+        st.markdown("Menganalisis pelaksana berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
+
+        if 'Nama Pelaksana' in df_flm and not df_flm['Nama Pelaksana'].dropna().empty:
+            pelaksana_counts = df_flm['Nama Pelaksana'].str.split(',').explode().str.strip().value_counts().reset_index()
+            pelaksana_counts.columns = ['Nama Pelaksana', 'Jumlah FLM Dikerjakan']
+
+            if not pelaksana_counts.empty:
+                top_performer = pelaksana_counts.iloc[0]
+                
+                st.markdown("#### Performa Terbaik")
+                col_kpi1, col_kpi2 = st.columns(2)
+                with col_kpi1: st.success(f"**Top Performer:** {top_performer['Nama Pelaksana']}")
+                with col_kpi2: st.success(f"**Jumlah Pekerjaan:** {top_performer['Jumlah FLM Dikerjakan']} Kali")
+                st.markdown("---")
+                
+                st.subheader("Peringkat Semua Pelaksana")
+                fig_leaderboard = px.bar(pelaksana_counts.sort_values('Jumlah FLM Dikerjakan'), x='Jumlah FLM Dikerjakan', y='Nama Pelaksana', orientation='h', title='Leaderboard Pelaksana FLM', text='Jumlah FLM Dikerjakan', color='Jumlah FLM Dikerjakan', color_continuous_scale=px.colors.sequential.Greens_r, template='plotly_dark')
+                fig_leaderboard.update_yaxes(categoryorder="total ascending")
+                st.plotly_chart(fig_leaderboard, use_container_width=True)
+            else:
+                st.info("Tidak ada data pelaksana untuk dianalisis sesuai filter.")
+        else:
+            st.info("Kolom 'Nama Pelaksana' kosong pada data yang difilter.")
+
+elif menu == "Dashboard Peringatan":
+    st.header("⚠️ Peringatan Corrective Maintenance (Warning CM)")
+    st.markdown("Dashboard ini menganalisis area dengan frekuensi Corrective Maintenance tertinggi.")
+
+    st.sidebar.header("Filter Dashboard")
+    if not df.empty:
+        df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
+        min_date_cm, max_date_cm = df['Tanggal'].min().date(), df['Tanggal'].max().date()
+    else: min_date_cm, max_date_cm = date.today(), date.today()
+
+    start_date_cm = st.sidebar.date_input("Tanggal Mulai", min_date_cm, key="cm_start_date")
+    end_date_cm = st.sidebar.date_input("Tanggal Akhir", max_date_cm, key="cm_end_date")
+    all_status_cm = df['Status'].unique() if not df.empty else []
+    selected_status_cm = st.sidebar.multiselect("Filter Status:", options=all_status_cm, default=all_status_cm, key="cm_status_filter")
+
+    mask_cm = (df['Tanggal'].dt.date >= start_date_cm) & (df['Tanggal'].dt.date <= end_date_cm) & \
+              (df['Status'].isin(selected_status_cm)) & \
+              (df['Jenis'] == 'Corrective Maintenance')
+    df_cm = df[mask_cm]
+    
+    if df_cm.empty:
+        st.warning("Tidak ada data 'Corrective Maintenance' yang cocok dengan filter Anda.")
+    else:
+        cm_counts = df_cm['Area'].value_counts().reset_index()
+        cm_counts.columns = ['Area', 'Jumlah Kasus']
+        total_kasus = cm_counts['Jumlah Kasus'].sum()
+        area_teratas = cm_counts.iloc[0]
+
+        st.markdown("### Ringkasan Peringatan")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Total Kasus Corrective", f"{total_kasus} Kasus")
+        col2.metric("Area Paling Bermasalah", area_teratas['Area'])
+        col3.metric("Jumlah Kasus di Area Tsb", f"{area_teratas['Jumlah Kasus']} Kasus", delta="Paling Tinggi", delta_color="inverse")
+        st.markdown("---")
+
+        chart_col1, chart_col2 = st.columns(2)
+        with chart_col1:
+            st.subheader("Distribusi Kasus per Area")
+            fig_pie = px.pie(cm_counts, names='Area', values='Jumlah Kasus', hole=0.4, template='plotly_dark')
+            st.plotly_chart(fig_pie, use_container_width=True)
+        with chart_col2:
+            st.subheader("Peringkat Area Bermasalah")
+            fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
+            st.plotly_chart(fig_bar, use_container_width=True)
+        st.markdown("---")
+
+        st.subheader("📈 Tren Kasus Corrective Maintenance")
+        df_tren = df_cm.set_index('Tanggal').resample('D').size().reset_index(name='Jumlah Kasus')
+        fig_line = px.line(df_tren, x='Tanggal', y='Jumlah Kasus', title='Jumlah Kasus per Hari', markers=True, template='plotly_dark')
+        st.plotly_chart(fig_line, use_container_width=True)
