@@ -20,15 +20,15 @@ import plotly.express as px
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom (Mulai diaktifkan kembali) ==================
+# ================== CSS Kustom (Mengomentari baris penyebab) ==================
 st.markdown(
     """
     <style>
-        /* Impor font eksternal, bisa jadi penyebab jika ada masalah koneksi */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        /* BARIS INI KEMUNGKINAN BESAR PENYEBABNYA - DIKOMENTARI */
+        /* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); */
         
-        /* Font family dasar */
-        html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
+        /* BARIS INI JUGA KEMUNGKINAN BESAR PENYEBABNYA - DIKOMENTARI */
+        /* html, body, [class*="st-"] { font-family: 'Inter', sans-serif; } */
         
         /* Background aplikasi */
         .stApp {
@@ -47,8 +47,7 @@ st.markdown(
         /* Border bawah untuk h1 */
         h1 { border-bottom: 2px solid #3498DB; padding-bottom: 10px; margin-bottom: 0.8rem; }
         
-        /* BAGIAN DI BAWAH INI MASIH DIKOMENTARI DAN AKAN DIUJI BERTAHAP */
-        /*
+        /* SISA BAGIAN CSS KUSTOM ANDA */
         [data-testid="stSidebar"] {
             background-color: rgba(2, 16, 33, 0.8);
             backdrop-filter: blur(5px);
@@ -94,7 +93,6 @@ st.markdown(
         [data-testid="stMetricValue"] { color: #FFFFFF !important; }
         [data-testid="stMetricDelta"] { color: #2ECC71 !important; }
         [data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] { color: #FF4B4B !important; }
-        */
     </style>
     """,
     unsafe_allow_html=True
