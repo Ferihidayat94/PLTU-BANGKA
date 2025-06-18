@@ -24,17 +24,12 @@ st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 st.markdown(
     """
     <style>
-        /* BARIS INI TETAP DIKOMENTARI KARENA MENYEBABKAN MASALAH IKON */
-        /* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); */
-        
-        /* BARIS INI TETAP DIKOMENTARI KARENA MENYEBABKAN MASALAH IKON */
-        /* html, body, [class*="st-"] { font-family: 'Inter', sans-serif; } */
-        
-        /* Background aplikasi */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
         .stApp {
             background-color: #021021;
             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
-                                 linear-gradient(to top, #062b54, #021021);
+                                linear-gradient(to top, #062b54, #021021);
             background-attachment: fixed;
             color: #ECF0F1;
         }
@@ -67,34 +62,11 @@ st.markdown(
         }
         .delete-button button { border-color: #E74C3C !important; }
         .delete-button button:hover { background-color: #C0392B !important; border-color: #C0392B !important; }
-        
-        /* Gaya input/select/textarea */
-        div[data-baseweb="input"] > div, 
-        div[data-baseweb="textarea"] > div, 
-        div[data-baseweb="select"] > div {
-            background-color: rgba(236, 240, 241, 0.4) !important; /* Warna dasar transparan */
+        div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
+            background-color: rgba(236, 240, 241, 0.1) !important;
             border-color: rgba(52, 152, 219, 0.4) !important;
             color: #FFFFFF !important;
-            transition: all 0.2s ease-in-out; /* Transisi halus untuk semua properti yang berubah */
         }
-
-        /* Efek HOVER */
-        div[data-baseweb="input"] > div:hover,
-        div[data-baseweb="textarea"] > div:hover,
-        div[data-baseweb="select"] > div:hover {
-            background-color: rgba(236, 240, 241, 0.55) !important; /* Sedikit lebih padat */
-            border-color: rgba(52, 152, 219, 0.7) !important; /* Border lebih jelas */
-        }
-
-        /* Efek FOCUS (saat diklik/aktif) */
-        div[data-baseweb="input"] > div:focus-within,
-        div[data-baseweb="textarea"] > div:focus-within,
-        div[data-baseweb="select"] > div:focus-within {
-            background-color: rgba(236, 240, 241, 0.7) !important; /* Lebih terang */
-            border-color: #3498DB !important; /* Biru solid */
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3) !important; /* Bayangan halus */
-        }
-
         label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
             color: #FFFFFF !important; font-weight: 500;
         }
@@ -134,11 +106,10 @@ def verify_user(username, password):
         result = supabase.table("users").select("*").eq("username", username).single().execute()
         if result.data and result.data['hashed_password'] == hashed_pass:
             return result.data
-        else:
-            return None
     except Exception as e:
-        print(f"Authentication error during verify_user: {e}")
+        print(f"Authentication error: {e}")
         return None
+    return None
 
 @st.cache_data(ttl=600)
 def load_data_from_db():
@@ -152,29 +123,23 @@ def load_data_from_db():
         st.error(f"Gagal mengambil data dari database: {e}")
         return pd.DataFrame()
 
-ALL_APP_PAGES = ["Input Data", "Report Data", "Analisis FLM", "Dashboard Peringatan"]
-
-# --- Modified logout function to be defined before usage ---
 def logout():
-    # Hapus semua kunci dari session_state
     for key in list(st.session_state.keys()):
-        del st.session_state[key]
-    
-    # Hapus query parameters yang berkaitan dengan login dan halaman
-    params_to_clear = ['loggedIn', 'userRole', 'page']
-    for param in params_to_clear:
-        if param in st.query_params:
-            del st.query_params[param]
-    
-    # Setelah membersihkan, secara eksplisit setel status awal untuk run berikutnya
-    st.session_state.logged_in = False 
-    st.session_state.user = None 
-    st.session_state.last_activity = datetime.now()
-    st.session_state.current_page = ALL_APP_PAGES[0] 
-    
-    st.rerun() 
+        if key not in ['logged_in', 'user']:
+            del st.session_state[key]
+    st.session_state.logged_in = False
+    st.rerun()
 
-# --- Fungsi-fungsi lain tidak berubah ---
+def generate_next_id(df, jenis):
+    prefix_map = {'First Line Maintenance': 'FLM', 'Corrective Maintenance': 'CM', 'Preventive Maintenance': 'PM'}
+    prefix = next((p for key, p in prefix_map.items() if jenis.startswith(key)), 'JOB')
+    
+    if df.empty: return f"{prefix}-001"
+    relevant_ids = df[df['ID'].str.startswith(prefix, na=False)]['ID'].str.split('-').str[1].dropna().astype(int)
+    if relevant_ids.empty: return f"{prefix}-001"
+    
+    return f"{prefix}-{relevant_ids.max() + 1:03d}"
+
 def fix_image_orientation(image):
     try:
         exif = image.getexif()
@@ -201,115 +166,8 @@ def upload_image_to_storage(uploaded_file):
         st.error(f"Gagal upload gambar: {e}")
         return ""
 
-def create_excel_report_with_images(filtered_data):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        data_to_write = filtered_data.drop(columns=['Hapus'], errors='ignore')
-        data_to_write.to_excel(writer, sheet_name='Laporan Pekerjaan', index=False)
-
-        workbook = writer.book
-        worksheet = writer.sheets['Laporan Pekerjaan']
-
-        try:
-            image_col_before = data_to_write.columns.get_loc("Evidance")
-            image_col_after = data_to_write.columns.get_loc("Evidance After")
-        except KeyError:
-            image_col_before = -1 
-            image_col_after = -1
-
-        if image_col_before != -1:
-            worksheet.set_column(image_col_before, image_col_before, 18)
-        if image_col_after != -1:
-            worksheet.set_column(image_col_after, image_col_after, 18)
-
-        for row_num, row_data in filtered_data.iterrows():
-            excel_row = row_num + 1
-            worksheet.set_row(excel_row, 90)
-
-            img_url_before = row_data.get("Evidance")
-            if img_url_before and isinstance(img_url_before, str) and image_col_before != -1:
-                try:
-                    response = requests.get(img_url_before, stream=True, timeout=10)
-                    response.raise_for_status()
-                    img_data = io.BytesIO(response.content)
-
-                    img = Image.open(img_data).convert("RGB")
-                    img = fix_image_orientation(img)
-                    
-                    width, height = img.size
-                    max_width = 120
-                    max_height = 90
-                    aspect_ratio = width / height
-                    
-                    if width > max_width or height > max_height:
-                        if width / max_width > height / max_height:
-                            new_width = max_width
-                            new_height = int(new_width / aspect_ratio)
-                        else:
-                            new_height = max_height
-                            new_width = int(new_height * aspect_ratio)
-                    else:
-                        new_width, new_height = width, height
-
-                    img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                    
-                    resized_img_buffer = io.BytesIO()
-                    img_resized.save(resized_img_buffer, format="JPEG", quality=80)
-                    resized_img_buffer.seek(0)
-
-                    worksheet.insert_image(excel_row, image_col_before, "image_before.jpg",
-                                           {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
-                                            'object_position': 3
-                                           })
-                    worksheet.write(excel_row, image_col_before, "Lihat Gambar")
-                except Exception as e:
-                    print(f"Gagal memuat atau menyematkan gambar before dari URL {img_url_before}: {e}")
-                    worksheet.write(excel_row, image_col_before, img_url_before if pd.notna(img_url_before) else "Tidak Ada Gambar")
-
-            img_url_after = row_data.get("Evidance After")
-            if img_url_after and isinstance(img_url_after, str) and image_col_after != -1:
-                try:
-                    response = requests.get(img_url_after, stream=True, timeout=10)
-                    response.raise_for_status()
-                    img_data = io.BytesIO(response.content)
-
-                    img = Image.open(img_data).convert("RGB")
-                    img = fix_image_orientation(img)
-                    
-                    width, height = img.size
-                    max_width = 120
-                    max_height = 90
-                    aspect_ratio = width / height
-                    
-                    if width > max_width or height > max_height:
-                        if width / max_width > height / max_height:
-                            new_width = max_width
-                            new_height = int(new_width / aspect_ratio)
-                        else:
-                            new_height = max_height
-                            new_width = int(new_height * aspect_ratio)
-                    else:
-                        new_width, new_height = width, height
-
-                    img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                    
-                    resized_img_buffer = io.BytesIO()
-                    img_resized.save(resized_img_buffer, format="JPEG", quality=80)
-                    resized_img_buffer.seek(0)
-
-                    worksheet.insert_image(excel_row, image_col_after, "image_after.jpg",
-                                           {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
-                                            'object_position': 3
-                                           })
-                    worksheet.write(excel_row, image_col_after, "Lihat Gambar")
-                except Exception as e:
-                    print(f"Gagal memuat atau menyematkan gambar after dari URL {img_url_after}: {e}")
-                    worksheet.write(excel_row, image_col_after, img_url_after if pd.notna(img_url_after) else "Tidak Ada Gambar")
-
-    output.seek(0)
-    return output.getvalue()
-
 def create_pdf_report(filtered_data, report_type):
+    # (Fungsi ini tidak diubah)
     pdf_buffer = io.BytesIO()
     doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
     styles = getSampleStyleSheet()
@@ -372,75 +230,11 @@ def create_pdf_report(filtered_data, report_type):
     pdf_buffer.seek(0)
     return pdf_buffer.getvalue()
 
-
 # ================== Logika Utama Aplikasi ==================
-
-# ********************************************************************
-# BAGIAN PERSISTENSI LOGIN DAN HALAMAN (PALING AWAL DALAM EKSEKUSI SCRIPT)
-# ********************************************************************
-
-# Debugging point 1: Tampilkan query_params dan session_state saat awal eksekusi
-st.sidebar.markdown("---")
-st.sidebar.markdown("**DEBUG INFO:**")
-st.sidebar.write(f"Query Params: {st.query_params}")
-st.sidebar.write(f"Session State (awal): {st.session_state}")
-
-
-# A. Inisialisasi state jika belum ada
-if 'logged_in' not in st.session_state:
+if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if 'user' not in st.session_state:
-    st.session_state.user = None
-if 'last_activity' not in st.session_state:
-    st.session_state.last_activity = datetime.now()
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = ALL_APP_PAGES[0] 
 
-# B. Jika belum logged_in di session_state, coba pulihkan dari URL
-if not st.session_state.logged_in:
-    # Periksa 'loggedIn' query parameter. Gunakan .get_all() untuk memastikan penanganan list.
-    logged_in_param = st.query_params.get_all('loggedIn')
-    user_role_param = st.query_params.get_all('userRole')
-    page_param = st.query_params.get_all('page')
-
-    st.sidebar.write(f"logged_in_param: {logged_in_param}")
-    st.sidebar.write(f"user_role_param: {user_role_param}")
-    st.sidebar.write(f"page_param: {page_param}")
-
-    if 'true' in logged_in_param: # Cek jika 'true' ada dalam list nilai
-        st.session_state.logged_in = True
-        st.session_state.user = user_role_param[0] if user_role_param else 'admin' 
-        st.session_state.last_activity = datetime.now()
-        
-        if page_param and page_param[0] in ALL_APP_PAGES:
-            st.session_state.current_page = page_param[0]
-        
-        st.sidebar.write("Sesi dipulihkan dari URL.")
-    else:
-        # Jika tidak ada sesi valid di URL, bersihkan params yang mungkin ada dari sesi sebelumnya yang gagal
-        params_to_clear_on_fail = ['loggedIn', 'userRole', 'page']
-        for param in params_to_clear_on_fail:
-            if param in st.query_params:
-                del st.query_params[param]
-        st.sidebar.write("Tidak ada sesi valid di URL, membersihkan query params.")
-
-
-# Debugging point 2: Tampilkan session_state setelah mencoba pulihkan
-st.sidebar.write(f"Session State (setelah pulih): {st.session_state}")
-st.sidebar.markdown("---")
-
-
-# C. Logika Timeout Sesi
-if st.session_state.logged_in:
-    if (datetime.now() - st.session_state.last_activity > timedelta(minutes=30)):
-        st.warning("Sesi berakhir karena tidak ada aktivitas. Silakan login kembali.")
-        logout() 
-    else:
-        st.session_state.last_activity = datetime.now()
-
-# D. Conditional App Display (Login Form vs. Main App)
-if not st.session_state.logged_in:
-    # Tampilkan Form Login
+if not st.session_state.get("logged_in"):
     col1, col2, col3 = st.columns([1,1.5,1])
     with col2:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
@@ -461,23 +255,16 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
                     st.session_state.user = user_data['role']
                     st.session_state.last_activity = datetime.now()
-                    
-                    # Update query parameters on successful login
-                    st.query_params['loggedIn'] = 'true'
-                    st.query_params['userRole'] = user_data['role'] 
-                    st.query_params['page'] = st.session_state.current_page 
-                    
-                    st.rerun() # Crucial: Rerun to update URL and display app content
+                    st.rerun()
                 else:
                     st.error("Username atau password salah.")
         st.markdown('</div>', unsafe_allow_html=True)
-    st.stop() # Hentikan eksekusi lebih lanjut jika tidak login
+    st.stop()
 
-# ********************************************************************
-# AKHIR BAGIAN PERSISTENSI LOGIN DAN HALAMAN
-# ********************************************************************
+if 'last_activity' not in st.session_state or datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
+    logout()
+st.session_state.last_activity = datetime.now()
 
-# D. Jika sudah login, lanjutkan untuk memuat data dan menampilkan konten aplikasi utama
 if 'data' not in st.session_state:
     st.session_state.data = load_data_from_db()
 df = st.session_state.data.copy()
@@ -487,34 +274,15 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
-
-    try:
-        default_index_for_radio = ALL_APP_PAGES.index(st.session_state.current_page)
-    except ValueError:
-        default_index_for_radio = 0 
-
-    menu = st.radio(
-        "Pilih Halaman:",
-        ALL_APP_PAGES,
-        index=default_index_for_radio, 
-        label_visibility="collapsed",
-        key="main_menu_selector" 
-    )
-
-    if menu != st.session_state.current_page:
-        st.session_state.current_page = menu
-        st.query_params['page'] = menu
-        
+    menu = st.radio("Pilih Halaman:", ["Input Data", "Report Data", "Analisis FLM", "Dashboard Peringatan"], label_visibility="collapsed")
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-# PERBAIKAN UNTUK OPERATOR: Hanya sembunyikan #MainMenu dan footer, BIARKAN header.
 if st.session_state.get('user') == 'operator':
-    st.markdown("""<style>#MainMenu, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
+    st.markdown("""<style>#MainMenu, header, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
-
-# ================== Logika Halaman (menggunakan variabel 'menu') ==================
+# ================== Logika Halaman ==================
 if menu == "Input Data":
     st.header("Input Data Pekerjaan Baru")
     with st.form("input_form", clear_on_submit=True):
@@ -602,14 +370,11 @@ elif menu == "Report Data":
                 ids_to_delete = rows_to_delete['ID'].tolist()
                 if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
                     with st.spinner("Menghapus data..."):
-                        try: # Added try-except around Supabase delete for explicit error handling
-                            supabase.table("jobs").delete().in_("ID", ids_to_delete).execute() 
-                            st.cache_data.clear()
-                            st.session_state.data = load_data_from_db()
-                            st.success("Data terpilih berhasil dihapus.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Gagal menghapus data: {e}") 
+                        supabase.table("jobs").delete().in_("ID", ids_to_delete).execute()
+                        st.cache_data.clear()
+                        st.session_state.data = load_data_from_db()
+                        st.success("Data terpilih berhasil dihapus.")
+                        st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
             elif not rows_to_delete.empty:
                 st.warning("Hanya 'admin' yang dapat menghapus data.")
@@ -679,22 +444,9 @@ elif menu == "Report Data":
             else:
                 dl_col1, dl_col2 = st.columns(2)
                 with dl_col1:
-                    # UNDUH EXCEL
-                    if st.button("📊 Buat & Siapkan Excel", use_container_width=True, key='prepare_excel_button'):
-                        with st.spinner("Membuat file Excel..."):
-                            excel_bytes = create_excel_report_with_images(filtered_data) 
-                            st.session_state.excel_bytes = excel_bytes
-                            st.session_state.excel_filename = f"laporan_excel_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
-                    
-                    if 'excel_bytes' in st.session_state and st.session_state.excel_bytes:
-                        st.download_button(
-                            label="⬇️ Download Laporan (Excel)",
-                            data=st.session_state.excel_bytes,
-                            file_name=st.session_state.excel_filename,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
-                            key='download_excel_button'
-                        )
+                    csv_data = filtered_data.to_csv(index=False).encode('utf-8')
+                    csv_filename = f"laporan_csv_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
+                    st.download_button("⬇️ Download Laporan (CSV)", data=csv_data, file_name=csv_filename, mime="text/csv", use_container_width=True)
                 
                 with dl_col2:
                     pdf_filename = f"laporan_pdf_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
@@ -717,6 +469,7 @@ elif menu == "Report Data":
                     )
 
 elif menu == "Analisis FLM":
+    # ... (Kode halaman ini tidak diubah)
     st.header("📊 Analisis FLM (Scoreboard)")
     st.markdown("Dashboard ini menganalisis jenis First Line Maintenance (FLM) yang paling sering dilaksanakan.")
     
@@ -739,6 +492,7 @@ elif menu == "Analisis FLM":
     if df_flm.empty:
         st.warning("Tidak ada data FLM yang cocok dengan filter Anda.")
     else:
+        # Analisis Tipe FLM
         flm_counts = df_flm['Jenis'].value_counts().reset_index()
         flm_counts.columns = ['Jenis FLM', 'Jumlah']
         total_pelaksanaan = flm_counts['Jumlah'].sum()
@@ -790,6 +544,7 @@ elif menu == "Analisis FLM":
             st.info("Kolom 'Nama Pelaksana' kosong pada data yang difilter.")
 
 elif menu == "Dashboard Peringatan":
+    # ... (Kode halaman ini tidak diubah)
     st.header("⚠️ Peringatan Corrective Maintenance (Warning CM)")
     st.markdown("Dashboard ini menganalisis area dengan frekuensi Corrective Maintenance tertinggi.")
 
