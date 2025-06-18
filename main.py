@@ -20,14 +20,14 @@ import plotly.express as px
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom (Mengomentari baris penyebab) ==================
+# ================== CSS Kustom (Seluruhnya diaktifkan kembali kecuali baris bermasalah) ==================
 st.markdown(
     """
     <style>
-        /* BARIS INI KEMUNGKINAN BESAR PENYEBABNYA - DIKOMENTARI */
+        /* BARIS INI TETAP DIKOMENTARI KARENA MENYEBABKAN MASALAH IKON */
         /* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); */
         
-        /* BARIS INI JUGA KEMUNGKINAN BESAR PENYEBABNYA - DIKOMENTARI */
+        /* BARIS INI TETAP DIKOMENTARI KARENA MENYEBABKAN MASALAH IKON */
         /* html, body, [class*="st-"] { font-family: 'Inter', sans-serif; } */
         
         /* Background aplikasi */
@@ -36,18 +36,12 @@ st.markdown(
             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
                                  linear-gradient(to top, #062b54, #021021);
             background-attachment: fixed;
-            color: #ECF0F1; /* Warna teks utama */
+            color: #ECF0F1;
         }
-        
-        /* Warna heading */
         .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 { color: #FFFFFF; }
         .stApp [data-testid="stHeading"] { color: #FFFFFF !important; }
-        .stApp p { color: #ECF0F1 !important; } /* Warna paragraf */
-        
-        /* Border bawah untuk h1 */
+        .stApp p { color: #ECF0F1 !important; }
         h1 { border-bottom: 2px solid #3498DB; padding-bottom: 10px; margin-bottom: 0.8rem; }
-        
-        /* SISA BAGIAN CSS KUSTOM ANDA */
         [data-testid="stSidebar"] {
             background-color: rgba(2, 16, 33, 0.8);
             backdrop-filter: blur(5px);
@@ -400,8 +394,10 @@ with st.sidebar:
     if st.button("Logout"): logout()
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
+# PERBAIKAN UNTUK OPERATOR: Hanya sembunyikan #MainMenu dan footer, BIARKAN header.
 if st.session_state.get('user') == 'operator':
-    st.markdown("""<style>#MainMenu, header, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
+    st.markdown("""<style>#MainMenu, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
+
 
 # ================== Logika Halaman ==================
 if menu == "Input Data":
