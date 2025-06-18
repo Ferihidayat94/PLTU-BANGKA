@@ -20,72 +20,72 @@ import plotly.express as px
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom ==================
-st.markdown(
-    """
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
-        .stApp {
-            background-color: #021021;
-            background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
-                                linear-gradient(to top, #062b54, #021021);
-            background-attachment: fixed;
-            color: #ECF0F1;
-        }
-        .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 { color: #FFFFFF; }
-        .stApp [data-testid="stHeading"] { color: #FFFFFF !important; }
-        .stApp p { color: #ECF0F1 !important; }
-        h1 { border-bottom: 2px solid #3498DB; padding-bottom: 10px; margin-bottom: 0.8rem; }
-        [data-testid="stSidebar"] {
-            background-color: rgba(2, 16, 33, 0.8);
-            backdrop-filter: blur(5px);
-            border-right: 1px solid rgba(52, 152, 219, 0.3);
-        }
-        .login-container [data-testid="stForm"], [data-testid="stForm"], [data-testid="stExpander"],
-        [data-testid="stVerticalBlock"] [data-testid="stVerticalBlock"] [data-testid="stContainer"] {
-            background-color: rgba(44, 62, 80, 0.6);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(52, 152, 219, 0.4);
-            padding: 1.5rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
-        }
-        .login-title { color: #FFFFFF; text-align: center; border-bottom: none; font-size: 1.9rem; white-space: nowrap; }
-        div[data-testid="stButton"] > button, div[data-testid="stDownloadButton"] > button, div[data-testid="stForm"] button {
-            font-weight: 600; border-radius: 8px; border: 1px solid #3498DB !important;
-            background-color: transparent !important; color: #FFFFFF !important;
-            transition: all 0.3s ease-in-out; padding: 10px 24px; width: 100%;
-        }
-        div[data-testid="stButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover, div[data-testid="stForm"] button:hover {
-            background-color: #3498DB !important; border-color: #3498DB !important;
-        }
-        .delete-button button { border-color: #E74C3C !important; }
-        .delete-button button:hover { background-color: #C0392B !important; border-color: #C0392B !important; }
-        div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
-            background-color: rgba(236, 240, 241, 0.1) !important;
-            border-color: rgba(52, 152, 219, 0.4) !important;
-            color: #FFFFFF !important;
-        }
-        label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
-            color: #FFFFFF !important; font-weight: 500;
-        }
-        [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] .stMarkdown strong,
-        [data-testid="stSidebar"] .stRadio > label span, [data-testid="stSidebar"] .stCaption {
-            color: #FFFFFF !important; opacity: 1;
-        }
-        [data-testid="stSidebar"] .st-bo:has(input:checked) + label span { color: #5DADE2 !important; font-weight: 700 !important; }
-        [data-testid="stSidebar"] .stButton > button { color: #EAECEE !important; border-color: #EAECEE !important; }
-        [data-testid="stSidebar"] .stButton > button:hover { color: #FFFFFF !important; border-color: #E74C3C !important; background-color: #E74C3C !important; }
-        [data-testid="stSidebarNavCollapseButton"] svg { fill: #FFFFFF !important; }
-        [data-testid="stMetricLabel"] { color: #A9C5E1 !important; }
-        [data-testid="stMetricValue"] { color: #FFFFFF !important; }
-        [data-testid="stMetricDelta"] { color: #2ECC71 !important; }
-        [data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] { color: #FF4B4B !important; }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# ================== CSS Kustom (SELURUH BLOK INI DIKOMENTARI SEMENTARA UNTUK DEBUGGING) ==================
+# st.markdown(
+#     """
+#     <style>
+#         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+#         html, body, [class*="st-"] { font-family: 'Inter', sans-serif; }
+#         .stApp {
+#             background-color: #021021;
+#             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
+#                                  linear-gradient(to top, #062b54, #021021);
+#             background-attachment: fixed;
+#             color: #ECF0F1;
+#         }
+#         .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6 { color: #FFFFFF; }
+#         .stApp [data-testid="stHeading"] { color: #FFFFFF !important; }
+#         .stApp p { color: #ECF0F1 !important; }
+#         h1 { border-bottom: 2px solid #3498DB; padding-bottom: 10px; margin-bottom: 0.8rem; }
+#         [data-testid="stSidebar"] {
+#             background-color: rgba(2, 16, 33, 0.8);
+#             backdrop-filter: blur(5px);
+#             border-right: 1px solid rgba(52, 152, 219, 0.3);
+#         }
+#         .login-container [data-testid="stForm"], [data-testid="stForm"], [data-testid="stExpander"],
+#         [data-testid="stVerticalBlock"] [data-testid="stVerticalBlock"] [data-testid="stContainer"] {
+#             background-color: rgba(44, 62, 80, 0.6);
+#             backdrop-filter: blur(5px);
+#             border: 1px solid rgba(52, 152, 219, 0.4);
+#             padding: 1.5rem;
+#             border-radius: 10px;
+#             margin-bottom: 1rem;
+#         }
+#         .login-title { color: #FFFFFF; text-align: center; border-bottom: none; font-size: 1.9rem; white-space: nowrap; }
+#         div[data-testid="stButton"] > button, div[data-testid="stDownloadButton"] > button, div[data-testid="stForm"] button {
+#             font-weight: 600; border-radius: 8px; border: 1px solid #3498DB !important;
+#             background-color: transparent !important; color: #FFFFFF !important;
+#             transition: all 0.3s ease-in-out; padding: 10px 24px; width: 100%;
+#         }
+#         div[data-testid="stButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover, div[data-testid="stForm"] button:hover {
+#             background-color: #3498DB !important; border-color: #3498DB !important;
+#         }
+#         .delete-button button { border-color: #E74C3C !important; }
+#         .delete-button button:hover { background-color: #C0392B !important; border-color: #C0392B !important; }
+#         div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
+#             background-color: rgba(236, 240, 241, 0.1) !important;
+#             border-color: rgba(52, 152, 219, 0.4) !important;
+#             color: #FFFFFF !important;
+#         }
+#         label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
+#             color: #FFFFFF !important; font-weight: 500;
+#         }
+#         [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] .stMarkdown strong,
+#         [data-testid="stSidebar"] .stRadio > label span, [data-testid="stSidebar"] .stCaption {
+#             color: #FFFFFF !important; opacity: 1;
+#         }
+#         [data-testid="stSidebar"] .st-bo:has(input:checked) + label span { color: #5DADE2 !important; font-weight: 700 !important; }
+#         [data-testid="stSidebar"] .stButton > button { color: #EAECEE !important; border-color: #EAECEE !important; }
+#         [data-testid="stSidebar"] .stButton > button:hover { color: #FFFFFF !important; border-color: #E74C3C !important; background-color: #E74C3C !important; }
+#         [data-testid="stSidebarNavCollapseButton"] svg { fill: #FFFFFF !important; }
+#         [data-testid="stMetricLabel"] { color: #A9C5E1 !important; }
+#         [data-testid="stMetricValue"] { color: #FFFFFF !important; }
+#         [data-testid="stMetricDelta"] { color: #2ECC71 !important; }
+#         [data-testid="stMetricDelta"][style*="color: rgb(255, 43, 43)"] { color: #FF4B4B !important; }
+#     </style>
+#     """,
+#     unsafe_allow_html=True
+# )
 
 # ================== Koneksi & Konfigurasi Global ==================
 @st.cache_resource
@@ -165,6 +165,116 @@ def upload_image_to_storage(uploaded_file):
     except Exception as e:
         st.error(f"Gagal upload gambar: {e}")
         return ""
+
+# --- FUNGSI UNTUK EXCEL REPORT DENGAN GAMBAR (TIDAK BERUBAH DARI SEBELUMNYA) ---
+def create_excel_report_with_images(filtered_data):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        data_to_write = filtered_data.drop(columns=['Hapus'], errors='ignore')
+        data_to_write.to_excel(writer, sheet_name='Laporan Pekerjaan', index=False)
+
+        workbook = writer.book
+        worksheet = writer.sheets['Laporan Pekerjaan']
+
+        try:
+            image_col_before = data_to_write.columns.get_loc("Evidance")
+            image_col_after = data_to_write.columns.get_loc("Evidance After")
+        except KeyError:
+            image_col_before = -1 
+            image_col_after = -1
+
+        if image_col_before != -1:
+            worksheet.set_column(image_col_before, image_col_before, 18)
+        if image_col_after != -1:
+            worksheet.set_column(image_col_after, image_col_after, 18)
+
+        for row_num, row_data in filtered_data.iterrows():
+            excel_row = row_num + 1
+            worksheet.set_row(excel_row, 90)
+
+            img_url_before = row_data.get("Evidance")
+            if img_url_before and isinstance(img_url_before, str) and image_col_before != -1:
+                try:
+                    response = requests.get(img_url_before, stream=True, timeout=10)
+                    response.raise_for_status()
+                    img_data = io.BytesIO(response.content)
+
+                    img = Image.open(img_data).convert("RGB")
+                    img = fix_image_orientation(img)
+                    
+                    width, height = img.size
+                    max_width = 120
+                    max_height = 90
+                    aspect_ratio = width / height
+                    
+                    if width > max_width or height > max_height:
+                        if width / max_width > height / max_height:
+                            new_width = max_width
+                            new_height = int(new_width / aspect_ratio)
+                        else:
+                            new_height = max_height
+                            new_width = int(new_height * aspect_ratio)
+                    else:
+                        new_width, new_height = width, height
+
+                    img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    
+                    resized_img_buffer = io.BytesIO()
+                    img_resized.save(resized_img_buffer, format="JPEG", quality=80)
+                    resized_img_buffer.seek(0)
+
+                    worksheet.insert_image(excel_row, image_col_before, "image_before.jpg",
+                                           {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
+                                            'object_position': 3
+                                           })
+                    worksheet.write(excel_row, image_col_before, "Lihat Gambar")
+                except Exception as e:
+                    print(f"Gagal memuat atau menyematkan gambar before dari URL {img_url_before}: {e}")
+                    worksheet.write(excel_row, image_col_before, img_url_before if pd.notna(img_url_before) else "Tidak Ada Gambar")
+
+            img_url_after = row_data.get("Evidance After")
+            if img_url_after and isinstance(img_url_after, str) and image_col_after != -1:
+                try:
+                    response = requests.get(img_url_after, stream=True, timeout=10)
+                    response.raise_for_status()
+                    img_data = io.BytesIO(response.content)
+
+                    img = Image.open(img_data).convert("RGB")
+                    img = fix_image_orientation(img)
+                    
+                    width, height = img.size
+                    max_width = 120
+                    max_height = 90
+                    aspect_ratio = width / height
+                    
+                    if width > max_width or height > max_height:
+                        if width / max_width > height / max_height:
+                            new_width = max_width
+                            new_height = int(new_width / aspect_ratio)
+                        else:
+                            new_height = max_height
+                            new_width = int(new_height * aspect_ratio)
+                    else:
+                        new_width, new_height = width, height
+
+                    img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    
+                    resized_img_buffer = io.BytesIO()
+                    img_resized.save(resized_img_buffer, format="JPEG", quality=80)
+                    resized_img_buffer.seek(0)
+
+                    worksheet.insert_image(excel_row, image_col_after, "image_after.jpg",
+                                           {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
+                                            'object_position': 3
+                                           })
+                    worksheet.write(excel_row, image_col_after, "Lihat Gambar")
+                except Exception as e:
+                    print(f"Gagal memuat atau menyematkan gambar after dari URL {img_url_after}: {e}")
+                    worksheet.write(excel_row, image_col_after, img_url_after if pd.notna(img_url_after) else "Tidak Ada Gambar")
+
+    output.seek(0)
+    return output.getvalue()
+
 
 def create_pdf_report(filtered_data, report_type):
     # (Fungsi ini tidak diubah)
@@ -444,153 +554,11 @@ elif menu == "Report Data":
             else:
                 dl_col1, dl_col2 = st.columns(2)
                 with dl_col1:
-                    csv_data = filtered_data.to_csv(index=False).encode('utf-8')
-                    csv_filename = f"laporan_csv_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.csv"
-                    st.download_button("⬇️ Download Laporan (CSV)", data=csv_data, file_name=csv_filename, mime="text/csv", use_container_width=True)
-                
-                with dl_col2:
-                    pdf_filename = f"laporan_pdf_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
-                    # Generate PDF bytes when the button is clicked
-                    if st.button("📄 Buat & Siapkan PDF", use_container_width=True):
-                        with st.spinner("Membuat file PDF..."):
-                            pdf_bytes = create_pdf_report(filtered_data, report_type)
-                            st.session_state.pdf_bytes = pdf_bytes
-                            st.session_state.pdf_filename = pdf_filename
-                
-                # Show download button for PDF only after it has been generated
-                if 'pdf_bytes' in st.session_state and st.session_state.pdf_bytes:
-                    st.download_button(
-                        label="⬇️ Download Laporan (PDF)",
-                        data=st.session_state.pdf_bytes,
-                        file_name=st.session_state.pdf_filename,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key='download_pdf_button'
-                    )
-
-elif menu == "Analisis FLM":
-    # ... (Kode halaman ini tidak diubah)
-    st.header("📊 Analisis FLM (Scoreboard)")
-    st.markdown("Dashboard ini menganalisis jenis First Line Maintenance (FLM) yang paling sering dilaksanakan.")
-    
-    st.sidebar.header("Filter Dashboard")
-    if not df.empty:
-        df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
-        min_date, max_date = df['Tanggal'].min().date(), df['Tanggal'].max().date()
-    else: min_date, max_date = date.today(), date.today()
-
-    start_date_flm = st.sidebar.date_input("Tanggal Mulai", min_date, key="flm_start_date")
-    end_date_flm = st.sidebar.date_input("Tanggal Akhir", max_date, key="flm_end_date")
-    all_status_flm = df['Status'].unique() if not df.empty else []
-    selected_status_flm = st.sidebar.multiselect("Filter Status:", options=all_status_flm, default=all_status_flm, key="flm_status_filter")
-
-    mask_flm = (df['Tanggal'].dt.date >= start_date_flm) & (df['Tanggal'].dt.date <= end_date_flm) & \
-               (df['Status'].isin(selected_status_flm)) & \
-               (df['Jenis'].str.startswith('First Line Maintenance', na=False))
-    df_flm = df[mask_flm]
-
-    if df_flm.empty:
-        st.warning("Tidak ada data FLM yang cocok dengan filter Anda.")
-    else:
-        # Analisis Tipe FLM
-        flm_counts = df_flm['Jenis'].value_counts().reset_index()
-        flm_counts.columns = ['Jenis FLM', 'Jumlah']
-        total_pelaksanaan = flm_counts['Jumlah'].sum()
-        flm_teratas = flm_counts.iloc[0]
-
-        st.markdown("### Ringkasan Dominasi FLM")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Pelaksanaan FLM", f"{total_pelaksanaan} Kali")
-        col2.metric("FLM Paling Dominan", flm_teratas['Jenis FLM'].replace("First Line Maintenance ", ""))
-        col3.metric("Jumlahnya", f"{flm_teratas['Jumlah']} Kali", delta="Paling Sering", delta_color="off")
-        st.markdown("---")
-        
-        # Visualisasi Tipe FLM
-        chart_col1, chart_col2 = st.columns(2)
-        with chart_col1:
-            st.subheader("Proporsi Jenis FLM")
-            fig_pie = px.pie(flm_counts, names='Jenis FLM', values='Jumlah', hole=0.4, title='Persentase Pelaksanaan FLM', template='plotly_dark')
-            st.plotly_chart(fig_pie, use_container_width=True)
-        with chart_col2:
-            st.subheader("Peringkat Dominasi FLM")
-            fig_bar = px.bar(flm_counts.sort_values('Jumlah'), x='Jumlah', y='Jenis FLM', orientation='h', text='Jumlah', color='Jumlah', color_continuous_scale=px.colors.sequential.Blues_r, template='plotly_dark')
-            st.plotly_chart(fig_bar, use_container_width=True)
-        
-        # Analisis Leaderboard Pelaksana
-        st.markdown("---") 
-        st.header("🏆 Skor Pelaksana FLM (Leaderboard)")
-        st.markdown("Menganalisis pelaksana berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
-
-        if 'Nama Pelaksana' in df_flm and not df_flm['Nama Pelaksana'].dropna().empty:
-            pelaksana_counts = df_flm['Nama Pelaksana'].str.split(',').explode().str.strip().value_counts().reset_index()
-            pelaksana_counts.columns = ['Nama Pelaksana', 'Jumlah FLM Dikerjakan']
-
-            if not pelaksana_counts.empty:
-                top_performer = pelaksana_counts.iloc[0]
-                
-                st.markdown("#### Performa Terbaik")
-                col_kpi1, col_kpi2 = st.columns(2)
-                with col_kpi1: st.success(f"**Top Performer:** {top_performer['Nama Pelaksana']}")
-                with col_kpi2: st.success(f"**Jumlah Pekerjaan:** {top_performer['Jumlah FLM Dikerjakan']} Kali")
-                st.markdown("---")
-                
-                st.subheader("Peringkat Semua Pelaksana")
-                fig_leaderboard = px.bar(pelaksana_counts.sort_values('Jumlah FLM Dikerjakan'), x='Jumlah FLM Dikerjakan', y='Nama Pelaksana', orientation='h', title='Leaderboard Pelaksana FLM', text='Jumlah FLM Dikerjakan', color='Jumlah FLM Dikerjakan', color_continuous_scale=px.colors.sequential.Greens_r, template='plotly_dark')
-                fig_leaderboard.update_yaxes(categoryorder="total ascending")
-                st.plotly_chart(fig_leaderboard, use_container_width=True)
-            else:
-                st.info("Tidak ada data pelaksana untuk dianalisis sesuai filter.")
-        else:
-            st.info("Kolom 'Nama Pelaksana' kosong pada data yang difilter.")
-
-elif menu == "Dashboard Peringatan":
-    # ... (Kode halaman ini tidak diubah)
-    st.header("⚠️ Peringatan Corrective Maintenance (Warning CM)")
-    st.markdown("Dashboard ini menganalisis area dengan frekuensi Corrective Maintenance tertinggi.")
-
-    st.sidebar.header("Filter Dashboard")
-    if not df.empty:
-        df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
-        min_date_cm, max_date_cm = df['Tanggal'].min().date(), df['Tanggal'].max().date()
-    else: min_date_cm, max_date_cm = date.today(), date.today()
-
-    start_date_cm = st.sidebar.date_input("Tanggal Mulai", min_date_cm, key="cm_start_date")
-    end_date_cm = st.sidebar.date_input("Tanggal Akhir", max_date_cm, key="cm_end_date")
-    all_status_cm = df['Status'].unique() if not df.empty else []
-    selected_status_cm = st.sidebar.multiselect("Filter Status:", options=all_status_cm, default=all_status_cm, key="cm_status_filter")
-
-    mask_cm = (df['Tanggal'].dt.date >= start_date_cm) & (df['Tanggal'].dt.date <= end_date_cm) & \
-              (df['Status'].isin(selected_status_cm)) & \
-              (df['Jenis'] == 'Corrective Maintenance')
-    df_cm = df[mask_cm]
-    
-    if df_cm.empty:
-        st.warning("Tidak ada data 'Corrective Maintenance' yang cocok dengan filter Anda.")
-    else:
-        cm_counts = df_cm['Area'].value_counts().reset_index()
-        cm_counts.columns = ['Area', 'Jumlah Kasus']
-        total_kasus = cm_counts['Jumlah Kasus'].sum()
-        area_teratas = cm_counts.iloc[0]
-
-        st.markdown("### Ringkasan Peringatan")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Kasus Corrective", f"{total_kasus} Kasus")
-        col2.metric("Area Paling Bermasalah", area_teratas['Area'])
-        col3.metric("Jumlah Kasus di Area Tsb", f"{area_teratas['Jumlah Kasus']} Kasus", delta="Paling Tinggi", delta_color="inverse")
-        st.markdown("---")
-
-        chart_col1, chart_col2 = st.columns(2)
-        with chart_col1:
-            st.subheader("Distribusi Kasus per Area")
-            fig_pie = px.pie(cm_counts, names='Area', values='Jumlah Kasus', hole=0.4, template='plotly_dark')
-            st.plotly_chart(fig_pie, use_container_width=True)
-        with chart_col2:
-            st.subheader("Peringkat Area Bermasalah")
-            fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
-            st.plotly_chart(fig_bar, use_container_width=True)
-        st.markdown("---")
-
-        st.subheader("📈 Tren Kasus Corrective Maintenance")
-        df_tren = df_cm.set_index('Tanggal').resample('D').size().reset_index(name='Jumlah Kasus')
-        fig_line = px.line(df_tren, x='Tanggal', y='Jumlah Kasus', title='Jumlah Kasus per Hari', markers=True, template='plotly_dark')
-        st.plotly_chart(fig_line, use_container_width=True)
+                    # UNDUH EXCEL
+                    if st.button("📊 Buat & Siapkan Excel", use_container_width=True, key='prepare_excel_button'):
+                        with st.spinner("Membuat file Excel..."):
+                            excel_bytes = create_excel_report_with_images(filtered_data) 
+                            st.session_state.excel_bytes = excel_bytes
+                            st.session_state.excel_filename = f"laporan_excel_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
+                    
+                    if 'excel_bytes' in st.session_state and st.session_
