@@ -20,7 +20,7 @@ import plotly.express as px
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom (Seluruhnya diaktifkan kembali kecuali baris bermasalah) ==================
+# ================== CSS Kustom ==================
 st.markdown(
     """
     <style>
@@ -67,11 +67,34 @@ st.markdown(
         }
         .delete-button button { border-color: #E74C3C !important; }
         .delete-button button:hover { background-color: #C0392B !important; border-color: #C0392B !important; }
-        div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
-            background-color: rgba(236, 240, 241, 0.1) !important;
+        
+        /* Gaya input/select/textarea */
+        div[data-baseweb="input"] > div, 
+        div[data-baseweb="textarea"] > div, 
+        div[data-baseweb="select"] > div {
+            background-color: rgba(236, 240, 241, 0.4) !important; /* Warna dasar transparan */
             border-color: rgba(52, 152, 219, 0.4) !important;
             color: #FFFFFF !important;
+            transition: all 0.2s ease-in-out; /* Transisi halus untuk semua properti yang berubah */
         }
+
+        /* Efek HOVER */
+        div[data-baseweb="input"] > div:hover,
+        div[data-baseweb="textarea"] > div:hover,
+        div[data-baseweb="select"] > div:hover {
+            background-color: rgba(236, 240, 241, 0.55) !important; /* Sedikit lebih padat */
+            border-color: rgba(52, 152, 219, 0.7) !important; /* Border lebih jelas */
+        }
+
+        /* Efek FOCUS (saat diklik/aktif) */
+        div[data-baseweb="input"] > div:focus-within,
+        div[data-baseweb="textarea"] > div:focus-within,
+        div[data-baseweb="select"] > div:focus-within {
+            background-color: rgba(236, 240, 241, 0.7) !important; /* Lebih terang */
+            border-color: #3498DB !important; /* Biru solid */
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3) !important; /* Bayangan halus */
+        }
+
         label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
             color: #FFFFFF !important; font-weight: 500;
         }
