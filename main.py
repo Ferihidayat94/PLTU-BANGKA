@@ -500,43 +500,84 @@ elif menu == "Report Data":
         if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
-        if not data_to_display.empty:
-            if 'Hapus' not in data_to_display.columns:
-                data_to_display.insert(0, "Hapus", False)
+        # === ST.DATA_EDITOR DENGAN KOLOM YANG DAPAT DIEDIT ADMIN ===
+        # Memastikan hanya kolom tertentu yang bisa diedit oleh admin
+        # Gunakan 'disabled' di setiap st.column_config untuk kontrol per peran
+        col_config_dict = {
+            "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), 
+            "ID": st.column_config.TextColumn("ID", disabled=True), # Tetap nonaktif
+            "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY", disabled=True), # Tetap nonaktif
+            "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES, disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
+            "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
+            "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"], disabled=True), # Tetap nonaktif
+            "Nomor SR": st.column_config.TextColumn("Nomor SR", disabled=True), # Tetap nonaktif
+            "Nama Pelaksana": st.column_config.TextColumn("Nama Pelaksana", disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
+            "Keterangan": st.column_config.TextColumn("Keterangan", width="large", disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
+            "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat", disabled=True),
+            "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat", disabled=True),
+        }
+        
+        # Parameter 'disabled' global pada st.data_editor tidak digunakan karena kontrol di column_config
+        edited_df = st.data_editor(
+            data_to_display,
+            key="data_editor",
+            use_container_width=True,
+            column_config=col_config_dict,
+            column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
+        )
+        
+        # Logika menyimpan perubahan dari data_editor
+        # Tombol simpan hanya muncul jika ada perubahan (edited_rows TIDAK KOSONG) DAN pengguna adalah admin
+        if st.session_state.get("data_editor") and st.session_state["data_editor"]["edited_rows"] and st.session_state.user == 'admin':
+            edited_rows_data = st.session_state["data_editor"]["edited_rows"]
             
-            edited_df = st.data_editor(
-                data_to_display, key="data_editor", disabled=["ID", "Evidance", "Evidance After"], use_container_width=True,
-                column_config={
-                    "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), 
-                    "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"),
-                    "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES),
-                    "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"]),
-                    "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"]),
-                    "Keterangan": st.column_config.TextColumn("Keterangan", width="large"),
-                    "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat"), 
-                    "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat"),
-                    "ID": st.column_config.TextColumn("ID", disabled=True),
-                }, column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
-            )
-            
-            rows_to_delete = edited_df[edited_df['Hapus'] == True]
-            
-            if not rows_to_delete.empty and st.session_state.user == 'admin':
-                st.markdown('<div class="delete-button">', unsafe_allow_html=True)
-                ids_to_delete = rows_to_delete['ID'].tolist()
-                if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
-                    with st.spinner("Menghapus data..."):
-                        try: # Added try-except around Supabase delete for explicit error handling
-                            supabase.table("jobs").delete().in_("ID", ids_to_delete).execute() 
-                            st.cache_data.clear()
-                            st.session_state.data = load_data_from_db()
-                            st.success("Data terpilih berhasil dihapus.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Gagal menghapus data: {e}") 
-                st.markdown('</div>', unsafe_allow_html=True)
-            elif not rows_to_delete.empty:
-                st.warning("Hanya 'admin' yang dapat menghapus data.")
+            if st.button("💾 Simpan Perubahan Data", use_container_width=True):
+                with st.spinner("Menyimpan perubahan..."):
+                    changes_successful = True
+                    for idx, changes in edited_rows_data.items():
+                        original_id = data_to_display.loc[idx, 'ID']
+                        update_payload = {}
+                        
+                        # Langsung gunakan perubahan dari 'changes' karena edited_rows hanya berisi yang diedit
+                        for col_name, new_value in changes.items():
+                            update_payload[col_name] = new_value
+
+                        if update_payload: # Hanya update ke Supabase jika payload tidak kosong
+                            try:
+                                supabase.table("jobs").update(update_payload).eq("ID", original_id).execute()
+                                st.toast(f"Data ID '{original_id}' berhasil diupdate!")
+                            except Exception as e:
+                                st.error(f"Gagal mengupdate data ID '{original_id}': {e}")
+                                changes_successful = False
+                                break 
+
+                    if changes_successful:
+                        st.cache_data.clear() # Hapus cache untuk memaksa pemuatan ulang
+                        st.session_state.data = load_data_from_db() # Muat ulang data
+                        st.success("Semua perubahan berhasil disimpan.")
+                        st.rerun() # Rerun untuk merefleksikan perubahan dan membersihkan edited_rows state
+                    else:
+                        st.warning("Beberapa perubahan mungkin tidak tersimpan karena error. Mohon periksa konsol untuk detail.")
+        # === AKHIR LOGIKA ST.DATA_EDITOR ===
+
+        # Logika Hapus Baris Terpilih
+        rows_to_delete = edited_df[edited_df['Hapus'] == True]
+        if not rows_to_delete.empty and st.session_state.user == 'admin':
+            st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+            ids_to_delete = rows_to_delete['ID'].tolist()
+            if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
+                with st.spinner("Menghapus data..."):
+                    try: 
+                        supabase.table("jobs").delete().in_("ID", ids_to_delete).execute() 
+                        st.cache_data.clear()
+                        st.session_state.data = load_data_from_db()
+                        st.success("Data terpilih berhasil dihapus.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Gagal menghapus data: {e}") 
+            st.markdown('</div>', unsafe_allow_html=True)
+        elif not rows_to_delete.empty:
+            st.warning("Hanya 'admin' yang dapat menghapus data.")
 
     st.write("---") 
     
@@ -755,7 +796,6 @@ elif menu == "Dashboard Peringatan":
             st.plotly_chart(fig_pie, use_container_width=True)
         with chart_col2:
             st.subheader("Peringkat Area Bermasalah")
-            # FIX TYPO HERE: 'Jumlah Kas' -> 'Jumlah Kasus'
             fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
         st.markdown("---")
