@@ -184,8 +184,8 @@ def upload_image_to_storage(uploaded_file):
     if uploaded_file is None: return ""
     try:
         image = Image.open(uploaded_file).convert("RGB")
-        image = fix_image_orientation(image)
         output_buffer = io.BytesIO()
+        image = fix_image_orientation(image) # Panggil fungsi fix_image_orientation setelah Image.open
         image.save(output_buffer, format="JPEG", quality=85, optimize=True)
         file_name = f"{uuid.uuid4()}.jpeg"
         supabase.storage.from_("evidences").upload(file=output_buffer.getvalue(), path=file_name, file_options={"content-type": "image/jpeg"})
@@ -322,7 +322,6 @@ def create_excel_report_with_images(filtered_data):
 
 
 def create_pdf_report(filtered_data, report_type):
-    # (Fungsi ini tidak diubah)
     pdf_buffer = io.BytesIO()
     doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
     styles = getSampleStyleSheet()
@@ -435,8 +434,6 @@ with st.sidebar:
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
 # PERBAIKAN UNTUK OPERATOR: Hanya sembunyikan #MainMenu dan footer, BIARKAN header.
-# Catatan: Jika ada header Streamlit yang terlihat, inilah yang menyembunyikan tombol sidebar expand/collapse.
-# Mengubah 'header' menjadi 'footer' agar tombol tidak hilang.
 if st.session_state.get('user') == 'operator':
     st.markdown("""<style>#MainMenu, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
@@ -529,7 +526,6 @@ elif menu == "Report Data":
                 if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
                     with st.spinner("Menghapus data..."):
                         try: # Added try-except around Supabase delete for explicit error handling
-                            # FIX TYPO HERE: ids_to_to_delete -> ids_to_delete
                             supabase.table("jobs").delete().in_("ID", ids_to_delete).execute() 
                             st.cache_data.clear()
                             st.session_state.data = load_data_from_db()
@@ -758,7 +754,8 @@ elif menu == "Dashboard Peringatan":
             st.plotly_chart(fig_pie, use_container_width=True)
         with chart_col2:
             st.subheader("Peringkat Area Bermasalah")
-            fig_bar = px.bar(cm_counts.sort_values('Jumlah Kas'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
+            # FIX TYPO HERE: 'Jumlah Kas' -> 'Jumlah Kasus'
+            fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
         st.markdown("---")
 
