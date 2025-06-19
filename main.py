@@ -184,8 +184,8 @@ def upload_image_to_storage(uploaded_file):
     if uploaded_file is None: return ""
     try:
         image = Image.open(uploaded_file).convert("RGB")
-        output_buffer = io.BytesIO()
         image = fix_image_orientation(image) # Panggil fungsi fix_image_orientation setelah Image.open
+        output_buffer = io.BytesIO()
         image.save(output_buffer, format="JPEG", quality=85, optimize=True)
         file_name = f"{uuid.uuid4()}.jpeg"
         supabase.storage.from_("evidences").upload(file=output_buffer.getvalue(), path=file_name, file_options={"content-type": "image/jpeg"})
@@ -463,6 +463,7 @@ if menu == "Input Data":
             else:
                 with st.spinner("Menyimpan data..."):
                     latest_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
+                    # FIX TYPO HERE: latest_ids_of_data -> latest_ids_df
                     new_id = generate_next_id(latest_ids_df, jenis)
                     
                     evidance_url = upload_image_to_storage(evidance_file)
