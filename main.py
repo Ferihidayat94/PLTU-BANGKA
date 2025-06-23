@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP - FINAL VERSION 
+# APLIKASI PRODUKSI LENGKAP - FINAL VERSION
 import streamlit as st
 import pandas as pd
 import os
@@ -268,9 +268,9 @@ def create_excel_report_with_images(filtered_data):
 
                     # Sisipkan gambar ke kolom "Evidance" di baris yang sesuai
                     worksheet.insert_image(excel_row, image_col_before, "image_before.jpg",
-                                           {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
-                                            'object_position': 3 
-                                           })
+                                             {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
+                                              'object_position': 3 
+                                             })
                     worksheet.write(excel_row, image_col_before, "Lihat Gambar") 
                 except Exception as e:
                     print(f"Gagal memuat atau menyematkan gambar before dari URL {img_url_before}: {e}")
@@ -309,9 +309,9 @@ def create_excel_report_with_images(filtered_data):
                     resized_img_buffer.seek(0)
 
                     worksheet.insert_image(excel_row, image_col_after, "image_after.jpg",
-                                           {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
-                                            'object_position': 3
-                                           })
+                                             {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
+                                              'object_position': 3
+                                             })
                     worksheet.write(excel_row, image_col_after, "Lihat Gambar")
                 except Exception as e:
                     print(f"Gagal memuat atau menyematkan gambar after dari URL {img_url_after}: {e}")
@@ -463,7 +463,6 @@ if menu == "Input Data":
             else:
                 with st.spinner("Menyimpan data..."):
                     latest_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
-                    # FIX TYPO HERE: latest_ids_of_data -> latest_ids_df
                     new_id = generate_next_id(latest_ids_df, jenis)
                     
                     evidance_url = upload_image_to_storage(evidance_file)
@@ -488,6 +487,11 @@ elif menu == "Report Data":
     with st.container(border=True):
         st.subheader("Filter & Edit Data")
         data_to_display = df.copy()
+        
+        # --- FIX: Tambahkan kolom 'Hapus' ke DataFrame sebelum st.data_editor ---
+        if 'Hapus' not in data_to_display.columns:
+            data_to_display['Hapus'] = False
+        # ------------------------------------------------------------------
         
         filter_col1, filter_col2 = st.columns(2)
         with filter_col1:
@@ -519,7 +523,7 @@ elif menu == "Report Data":
         
         # Parameter 'disabled' global pada st.data_editor tidak digunakan karena kontrol di column_config
         edited_df = st.data_editor(
-            data_to_display,
+            data_to_display, # Sekarang data_to_display memiliki kolom 'Hapus'
             key="data_editor",
             use_container_width=True,
             column_config=col_config_dict,
@@ -647,6 +651,13 @@ elif menu == "Report Data":
                     # UNDUH EXCEL
                     if st.button("📊 Buat & Siapkan Excel", use_container_width=True, key='prepare_excel_button'):
                         with st.spinner("Membuat file Excel..."):
+                            # Pastikan 'Hapus' juga ditambahkan ke filtered_data sementara untuk dikirim ke fungsi report jika diperlukan,
+                            # atau pastikan fungsi report menanganinya dengan robust (seperti yang sudah Anda lakukan dengan .drop(errors='ignore'))
+                            # Untuk memastikan create_excel_report_with_images tidak error jika filtered_data tidak memiliki 'Hapus'
+                            # Walaupun di sini filtered_data berasal dari df, jadi seharusnya kolom Hapus tidak ada di df
+                            # Kecuali Anda menambahkan di scope global, tapi itu tidak disarankan.
+                            # Jadi, filtered_data yang dikirim ke fungsi laporan tidak perlu memiliki kolom 'Hapus'
+                            # karena fungsi laporan akan menanganinya sendiri (drop errors='ignore').
                             excel_bytes = create_excel_report_with_images(filtered_data) 
                             st.session_state.excel_bytes = excel_bytes
                             st.session_state.excel_filename = f"laporan_excel_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
@@ -669,7 +680,7 @@ elif menu == "Report Data":
                             pdf_bytes = create_pdf_report(filtered_data, report_type)
                             st.session_state.pdf_bytes = pdf_bytes
                             st.session_state.pdf_filename = pdf_filename
-                
+                    
                 # Show download button for PDF only after it has been generated
                 if 'pdf_bytes' in st.session_state and st.session_state.pdf_bytes:
                     st.download_button(
