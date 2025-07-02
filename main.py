@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP - VERSI DENGAN ABSENSI
+# APLIKASI PRODUKSI LENGKAP - VERSI DENGAN ABSENSI & KELOLA PERSONEL
 import streamlit as st
 import pandas as pd
 import os
@@ -152,7 +152,6 @@ def load_data_from_db():
         st.error(f"Gagal mengambil data pekerjaan dari database: {e}")
         return pd.DataFrame()
 
-# === FUNGSI BARU UNTUK MEMUAT DATA ABSENSI ===
 @st.cache_data(ttl=300)
 def load_absensi_data():
     try:
@@ -165,17 +164,15 @@ def load_absensi_data():
         st.error(f"Gagal mengambil data absensi dari database: {e}")
         return pd.DataFrame()
 
-# === FUNGSI BARU UNTUK MENDAPATKAN DAFTAR PERSONEL ===
-@st.cache_data(ttl=3600)
-def get_personnel_list(jobs_df):
-    if jobs_df.empty or 'Nama Pelaksana' not in jobs_df.columns:
-        return []
-    names = set()
-    # Handle nama yang dipisah koma (jika ada tim) dan hilangkan spasi ekstra
-    for name_list in jobs_df['Nama Pelaksana'].dropna().unique():
-        for name in name_list.split(','):
-            names.add(name.strip())
-    return sorted(list(names))
+# === FUNGSI BARU UNTUK MEMUAT DATA PERSONEL DARI TABEL 'personel' ===
+@st.cache_data(ttl=300)
+def load_personnel_data():
+    try:
+        response = supabase.table('personel').select('id, nama').order('nama', desc=False).execute()
+        return pd.DataFrame(response.data)
+    except Exception as e:
+        st.error(f"Gagal mengambil daftar personel: {e}")
+        return pd.DataFrame(columns=['id', 'nama'])
 
 def logout():
     for key in list(st.session_state.keys()):
@@ -328,7 +325,7 @@ def create_pdf_report(filtered_data, report_type):
             ["Jenis", str(row.get('Jenis', ''))],
             ["Area", str(row.get('Area', ''))],
             ["Nomor SR", str(row.get('Nomor SR', ''))],
-            ["Nama Pelaksana", str(row.get('Nama Pelaksana', ''))],
+            ["Nama Personel", str(row.get('Nama Personel', ''))], # Ganti label
             ["Status", str(row.get('Status', ''))],
             ["Keterangan", Paragraph(str(row.get('Keterangan', '')).replace('\n', '<br/>'), styles['Normal'])],
         ]
@@ -397,9 +394,13 @@ if 'last_activity' not in st.session_state or datetime.now() - st.session_state.
     logout()
 st.session_state.last_activity = datetime.now()
 
+# Ganti nama kolom di DataFrame utama
 if 'data' not in st.session_state:
     st.session_state.data = load_data_from_db()
 df = st.session_state.data.copy()
+if 'Nama Pelaksana' in df.columns:
+    df.rename(columns={'Nama Pelaksana': 'Nama Personel'}, inplace=True)
+
 
 with st.sidebar:
     st.title("Menu Navigasi")
@@ -407,9 +408,13 @@ with st.sidebar:
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
     # === PERUBAHAN MENU SIDEBAR ===
+    menu_options = ["Input Data", "Report Data", "Analisis FLM", "Absensi Personel"]
+    if st.session_state.user == 'admin':
+        menu_options.append("Kelola Personel") # Menu Kelola Personel hanya untuk admin
+
     menu = st.radio(
         "Pilih Halaman:", 
-        ["Input Data", "Report Data", "Analisis FLM", "Absensi Personel"], 
+        menu_options, 
         label_visibility="collapsed"
     )
     st.markdown("<br/><br/>", unsafe_allow_html=True)
@@ -431,7 +436,7 @@ if menu == "Input Data":
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
-            nama_pelaksana = st.text_input("Nama Pelaksana")
+            nama_personel = st.text_input("Nama Personel") # Ganti label
             status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
             keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
         
@@ -441,19 +446,21 @@ if menu == "Input Data":
         with col_ev2: evidance_after_file = st.file_uploader("Upload Evidence (After)", type=["png", "jpg", "jpeg"])
         
         if st.form_submit_button("Simpan Data"):
-            if not all([nomor_sr, nama_pelaksana, keterangan]):
+            if not all([nomor_sr, nama_personel, keterangan]):
                 st.error("Mohon isi semua field yang wajib.")
             else:
                 with st.spinner("Menyimpan data..."):
-                    latest_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
-                    new_id = generate_next_id(latest_ids_df, jenis)
+                    # Ambil data pekerjaan untuk generate ID baru
+                    job_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
+                    new_id = generate_next_id(job_ids_df, jenis)
                     
                     evidance_url = upload_image_to_storage(evidance_file)
                     evidance_after_url = upload_image_to_storage(evidance_after_file)
                     
                     new_job_data = {
                         "ID": new_id, "Tanggal": str(tanggal), "Jenis": jenis, "Area": area, "Nomor SR": nomor_sr, 
-                        "Nama Pelaksana": nama_pelaksana, "Keterangan": keterangan, "Status": status, 
+                        "Nama Pelaksana": nama_personel, # Kolom di DB tetap 'Nama Pelaksana'
+                        "Keterangan": keterangan, "Status": status, 
                         "Evidance": evidance_url, "Evidance After": evidance_after_url
                     }
                     try:
@@ -493,7 +500,7 @@ elif menu == "Report Data":
             "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if st.session_state.user == 'admin' else True),
             "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"], disabled=True),
             "Nomor SR": st.column_config.TextColumn("Nomor SR", disabled=True),
-            "Nama Pelaksana": st.column_config.TextColumn("Nama Pelaksana", disabled=False if st.session_state.user == 'admin' else True),
+            "Nama Personel": st.column_config.TextColumn("Nama Personel", disabled=False if st.session_state.user == 'admin' else True), # Ganti label
             "Keterangan": st.column_config.TextColumn("Keterangan", width="large", disabled=False if st.session_state.user == 'admin' else True),
             "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat", disabled=True),
             "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat", disabled=True),
@@ -504,7 +511,7 @@ elif menu == "Report Data":
             key="data_editor",
             use_container_width=True,
             column_config=col_config_dict,
-            column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
+            column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Personel", "Keterangan", "Evidance", "Evidance After"]
         )
         
         if st.session_state.get("data_editor") and st.session_state["data_editor"]["edited_rows"] and st.session_state.user == 'admin':
@@ -517,7 +524,11 @@ elif menu == "Report Data":
                         original_id = data_to_display.loc[idx, 'ID']
                         update_payload = {}
                         for col_name, new_value in changes.items():
-                            update_payload[col_name] = new_value
+                            # Ganti nama kolom kembali ke nama di DB sebelum mengirim
+                            if col_name == 'Nama Personel':
+                                update_payload['Nama Pelaksana'] = new_value
+                            else:
+                                update_payload[col_name] = new_value
                         if update_payload:
                             try:
                                 supabase.table("jobs").update(update_payload).eq("ID", original_id).execute()
@@ -559,7 +570,7 @@ elif menu == "Report Data":
         with st.expander("✅ **Update Status Pekerjaan**", expanded=True):
             open_jobs = df[df['Status'].isin(['Open', 'On Progress'])]
             if not open_jobs.empty:
-                job_options = {f"{row['ID']} - {row['Nama Pelaksana']} - {str(row.get('Keterangan',''))[:40]}...": row['ID'] for _, row in open_jobs.iterrows()}
+                job_options = {f"{row['ID']} - {row['Nama Personel']} - {str(row.get('Keterangan',''))[:40]}...": row['ID'] for _, row in open_jobs.iterrows()}
                 selected_job_display = st.selectbox("Pilih Pekerjaan yang akan diselesaikan:", list(job_options.keys()))
                 uploaded_evidence_after = st.file_uploader("Upload Bukti Selesai", type=["png", "jpg", "jpeg"], key="quick_upload")
                 if st.button("Submit Update", use_container_width=True):
@@ -672,28 +683,28 @@ elif menu == "Analisis FLM":
             st.plotly_chart(fig_bar, use_container_width=True)
         
         st.markdown("---") 
-        st.header("🏆 Skor Pelaksana FLM (Leaderboard)")
-        st.markdown("Menganalisis pelaksana berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
-        if 'Nama Pelaksana' in df_flm and not df_flm['Nama Pelaksana'].dropna().empty:
-            pelaksana_counts = df_flm['Nama Pelaksana'].str.split(',').explode().str.strip().value_counts().reset_index()
-            pelaksana_counts.columns = ['Nama Pelaksana', 'Jumlah FLM Dikerjakan']
-            if not pelaksana_counts.empty:
-                top_performer = pelaksana_counts.iloc[0]
+        st.header("🏆 Skor Personel FLM (Leaderboard)") # Ganti label
+        st.markdown("Menganalisis personel berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
+        if 'Nama Personel' in df_flm and not df_flm['Nama Personel'].dropna().empty:
+            personel_counts = df_flm['Nama Personel'].str.split(',').explode().str.strip().value_counts().reset_index()
+            personel_counts.columns = ['Nama Personel', 'Jumlah FLM Dikerjakan']
+            if not personel_counts.empty:
+                top_performer = personel_counts.iloc[0]
                 
                 st.markdown("#### Performa Terbaik")
                 col_kpi1, col_kpi2 = st.columns(2)
-                with col_kpi1: st.success(f"**Top Performer:** {top_performer['Nama Pelaksana']}")
+                with col_kpi1: st.success(f"**Top Performer:** {top_performer['Nama Personel']}")
                 with col_kpi2: st.success(f"**Jumlah Pekerjaan:** {top_performer['Jumlah FLM Dikerjakan']} Kali")
                 st.markdown("---")
                 
-                st.subheader("Peringkat Semua Pelaksana")
-                fig_leaderboard = px.bar(pelaksana_counts.sort_values('Jumlah FLM Dikerjakan'), x='Jumlah FLM Dikerjakan', y='Nama Pelaksana', orientation='h', title='Leaderboard Pelaksana FLM', text='Jumlah FLM Dikerjakan', color='Jumlah FLM Dikerjakan', color_continuous_scale=px.colors.sequential.Greens_r, template='plotly_dark')
+                st.subheader("Peringkat Semua Personel")
+                fig_leaderboard = px.bar(personel_counts.sort_values('Jumlah FLM Dikerjakan'), x='Jumlah FLM Dikerjakan', y='Nama Personel', orientation='h', title='Leaderboard Personel FLM', text='Jumlah FLM Dikerjakan', color='Jumlah FLM Dikerjakan', color_continuous_scale=px.colors.sequential.Greens_r, template='plotly_dark')
                 fig_leaderboard.update_yaxes(categoryorder="total ascending")
                 st.plotly_chart(fig_leaderboard, use_container_width=True)
             else:
-                st.info("Tidak ada data pelaksana untuk dianalisis sesuai filter.")
+                st.info("Tidak ada data personel untuk dianalisis sesuai filter.")
         else:
-            st.info("Kolom 'Nama Pelaksana' kosong pada data yang difilter.")
+            st.info("Kolom 'Nama Personel' kosong pada data yang difilter.")
 
 # === HALAMAN BARU: ABSENSI PERSONEL ===
 elif menu == "Absensi Personel":
@@ -701,17 +712,18 @@ elif menu == "Absensi Personel":
 
     # --- Bagian Input Absensi ---
     with st.expander("📝 **Input Absensi Baru**", expanded=True):
-        # Dapatkan daftar personel dari data pekerjaan yang ada
-        personnel_list = get_personnel_list(df)
+        # Dapatkan daftar personel dari tabel 'personel'
+        df_personnel = load_personnel_data()
+        personnel_list = df_personnel['nama'].tolist() if not df_personnel.empty else []
 
         if not personnel_list:
-            st.warning("Data personel belum tersedia. Harap isi data pekerjaan terlebih dahulu.")
+            st.warning("Daftar personel kosong. Harap isi data di halaman 'Kelola Personel' terlebih dahulu.")
         else:
             with st.form("absensi_form", clear_on_submit=True):
                 col1, col2 = st.columns(2)
                 with col1:
                     tanggal_absensi = st.date_input("Tanggal Absensi", date.today())
-                    nama_pelaksana_absensi = st.selectbox("Nama Pelaksana", options=personnel_list)
+                    nama_personel_absensi = st.selectbox("Nama Personel", options=personnel_list)
                 with col2:
                     status_absensi = st.selectbox("Status Kehadiran", options=ABSENSI_STATUS)
                     keterangan_absensi = st.text_area("Keterangan (jika Izin/Sakit/Cuti)")
@@ -722,91 +734,183 @@ elif menu == "Absensi Personel":
                         try:
                             supabase.table("absensi").insert({
                                 "tanggal": str(tanggal_absensi),
-                                "nama_pelaksana": nama_pelaksana_absensi,
+                                "nama_personel": nama_personel_absensi,
                                 "status_absensi": status_absensi,
                                 "keterangan": keterangan_absensi
                             }).execute()
-                            st.cache_data.clear() # Hapus cache agar data baru termuat
-                            st.success(f"Absensi untuk '{nama_pelaksana_absensi}' pada tanggal {tanggal_absensi.strftime('%d-%m-%Y')} berhasil disimpan.")
+                            st.cache_data.clear()
+                            st.success(f"Absensi untuk '{nama_personel_absensi}' pada tanggal {tanggal_absensi.strftime('%d-%m-%Y')} berhasil disimpan.")
                         except Exception as e:
                             st.error(f"Gagal menyimpan absensi: {e}")
 
     st.markdown("---")
 
     # --- Bagian Dashboard Absensi ---
-    st.subheader("📊 Laporan Ketidakhadiran Personel")
+    st.subheader("📊 Laporan Kehadiran & Ketidakhadiran")
     df_absensi = load_absensi_data()
 
     if df_absensi.empty:
         st.info("Belum ada data absensi untuk ditampilkan.")
     else:
         df_absensi['tanggal'] = pd.to_datetime(df_absensi['tanggal']).dt.tz_localize(None)
-        min_date, max_date = df_absensi['tanggal'].min().date(), df_absensi['tanggal'].max().date()
+        min_date_abs, max_date_abs = df_absensi['tanggal'].min().date(), df_absensi['tanggal'].max().date()
         
         # Filter
         filter_col1, filter_col2 = st.columns(2)
         with filter_col1:
-            start_date = st.date_input("Dari Tanggal", min_date, key="absensi_start_date")
+            start_date_abs = st.date_input("Dari Tanggal", min_date_abs, key="absensi_start_date")
         with filter_col2:
-            end_date = st.date_input("Sampai Tanggal", max_date, key="absensi_end_date")
+            end_date_abs = st.date_input("Sampai Tanggal", max_date_abs, key="absensi_end_date")
         
-        mask = (df_absensi['tanggal'].dt.date >= start_date) & (df_absensi['tanggal'].dt.date <= end_date)
-        filtered_df = df_absensi[mask]
+        mask_abs = (df_absensi['tanggal'].dt.date >= start_date_abs) & (df_absensi['tanggal'].dt.date <= end_date_abs)
+        filtered_df_abs = df_absensi[mask_abs]
 
-        # Fokus pada data yang 'tidak hadir'
-        df_absen = filtered_df[filtered_df['status_absensi'] != 'Hadir']
-
-        if df_absen.empty:
-            st.success("✅ Tidak ada data ketidakhadiran pada rentang tanggal yang dipilih.")
+        if filtered_df_abs.empty:
+             st.warning("Tidak ada data absensi pada rentang tanggal yang dipilih.")
         else:
-            # KPI / Metrik
-            absen_counts = df_absen['nama_pelaksana'].value_counts()
-            total_hari_absen = len(df_absen)
-            top_absen_personel = absen_counts.index[0] if not absen_counts.empty else "N/A"
-            top_absen_count = absen_counts.iloc[0] if not absen_counts.empty else 0
+            # Data Hadir dan Tidak Hadir
+            df_hadir = filtered_df_abs[filtered_df_abs['status_absensi'] == 'Hadir']
+            df_absen = filtered_df_abs[filtered_df_abs['status_absensi'] != 'Hadir']
 
-            st.markdown("#### Ringkasan Ketidakhadiran")
-            kpi_col1, kpi_col2 = st.columns(2)
-            kpi_col1.metric("Total Hari Tidak Hadir (Sakit/Izin/Cuti)", f"{total_hari_absen} Hari")
-            kpi_col2.metric("Personel Paling Sering Tidak Hadir", top_absen_personel, delta=f"{top_absen_count} hari", delta_color="inverse")
-            st.markdown("---")
+            # --- Visualisasi Peringkat ---
+            col1, col2 = st.columns(2)
 
-            # Visualisasi
-            viz_col1, viz_col2 = st.columns(2)
-            with viz_col1:
-                st.subheader("Peringkat Ketidakhadiran")
-                personel_absen_counts = df_absen['nama_pelaksana'].value_counts().reset_index()
-                personel_absen_counts.columns = ['Nama Pelaksana', 'Jumlah Hari Tidak Hadir']
-                fig_bar_personel = px.bar(
-                    personel_absen_counts.sort_values('Jumlah Hari Tidak Hadir'), 
-                    x='Jumlah Hari Tidak Hadir', 
-                    y='Nama Pelaksana', 
-                    orientation='h', 
-                    text='Jumlah Hari Tidak Hadir',
-                    color='Jumlah Hari Tidak Hadir',
-                    color_continuous_scale=px.colors.sequential.Reds,
-                    template='plotly_dark'
-                )
-                st.plotly_chart(fig_bar_personel, use_container_width=True)
+            with col1:
+                st.subheader("✅ Peringkat Kehadiran")
+                if df_hadir.empty:
+                    st.info("Tidak ada data kehadiran.")
+                else:
+                    hadir_counts = df_hadir['nama_personel'].value_counts().reset_index()
+                    hadir_counts.columns = ['Nama Personel', 'Jumlah Hari Hadir']
+                    fig_bar_hadir = px.bar(
+                        hadir_counts.sort_values('Jumlah Hari Hadir'), 
+                        x='Jumlah Hari Hadir', 
+                        y='Nama Personel', 
+                        orientation='h', 
+                        text='Jumlah Hari Hadir',
+                        color='Jumlah Hari Hadir',
+                        color_continuous_scale=px.colors.sequential.Greens,
+                        template='plotly_dark',
+                        title="Top Kehadiran Personel"
+                    )
+                    st.plotly_chart(fig_bar_hadir, use_container_width=True)
 
-            with viz_col2:
-                st.subheader("Alasan Ketidakhadiran")
-                status_counts = df_absen['status_absensi'].value_counts().reset_index()
-                status_counts.columns = ['Status', 'Jumlah']
-                fig_pie_status = px.pie(
-                    status_counts, 
-                    names='Status', 
-                    values='Jumlah', 
-                    hole=0.4, 
-                    title='Proporsi Alasan Tidak Hadir', 
-                    template='plotly_dark'
-                )
-                st.plotly_chart(fig_pie_status, use_container_width=True)
-            
+            with col2:
+                st.subheader("❌ Peringkat Ketidakhadiran")
+                if df_absen.empty:
+                    st.success("Tidak ada data ketidakhadiran.")
+                else:
+                    absen_counts = df_absen['nama_personel'].value_counts().reset_index()
+                    absen_counts.columns = ['Nama Personel', 'Jumlah Hari Tidak Hadir']
+                    fig_bar_absen = px.bar(
+                        absen_counts.sort_values('Jumlah Hari Tidak Hadir'), 
+                        x='Jumlah Hari Tidak Hadir', 
+                        y='Nama Personel', 
+                        orientation='h', 
+                        text='Jumlah Hari Tidak Hadir',
+                        color='Jumlah Hari Tidak Hadir',
+                        color_continuous_scale=px.colors.sequential.Reds,
+                        template='plotly_dark',
+                        title="Top Ketidakhadiran Personel"
+                    )
+                    st.plotly_chart(fig_bar_absen, use_container_width=True)
+
             # Tabel Data Detail
             st.markdown("---")
-            st.subheader("Detail Data Ketidakhadiran")
+            st.subheader("📋 Detail Data Absensi")
             st.dataframe(
-                df_absen[['tanggal', 'nama_pelaksana', 'status_absensi', 'keterangan']].sort_values('tanggal', ascending=False),
+                filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi', 'keterangan']].sort_values('tanggal', ascending=False),
                 use_container_width=True
             )
+
+# === HALAMAN BARU: KELOLA PERSONEL (HANYA ADMIN) ===
+elif menu == "Kelola Personel" and st.session_state.user == 'admin':
+    st.header("👥 Kelola Daftar Personel")
+    
+    # Muat data personel
+    df_personnel = load_personnel_data()
+
+    # --- Form Tambah Personel Baru ---
+    with st.expander("➕ Tambah Personel Baru"):
+        with st.form("add_personnel_form", clear_on_submit=True):
+            new_name = st.text_input("Nama Personel Baru")
+            if st.form_submit_button("Simpan Personel"):
+                if new_name:
+                    try:
+                        # Cek duplikasi sebelum insert
+                        if new_name in df_personnel['nama'].tolist():
+                            st.error(f"Personel dengan nama '{new_name}' sudah ada.")
+                        else:
+                            supabase.table("personel").insert({"nama": new_name}).execute()
+                            st.cache_data.clear() # Clear cache untuk reload
+                            st.success(f"Personel '{new_name}' berhasil ditambahkan.")
+                            st.rerun()
+                    except Exception as e:
+                        st.error(f"Gagal menambahkan personel: {e}")
+                else:
+                    st.warning("Nama tidak boleh kosong.")
+    
+    st.markdown("---")
+
+    # --- Tabel Edit dan Hapus Personel ---
+    st.subheader("✏️ Edit atau Hapus Personel")
+    if df_personnel.empty:
+        st.info("Belum ada data personel. Silakan tambahkan di atas.")
+    else:
+        # Gunakan st.data_editor untuk memungkinkan edit nama
+        df_personnel['Hapus'] = False # Tambah kolom untuk checkbox hapus
+        
+        edited_df_personnel = st.data_editor(
+            df_personnel[['id', 'nama', 'Hapus']],
+            column_config={
+                "id": st.column_config.NumberColumn("ID", disabled=True),
+                "nama": st.column_config.TextColumn("Nama Personel", required=True),
+                "Hapus": st.column_config.CheckboxColumn("Hapus?")
+            },
+            use_container_width=True,
+            hide_index=True,
+            key="personnel_editor"
+        )
+
+        # Tombol untuk menyimpan perubahan dan hapus
+        col_save, col_delete = st.columns(2)
+
+        with col_save:
+            if st.button("💾 Simpan Perubahan Nama"):
+                # Logika untuk update nama
+                changes = st.session_state.personnel_editor.get("edited_rows", {})
+                if not changes:
+                    st.info("Tidak ada perubahan nama untuk disimpan.")
+                else:
+                    with st.spinner("Menyimpan perubahan..."):
+                        success = True
+                        for row_idx, changed_data in changes.items():
+                            personnel_id = edited_df_personnel.iloc[row_idx]['id']
+                            new_name = changed_data.get('nama')
+                            if new_name:
+                                try:
+                                    supabase.table("personel").update({"nama": new_name}).eq("id", personnel_id).execute()
+                                except Exception as e:
+                                    st.error(f"Gagal update nama untuk ID {personnel_id}: {e}")
+                                    success = False
+                        if success:
+                            st.cache_data.clear()
+                            st.success("Semua perubahan nama berhasil disimpan.")
+                            st.rerun()
+
+        with col_delete:
+            # Logika untuk hapus
+            rows_to_delete = edited_df_personnel[edited_df_personnel['Hapus']]
+            if not rows_to_delete.empty:
+                ids_to_delete = rows_to_delete['id'].tolist()
+                st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Personel Terpilih"):
+                    with st.spinner("Menghapus personel..."):
+                        try:
+                            supabase.table("personel").delete().in_("id", ids_to_delete).execute()
+                            st.cache_data.clear()
+                            st.success("Personel terpilih berhasil dihapus.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Gagal menghapus personel: {e}")
+                st.markdown('</div>', unsafe_allow_html=True)
