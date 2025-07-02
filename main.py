@@ -1,4 +1,4 @@
-# APLIKASI PRODUKSI LENGKAP - FINAL VERSION
+# APLIKASI PRODUKSI LENGKAP - VERSI DENGAN ABSENSI
 import streamlit as st
 import pandas as pd
 import os
@@ -34,7 +34,7 @@ st.markdown(
         .stApp {
             background-color: #021021;
             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
-                                 linear-gradient(to top, #062b54, #021021);
+                                linear-gradient(to top, #062b54, #021021);
             background-attachment: fixed;
             color: #ECF0F1;
         }
@@ -123,6 +123,7 @@ def init_connection():
     return create_client(url, key)
 supabase = init_connection()
 JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )", "Corrective Maintenance", "Preventive Maintenance"]
+ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti']
 
 # ================== Fungsi-Fungsi Helper ==================
 def hash_password(password):
@@ -148,8 +149,33 @@ def load_data_from_db():
             df['Tanggal'] = pd.to_datetime(df['Tanggal'])
         return df
     except Exception as e:
-        st.error(f"Gagal mengambil data dari database: {e}")
+        st.error(f"Gagal mengambil data pekerjaan dari database: {e}")
         return pd.DataFrame()
+
+# === FUNGSI BARU UNTUK MEMUAT DATA ABSENSI ===
+@st.cache_data(ttl=300)
+def load_absensi_data():
+    try:
+        response = supabase.table('absensi').select('*').order('tanggal', desc=True).execute()
+        df = pd.DataFrame(response.data)
+        if 'tanggal' in df.columns and not df.empty:
+            df['tanggal'] = pd.to_datetime(df['tanggal'])
+        return df
+    except Exception as e:
+        st.error(f"Gagal mengambil data absensi dari database: {e}")
+        return pd.DataFrame()
+
+# === FUNGSI BARU UNTUK MENDAPATKAN DAFTAR PERSONEL ===
+@st.cache_data(ttl=3600)
+def get_personnel_list(jobs_df):
+    if jobs_df.empty or 'Nama Pelaksana' not in jobs_df.columns:
+        return []
+    names = set()
+    # Handle nama yang dipisah koma (jika ada tim) dan hilangkan spasi ekstra
+    for name_list in jobs_df['Nama Pelaksana'].dropna().unique():
+        for name in name_list.split(','):
+            names.add(name.strip())
+    return sorted(list(names))
 
 def logout():
     for key in list(st.session_state.keys()):
@@ -184,7 +210,7 @@ def upload_image_to_storage(uploaded_file):
     if uploaded_file is None: return ""
     try:
         image = Image.open(uploaded_file).convert("RGB")
-        image = fix_image_orientation(image) # Panggil fungsi fix_image_orientation setelah Image.open
+        image = fix_image_orientation(image)
         output_buffer = io.BytesIO()
         image.save(output_buffer, format="JPEG", quality=85, optimize=True)
         file_name = f"{uuid.uuid4()}.jpeg"
@@ -197,59 +223,33 @@ def upload_image_to_storage(uploaded_file):
 # --- FUNGSI UNTUK EXCEL REPORT DENGAN GAMBAR ---
 def create_excel_report_with_images(filtered_data):
     output = io.BytesIO()
-    # Gunakan Pandas ExcelWriter dengan engine 'xlsxwriter' untuk fitur gambar
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        # Tulis DataFrame ke sheet pertama
-        # Hapus kolom 'Hapus' jika ada, karena ini kolom sementara untuk UI
         data_to_write = filtered_data.drop(columns=['Hapus'], errors='ignore')
         data_to_write.to_excel(writer, sheet_name='Laporan Pekerjaan', index=False)
-
         workbook = writer.book
         worksheet = writer.sheets['Laporan Pekerjaan']
-
-        # Dapatkan indeks kolom untuk 'Evidance' dan 'Evidance After'
-        # Tambahkan error handling jika kolom tidak ada
         try:
             image_col_before = data_to_write.columns.get_loc("Evidance")
             image_col_after = data_to_write.columns.get_loc("Evidance After")
         except KeyError:
-            # Jika kolom tidak ada, mungkin tidak perlu menyematkan gambar
-            image_col_before = -1 
+            image_col_before = -1
             image_col_after = -1
-
-        # Atur lebar kolom untuk gambar (opsional, sesuaikan)
-        if image_col_before != -1:
-            worksheet.set_column(image_col_before, image_col_before, 18) # Lebar 18 unit (sekitar 120px)
-        if image_col_after != -1:
-            worksheet.set_column(image_col_after, image_col_after, 18) # Lebar 18 unit (sekitar 120px)
-
-        # Loop melalui baris data untuk menyematkan gambar
-        for row_num, row_data in filtered_data.iterrows(): # Gunakan filtered_data asli untuk akses URL
-            # Baris di Excel akan dimulai dari 1 (header), jadi tambahkan 1
+        if image_col_before != -1: worksheet.set_column(image_col_before, image_col_before, 18)
+        if image_col_after != -1: worksheet.set_column(image_col_after, image_col_after, 18)
+        for row_num, row_data in filtered_data.iterrows():
             excel_row = row_num + 1
-
-            # Atur tinggi baris untuk menampung gambar (opsional, sesuaikan)
-            worksheet.set_row(excel_row, 90) # Tinggi 90 pixels (sekitar 1.25 inci)
-
-            # --- Gambar Evidence (Before) ---
+            worksheet.set_row(excel_row, 90)
             img_url_before = row_data.get("Evidance")
             if img_url_before and isinstance(img_url_before, str) and image_col_before != -1:
                 try:
-                    response = requests.get(img_url_before, stream=True, timeout=10) # Perpanjang timeout
+                    response = requests.get(img_url_before, stream=True, timeout=10)
                     response.raise_for_status()
                     img_data = io.BytesIO(response.content)
-
-                    # Fix orientation dan resize jika perlu
                     img = Image.open(img_data).convert("RGB")
                     img = fix_image_orientation(img)
-                    
-                    # Resize gambar agar pas di sel
                     width, height = img.size
-                    max_width = 120 
-                    max_height = 90 
-                    
+                    max_width, max_height = 120, 90
                     aspect_ratio = width / height
-                    
                     if width > max_width or height > max_height:
                         if width / max_width > height / max_height:
                             new_width = max_width
@@ -257,41 +257,27 @@ def create_excel_report_with_images(filtered_data):
                         else:
                             new_height = max_height
                             new_width = int(new_height * aspect_ratio)
-                    else:
-                        new_width, new_height = width, height 
-
+                    else: new_width, new_height = width, height
                     img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                    
                     resized_img_buffer = io.BytesIO()
-                    img_resized.save(resized_img_buffer, format="JPEG", quality=80) # Kompresi gambar
+                    img_resized.save(resized_img_buffer, format="JPEG", quality=80)
                     resized_img_buffer.seek(0)
-
-                    # Sisipkan gambar ke kolom "Evidance" di baris yang sesuai
-                    worksheet.insert_image(excel_row, image_col_before, "image_before.jpg",
-                                             {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
-                                              'object_position': 3 
-                                             })
-                    worksheet.write(excel_row, image_col_before, "Lihat Gambar") 
+                    worksheet.insert_image(excel_row, image_col_before, "image_before.jpg", {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5, 'object_position': 3})
+                    worksheet.write(excel_row, image_col_before, "Lihat Gambar")
                 except Exception as e:
                     print(f"Gagal memuat atau menyematkan gambar before dari URL {img_url_before}: {e}")
                     worksheet.write(excel_row, image_col_before, img_url_before if pd.notna(img_url_before) else "Tidak Ada Gambar")
-
-            # --- Gambar Evidence After --- 
             img_url_after = row_data.get("Evidance After")
             if img_url_after and isinstance(img_url_after, str) and image_col_after != -1:
                 try:
                     response = requests.get(img_url_after, stream=True, timeout=10)
                     response.raise_for_status()
                     img_data = io.BytesIO(response.content)
-
                     img = Image.open(img_data).convert("RGB")
                     img = fix_image_orientation(img)
-                    
                     width, height = img.size
-                    max_width = 120
-                    max_height = 90
+                    max_width, max_height = 120, 90
                     aspect_ratio = width / height
-                    
                     if width > max_width or height > max_height:
                         if width / max_width > height / max_height:
                             new_width = max_width
@@ -299,24 +285,16 @@ def create_excel_report_with_images(filtered_data):
                         else:
                             new_height = max_height
                             new_width = int(new_height * aspect_ratio)
-                    else:
-                        new_width, new_height = width, height
-
+                    else: new_width, new_height = width, height
                     img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                    
                     resized_img_buffer = io.BytesIO()
                     img_resized.save(resized_img_buffer, format="JPEG", quality=80)
                     resized_img_buffer.seek(0)
-
-                    worksheet.insert_image(excel_row, image_col_after, "image_after.jpg",
-                                             {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5,
-                                              'object_position': 3
-                                             })
+                    worksheet.insert_image(excel_row, image_col_after, "image_after.jpg", {'image_data': resized_img_buffer, 'x_offset': 5, 'y_offset': 5, 'object_position': 3})
                     worksheet.write(excel_row, image_col_after, "Lihat Gambar")
                 except Exception as e:
                     print(f"Gagal memuat atau menyematkan gambar after dari URL {img_url_after}: {e}")
                     worksheet.write(excel_row, image_col_after, img_url_after if pd.notna(img_url_after) else "Tidak Ada Gambar")
-
     output.seek(0)
     return output.getvalue()
 
@@ -428,7 +406,12 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
-    menu = st.radio("Pilih Halaman:", ["Input Data", "Report Data", "Analisis FLM", "Dashboard Peringatan"], label_visibility="collapsed")
+    # === PERUBAHAN MENU SIDEBAR ===
+    menu = st.radio(
+        "Pilih Halaman:", 
+        ["Input Data", "Report Data", "Analisis FLM", "Absensi Personel"], 
+        label_visibility="collapsed"
+    )
     st.markdown("<br/><br/>", unsafe_allow_html=True)
     if st.button("Logout"): logout()
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
@@ -488,10 +471,8 @@ elif menu == "Report Data":
         st.subheader("Filter & Edit Data")
         data_to_display = df.copy()
         
-        # --- FIX: Tambahkan kolom 'Hapus' ke DataFrame sebelum st.data_editor ---
         if 'Hapus' not in data_to_display.columns:
             data_to_display['Hapus'] = False
-        # ------------------------------------------------------------------
         
         filter_col1, filter_col2 = st.columns(2)
         with filter_col1:
@@ -504,34 +485,28 @@ elif menu == "Report Data":
         if filter_jenis != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == filter_jenis]
         if filter_status != "Semua": data_to_display = data_to_display[data_to_display["Status"] == filter_status]
         
-        # === ST.DATA_EDITOR DENGAN KOLOM YANG DAPAT DIEDIT ADMIN ===
-        # Memastikan hanya kolom tertentu yang bisa diedit oleh admin
-        # Gunakan 'disabled' di setiap st.column_config untuk kontrol per peran
         col_config_dict = {
             "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), 
-            "ID": st.column_config.TextColumn("ID", disabled=True), # Tetap nonaktif
-            "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY", disabled=True), # Tetap nonaktif
-            "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES, disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
-            "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
-            "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"], disabled=True), # Tetap nonaktif
-            "Nomor SR": st.column_config.TextColumn("Nomor SR", disabled=True), # Tetap nonaktif
-            "Nama Pelaksana": st.column_config.TextColumn("Nama Pelaksana", disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
-            "Keterangan": st.column_config.TextColumn("Keterangan", width="large", disabled=False if st.session_state.user == 'admin' else True), # EDITABLE only for admin
+            "ID": st.column_config.TextColumn("ID", disabled=True),
+            "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY", disabled=True),
+            "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES, disabled=False if st.session_state.user == 'admin' else True),
+            "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if st.session_state.user == 'admin' else True),
+            "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"], disabled=True),
+            "Nomor SR": st.column_config.TextColumn("Nomor SR", disabled=True),
+            "Nama Pelaksana": st.column_config.TextColumn("Nama Pelaksana", disabled=False if st.session_state.user == 'admin' else True),
+            "Keterangan": st.column_config.TextColumn("Keterangan", width="large", disabled=False if st.session_state.user == 'admin' else True),
             "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat", disabled=True),
             "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat", disabled=True),
         }
         
-        # Parameter 'disabled' global pada st.data_editor tidak digunakan karena kontrol di column_config
         edited_df = st.data_editor(
-            data_to_display, # Sekarang data_to_display memiliki kolom 'Hapus'
+            data_to_display, 
             key="data_editor",
             use_container_width=True,
             column_config=col_config_dict,
             column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Pelaksana", "Keterangan", "Evidance", "Evidance After"]
         )
         
-        # Logika menyimpan perubahan dari data_editor
-        # Tombol simpan hanya muncul jika ada perubahan (edited_rows TIDAK KOSONG) DAN pengguna adalah admin
         if st.session_state.get("data_editor") and st.session_state["data_editor"]["edited_rows"] and st.session_state.user == 'admin':
             edited_rows_data = st.session_state["data_editor"]["edited_rows"]
             
@@ -541,12 +516,9 @@ elif menu == "Report Data":
                     for idx, changes in edited_rows_data.items():
                         original_id = data_to_display.loc[idx, 'ID']
                         update_payload = {}
-                        
-                        # Langsung gunakan perubahan dari 'changes' karena edited_rows hanya berisi yang diedit
                         for col_name, new_value in changes.items():
                             update_payload[col_name] = new_value
-
-                        if update_payload: # Hanya update ke Supabase jika payload tidak kosong
+                        if update_payload:
                             try:
                                 supabase.table("jobs").update(update_payload).eq("ID", original_id).execute()
                                 st.toast(f"Data ID '{original_id}' berhasil diupdate!")
@@ -554,17 +526,14 @@ elif menu == "Report Data":
                                 st.error(f"Gagal mengupdate data ID '{original_id}': {e}")
                                 changes_successful = False
                                 break 
-
                     if changes_successful:
-                        st.cache_data.clear() # Hapus cache untuk memaksa pemuatan ulang
-                        st.session_state.data = load_data_from_db() # Muat ulang data
+                        st.cache_data.clear()
+                        st.session_state.data = load_data_from_db()
                         st.success("Semua perubahan berhasil disimpan.")
-                        st.rerun() # Rerun untuk merefleksikan perubahan dan membersihkan edited_rows state
+                        st.rerun()
                     else:
-                        st.warning("Beberapa perubahan mungkin tidak tersimpan karena error. Mohon periksa konsol untuk detail.")
-        # === AKHIR LOGIKA ST.DATA_EDITOR ===
-
-        # Logika Hapus Baris Terpilih
+                        st.warning("Beberapa perubahan mungkin tidak tersimpan karena error.")
+        
         rows_to_delete = edited_df[edited_df['Hapus'] == True]
         if not rows_to_delete.empty and st.session_state.user == 'admin':
             st.markdown('<div class="delete-button">', unsafe_allow_html=True)
@@ -616,10 +585,8 @@ elif menu == "Report Data":
             st.session_state.data = load_data_from_db()
             st.toast("Data telah diperbarui!")
     
-    # === BAGIAN LAPORAN BARU YANG LEBIH SEDERHANA ===
     with st.container(border=True):
         st.subheader("📄 Unduh Laporan")
-
         if df.empty:
             st.info("Belum ada data untuk dibuat laporan.")
         else:
@@ -639,58 +606,31 @@ elif menu == "Report Data":
             if report_type != "Semua":
                 mask &= (df["Jenis"] == report_type)
             filtered_data = df[mask]
-
             st.write("---")
             st.write(f"**2. Hasil Filter: Ditemukan {len(filtered_data)} baris data**")
-
             if filtered_data.empty:
                 st.warning("Tidak ada data yang cocok dengan filter yang Anda pilih.")
             else:
                 dl_col1, dl_col2 = st.columns(2)
                 with dl_col1:
-                    # UNDUH EXCEL
                     if st.button("📊 Buat & Siapkan Excel", use_container_width=True, key='prepare_excel_button'):
                         with st.spinner("Membuat file Excel..."):
-                            # Pastikan 'Hapus' juga ditambahkan ke filtered_data sementara untuk dikirim ke fungsi report jika diperlukan,
-                            # atau pastikan fungsi report menanganinya dengan robust (seperti yang sudah Anda lakukan dengan .drop(errors='ignore'))
-                            # Untuk memastikan create_excel_report_with_images tidak error jika filtered_data tidak memiliki 'Hapus'
-                            # Walaupun di sini filtered_data berasal dari df, jadi seharusnya kolom Hapus tidak ada di df
-                            # Kecuali Anda menambahkan di scope global, tapi itu tidak disarankan.
-                            # Jadi, filtered_data yang dikirim ke fungsi laporan tidak perlu memiliki kolom 'Hapus'
-                            # karena fungsi laporan akan menanganinya sendiri (drop errors='ignore').
                             excel_bytes = create_excel_report_with_images(filtered_data) 
                             st.session_state.excel_bytes = excel_bytes
                             st.session_state.excel_filename = f"laporan_excel_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.xlsx"
                     
                     if 'excel_bytes' in st.session_state and st.session_state.excel_bytes:
-                        st.download_button(
-                            label="⬇️ Download Laporan (Excel)",
-                            data=st.session_state.excel_bytes,
-                            file_name=st.session_state.excel_filename,
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                            use_container_width=True,
-                            key='download_excel_button'
-                        )
+                        st.download_button(label="⬇️ Download Laporan (Excel)", data=st.session_state.excel_bytes, file_name=st.session_state.excel_filename, mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True, key='download_excel_button')
                 
                 with dl_col2:
-                    pdf_filename = f"laporan_pdf_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
-                    # Generate PDF bytes when the button is clicked
                     if st.button("📄 Buat & Siapkan PDF", use_container_width=True):
                         with st.spinner("Membuat file PDF..."):
                             pdf_bytes = create_pdf_report(filtered_data, report_type)
                             st.session_state.pdf_bytes = pdf_bytes
-                            st.session_state.pdf_filename = pdf_filename
+                            st.session_state.pdf_filename = f"laporan_pdf_{start_date.strftime('%Y%m%d')}_{end_date.strftime('%Y%m%d')}.pdf"
                     
-                # Show download button for PDF only after it has been generated
-                if 'pdf_bytes' in st.session_state and st.session_state.pdf_bytes:
-                    st.download_button(
-                        label="⬇️ Download Laporan (PDF)",
-                        data=st.session_state.pdf_bytes,
-                        file_name=st.session_state.pdf_filename,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key='download_pdf_button'
-                    )
+                    if 'pdf_bytes' in st.session_state and st.session_state.pdf_bytes:
+                        st.download_button(label="⬇️ Download Laporan (PDF)", data=st.session_state.pdf_bytes, file_name=st.session_state.pdf_filename, mime="application/pdf", use_container_width=True, key='download_pdf_button')
 
 elif menu == "Analisis FLM":
     st.header("📊 Analisis FLM (Scoreboard)")
@@ -701,17 +641,12 @@ elif menu == "Analisis FLM":
         df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
         min_date, max_date = df['Tanggal'].min().date(), df['Tanggal'].max().date()
     else: min_date, max_date = date.today(), date.today()
-
     start_date_flm = st.sidebar.date_input("Tanggal Mulai", min_date, key="flm_start_date")
     end_date_flm = st.sidebar.date_input("Tanggal Akhir", max_date, key="flm_end_date")
     all_status_flm = df['Status'].unique() if not df.empty else []
     selected_status_flm = st.sidebar.multiselect("Filter Status:", options=all_status_flm, default=all_status_flm, key="flm_status_filter")
-
-    mask_flm = (df['Tanggal'].dt.date >= start_date_flm) & (df['Tanggal'].dt.date <= end_date_flm) & \
-               (df['Status'].isin(selected_status_flm)) & \
-               (df['Jenis'].str.startswith('First Line Maintenance', na=False))
+    mask_flm = (df['Tanggal'].dt.date >= start_date_flm) & (df['Tanggal'].dt.date <= end_date_flm) & (df['Status'].isin(selected_status_flm)) & (df['Jenis'].str.startswith('First Line Maintenance', na=False))
     df_flm = df[mask_flm]
-
     if df_flm.empty:
         st.warning("Tidak ada data FLM yang cocok dengan filter Anda.")
     else:
@@ -719,7 +654,6 @@ elif menu == "Analisis FLM":
         flm_counts.columns = ['Jenis FLM', 'Jumlah']
         total_pelaksanaan = flm_counts['Jumlah'].sum()
         flm_teratas = flm_counts.iloc[0]
-
         st.markdown("### Ringkasan Dominasi FLM")
         col1, col2, col3 = st.columns(3)
         col1.metric("Total Pelaksanaan FLM", f"{total_pelaksanaan} Kali")
@@ -727,7 +661,6 @@ elif menu == "Analisis FLM":
         col3.metric("Jumlahnya", f"{flm_teratas['Jumlah']} Kali", delta="Paling Sering", delta_color="off")
         st.markdown("---")
         
-        # Visualisasi Tipe FLM
         chart_col1, chart_col2 = st.columns(2)
         with chart_col1:
             st.subheader("Proporsi Jenis FLM")
@@ -738,15 +671,12 @@ elif menu == "Analisis FLM":
             fig_bar = px.bar(flm_counts.sort_values('Jumlah'), x='Jumlah', y='Jenis FLM', orientation='h', text='Jumlah', color='Jumlah', color_continuous_scale=px.colors.sequential.Blues_r, template='plotly_dark')
             st.plotly_chart(fig_bar, use_container_width=True)
         
-        # Analisis Leaderboard Pelaksana
         st.markdown("---") 
         st.header("🏆 Skor Pelaksana FLM (Leaderboard)")
         st.markdown("Menganalisis pelaksana berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
-
         if 'Nama Pelaksana' in df_flm and not df_flm['Nama Pelaksana'].dropna().empty:
             pelaksana_counts = df_flm['Nama Pelaksana'].str.split(',').explode().str.strip().value_counts().reset_index()
             pelaksana_counts.columns = ['Nama Pelaksana', 'Jumlah FLM Dikerjakan']
-
             if not pelaksana_counts.empty:
                 top_performer = pelaksana_counts.iloc[0]
                 
@@ -765,53 +695,118 @@ elif menu == "Analisis FLM":
         else:
             st.info("Kolom 'Nama Pelaksana' kosong pada data yang difilter.")
 
-elif menu == "Dashboard Peringatan":
-    st.header("⚠️ Peringatan Corrective Maintenance (Warning CM)")
-    st.markdown("Dashboard ini menganalisis area dengan frekuensi Corrective Maintenance tertinggi.")
+# === HALAMAN BARU: ABSENSI PERSONEL ===
+elif menu == "Absensi Personel":
+    st.header("🗓️ Input & Dashboard Absensi Personel")
 
-    st.sidebar.header("Filter Dashboard")
-    if not df.empty:
-        df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
-        min_date_cm, max_date_cm = df['Tanggal'].min().date(), df['Tanggal'].max().date()
-    else: min_date_cm, max_date_cm = date.today(), date.today()
+    # --- Bagian Input Absensi ---
+    with st.expander("📝 **Input Absensi Baru**", expanded=True):
+        # Dapatkan daftar personel dari data pekerjaan yang ada
+        personnel_list = get_personnel_list(df)
 
-    start_date_cm = st.sidebar.date_input("Tanggal Mulai", min_date_cm, key="cm_start_date")
-    end_date_cm = st.sidebar.date_input("Tanggal Akhir", max_date_cm, key="cm_end_date")
-    all_status_cm = df['Status'].unique() if not df.empty else []
-    selected_status_cm = st.sidebar.multiselect("Filter Status:", options=all_status_cm, default=all_status_cm, key="cm_status_filter")
+        if not personnel_list:
+            st.warning("Data personel belum tersedia. Harap isi data pekerjaan terlebih dahulu.")
+        else:
+            with st.form("absensi_form", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    tanggal_absensi = st.date_input("Tanggal Absensi", date.today())
+                    nama_pelaksana_absensi = st.selectbox("Nama Pelaksana", options=personnel_list)
+                with col2:
+                    status_absensi = st.selectbox("Status Kehadiran", options=ABSENSI_STATUS)
+                    keterangan_absensi = st.text_area("Keterangan (jika Izin/Sakit/Cuti)")
 
-    mask_cm = (df['Tanggal'].dt.date >= start_date_cm) & (df['Tanggal'].dt.date <= end_date_cm) & \
-              (df['Status'].isin(selected_status_cm)) & \
-              (df['Jenis'] == 'Corrective Maintenance')
-    df_cm = df[mask_cm]
-    
-    if df_cm.empty:
-        st.warning("Tidak ada data 'Corrective Maintenance' yang cocok dengan filter Anda.")
+                submitted = st.form_submit_button("Simpan Absensi")
+                if submitted:
+                    with st.spinner("Menyimpan data absensi..."):
+                        try:
+                            supabase.table("absensi").insert({
+                                "tanggal": str(tanggal_absensi),
+                                "nama_pelaksana": nama_pelaksana_absensi,
+                                "status_absensi": status_absensi,
+                                "keterangan": keterangan_absensi
+                            }).execute()
+                            st.cache_data.clear() # Hapus cache agar data baru termuat
+                            st.success(f"Absensi untuk '{nama_pelaksana_absensi}' pada tanggal {tanggal_absensi.strftime('%d-%m-%Y')} berhasil disimpan.")
+                        except Exception as e:
+                            st.error(f"Gagal menyimpan absensi: {e}")
+
+    st.markdown("---")
+
+    # --- Bagian Dashboard Absensi ---
+    st.subheader("📊 Laporan Ketidakhadiran Personel")
+    df_absensi = load_absensi_data()
+
+    if df_absensi.empty:
+        st.info("Belum ada data absensi untuk ditampilkan.")
     else:
-        cm_counts = df_cm['Area'].value_counts().reset_index()
-        cm_counts.columns = ['Area', 'Jumlah Kasus']
-        total_kasus = cm_counts['Jumlah Kasus'].sum()
-        area_teratas = cm_counts.iloc[0]
+        df_absensi['tanggal'] = pd.to_datetime(df_absensi['tanggal']).dt.tz_localize(None)
+        min_date, max_date = df_absensi['tanggal'].min().date(), df_absensi['tanggal'].max().date()
+        
+        # Filter
+        filter_col1, filter_col2 = st.columns(2)
+        with filter_col1:
+            start_date = st.date_input("Dari Tanggal", min_date, key="absensi_start_date")
+        with filter_col2:
+            end_date = st.date_input("Sampai Tanggal", max_date, key="absensi_end_date")
+        
+        mask = (df_absensi['tanggal'].dt.date >= start_date) & (df_absensi['tanggal'].dt.date <= end_date)
+        filtered_df = df_absensi[mask]
 
-        st.markdown("### Ringkasan Peringatan")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Total Kasus Corrective", f"{total_kasus} Kasus")
-        col2.metric("Area Paling Bermasalah", area_teratas['Area'])
-        col3.metric("Jumlah Kasus di Area Tsb", f"{area_teratas['Jumlah Kasus']} Kasus", delta="Paling Tinggi", delta_color="inverse")
-        st.markdown("---")
+        # Fokus pada data yang 'tidak hadir'
+        df_absen = filtered_df[filtered_df['status_absensi'] != 'Hadir']
 
-        chart_col1, chart_col2 = st.columns(2)
-        with chart_col1:
-            st.subheader("Distribusi Kasus per Area")
-            fig_pie = px.pie(cm_counts, names='Area', values='Jumlah Kasus', hole=0.4, template='plotly_dark')
-            st.plotly_chart(fig_pie, use_container_width=True)
-        with chart_col2:
-            st.subheader("Peringkat Area Bermasalah")
-            fig_bar = px.bar(cm_counts.sort_values('Jumlah Kasus'), x='Jumlah Kasus', y='Area', orientation='h', text='Jumlah Kasus', color='Jumlah Kasus', color_continuous_scale=px.colors.sequential.Reds, template='plotly_dark')
-            st.plotly_chart(fig_bar, use_container_width=True)
-        st.markdown("---")
+        if df_absen.empty:
+            st.success("✅ Tidak ada data ketidakhadiran pada rentang tanggal yang dipilih.")
+        else:
+            # KPI / Metrik
+            absen_counts = df_absen['nama_pelaksana'].value_counts()
+            total_hari_absen = len(df_absen)
+            top_absen_personel = absen_counts.index[0] if not absen_counts.empty else "N/A"
+            top_absen_count = absen_counts.iloc[0] if not absen_counts.empty else 0
 
-        st.subheader("📈 Tren Kasus Corrective Maintenance")
-        df_tren = df_cm.set_index('Tanggal').resample('D').size().reset_index(name='Jumlah Kasus')
-        fig_line = px.line(df_tren, x='Tanggal', y='Jumlah Kasus', title='Jumlah Kasus per Hari', markers=True, template='plotly_dark')
-        st.plotly_chart(fig_line, use_container_width=True)
+            st.markdown("#### Ringkasan Ketidakhadiran")
+            kpi_col1, kpi_col2 = st.columns(2)
+            kpi_col1.metric("Total Hari Tidak Hadir (Sakit/Izin/Cuti)", f"{total_hari_absen} Hari")
+            kpi_col2.metric("Personel Paling Sering Tidak Hadir", top_absen_personel, delta=f"{top_absen_count} hari", delta_color="inverse")
+            st.markdown("---")
+
+            # Visualisasi
+            viz_col1, viz_col2 = st.columns(2)
+            with viz_col1:
+                st.subheader("Peringkat Ketidakhadiran")
+                personel_absen_counts = df_absen['nama_pelaksana'].value_counts().reset_index()
+                personel_absen_counts.columns = ['Nama Pelaksana', 'Jumlah Hari Tidak Hadir']
+                fig_bar_personel = px.bar(
+                    personel_absen_counts.sort_values('Jumlah Hari Tidak Hadir'), 
+                    x='Jumlah Hari Tidak Hadir', 
+                    y='Nama Pelaksana', 
+                    orientation='h', 
+                    text='Jumlah Hari Tidak Hadir',
+                    color='Jumlah Hari Tidak Hadir',
+                    color_continuous_scale=px.colors.sequential.Reds,
+                    template='plotly_dark'
+                )
+                st.plotly_chart(fig_bar_personel, use_container_width=True)
+
+            with viz_col2:
+                st.subheader("Alasan Ketidakhadiran")
+                status_counts = df_absen['status_absensi'].value_counts().reset_index()
+                status_counts.columns = ['Status', 'Jumlah']
+                fig_pie_status = px.pie(
+                    status_counts, 
+                    names='Status', 
+                    values='Jumlah', 
+                    hole=0.4, 
+                    title='Proporsi Alasan Tidak Hadir', 
+                    template='plotly_dark'
+                )
+                st.plotly_chart(fig_pie_status, use_container_width=True)
+            
+            # Tabel Data Detail
+            st.markdown("---")
+            st.subheader("Detail Data Ketidakhadiran")
+            st.dataframe(
+                df_absen[['tanggal', 'nama_pelaksana', 'status_absensi', 'keterangan']].sort_values('tanggal', ascending=False),
+                use_container_width=True
+            )
