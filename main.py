@@ -126,13 +126,23 @@ JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "Fi
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti']
 
 # ================== Fungsi-Fungsi Helper ==================
+
+# --- PERBAIKAN: Menggunakan metode login standar Supabase ---
 def verify_user_and_get_role(email, password):
+    """Verifikasi pengguna menggunakan Supabase Auth dan dapatkan perannya."""
     try:
-        session = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        # Coba login menggunakan email dan password
+        session = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        # Jika berhasil, dapatkan detail pengguna termasuk metadata
         if session.user:
-            role = session.user.user_metadata.get('role', 'operator')
+            # Ambil peran dari user_metadata
+            role = session.user.user_metadata.get('role', 'operator') # Default 'operator' jika tidak ada
             return {"role": role, "email": session.user.email}
     except Exception as e:
+        # Tangani error jika login gagal (misal: password salah)
         print(f"Authentication error: {e}")
         return None
     return None
@@ -705,38 +715,38 @@ elif menu == "Absensi Personel":
     st.header("🗓️ Input & Dashboard Absensi Personel")
 
     # --- Bagian Input Absensi ---
-    with st.expander("📝 **Input Absensi Baru**", expanded=True):
-        # Dapatkan daftar personel dari tabel 'personel'
-        df_personnel = load_personnel_data()
-        personnel_list = df_personnel['nama'].tolist() if not df_personnel.empty else []
+    if user_role == 'admin':
+        with st.expander("📝 **Input Absensi Baru**", expanded=True):
+            df_personnel = load_personnel_data()
+            personnel_list = df_personnel['nama'].tolist() if not df_personnel.empty else []
 
-        if not personnel_list:
-            st.warning("Daftar personel kosong. Harap isi data di halaman 'Kelola Personel' terlebih dahulu.")
-        else:
-            with st.form("absensi_form", clear_on_submit=True):
-                col1, col2 = st.columns(2)
-                with col1:
-                    tanggal_absensi = st.date_input("Tanggal Absensi", date.today())
-                    nama_personel_absensi = st.selectbox("Nama Personel", options=personnel_list)
-                with col2:
-                    status_absensi = st.selectbox("Status Kehadiran", options=ABSENSI_STATUS)
-                    keterangan_absensi = st.text_area("Keterangan (jika Izin/Sakit/Cuti)")
+            if not personnel_list:
+                st.warning("Daftar personel kosong. Harap isi data di halaman 'Kelola Personel' terlebih dahulu.")
+            else:
+                with st.form("absensi_form", clear_on_submit=True):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        tanggal_absensi = st.date_input("Tanggal Absensi", date.today())
+                        nama_personel_absensi = st.selectbox("Nama Personel", options=personnel_list)
+                    with col2:
+                        status_absensi = st.selectbox("Status Kehadiran", options=ABSENSI_STATUS)
+                        keterangan_absensi = st.text_area("Keterangan (jika Izin/Sakit/Cuti)")
 
-                submitted = st.form_submit_button("Simpan Absensi")
-                if submitted:
-                    with st.spinner("Menyimpan data absensi..."):
-                        try:
-                            supabase.table("absensi").insert({
-                                "tanggal": str(tanggal_absensi),
-                                "nama_personel": nama_personel_absensi,
-                                "status_absensi": status_absensi,
-                                "keterangan": keterangan_absensi
-                            }).execute()
-                            st.cache_data.clear()
-                            st.success(f"Absensi untuk '{nama_personel_absensi}' pada tanggal {tanggal_absensi.strftime('%d-%m-%Y')} berhasil disimpan.")
-                        except Exception as e:
-                            st.error(f"Gagal menyimpan absensi: {e}")
-
+                    submitted = st.form_submit_button("Simpan Absensi")
+                    if submitted:
+                        with st.spinner("Menyimpan data absensi..."):
+                            try:
+                                supabase.table("absensi").insert({
+                                    "tanggal": str(tanggal_absensi),
+                                    "nama_personel": nama_personel_absensi,
+                                    "status_absensi": status_absensi,
+                                    "keterangan": keterangan_absensi
+                                }).execute()
+                                st.cache_data.clear()
+                                st.success(f"Absensi untuk '{nama_personel_absensi}' pada tanggal {tanggal_absensi.strftime('%d-%m-%Y')} berhasil disimpan.")
+                            except Exception as e:
+                                st.error(f"Gagal menyimpan absensi: {e}")
+    
     st.markdown("---")
 
     # --- Bagian Dashboard Absensi ---
@@ -748,19 +758,15 @@ elif menu == "Absensi Personel":
     else:
         df_absensi['tanggal'] = pd.to_datetime(df_absensi['tanggal']).dt.tz_localize(None)
         
-        # --- PERBAIKAN: Filter berdasarkan Bulan dan Tahun ---
         col1, col2 = st.columns(2)
         with col1:
-            # Buat daftar tahun unik dari data
             year_options = sorted(df_absensi['tanggal'].dt.year.unique(), reverse=True)
             selected_year = st.selectbox("Pilih Tahun:", year_options)
         with col2:
-            # Buat daftar bulan unik dari data
             month_dict = {1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"}
             month_options = sorted(df_absensi[df_absensi['tanggal'].dt.year == selected_year]['tanggal'].dt.month.unique())
             selected_month_num = st.selectbox("Pilih Bulan:", month_options, format_func=lambda x: month_dict[x])
         
-        # Terapkan filter
         mask_abs = (df_absensi['tanggal'].dt.year == selected_year) & (df_absensi['tanggal'].dt.month == selected_month_num)
         filtered_df_abs = df_absensi[mask_abs]
 
@@ -768,11 +774,9 @@ elif menu == "Absensi Personel":
                 st.warning("Tidak ada data absensi pada bulan dan tahun yang dipilih.")
         else:
             if 'nama_personel' in filtered_df_abs.columns:
-                # Data Hadir dan Tidak Hadir
                 df_hadir = filtered_df_abs[filtered_df_abs['status_absensi'] == 'Hadir']
                 df_absen = filtered_df_abs[filtered_df_abs['status_absensi'] != 'Hadir']
 
-                # --- Visualisasi Peringkat ---
                 col1_chart, col2_chart = st.columns(2)
 
                 with col1_chart:
@@ -817,7 +821,6 @@ elif menu == "Absensi Personel":
             else:
                 st.error("Kolom 'nama_personel' tidak ditemukan dalam data absensi. Mohon periksa nama kolom di tabel 'absensi' pada Supabase.")
 
-            # Tabel Data Detail
             st.markdown("---")
             st.subheader("📋 Detail Data Absensi")
             st.dataframe(
@@ -829,22 +832,19 @@ elif menu == "Absensi Personel":
 elif menu == "Kelola Personel" and user_role == 'admin':
     st.header("👥 Kelola Daftar Personel")
     
-    # Muat data personel
     df_personnel = load_personnel_data()
 
-    # --- Form Tambah Personel Baru ---
     with st.expander("➕ Tambah Personel Baru"):
         with st.form("add_personnel_form"):
             new_name = st.text_input("Nama Personel Baru", key="new_personnel_name")
             if st.form_submit_button("Simpan Personel"):
                 if new_name:
                     try:
-                        # Cek duplikasi sebelum insert
                         if new_name in df_personnel['nama'].tolist():
                             st.error(f"Personel dengan nama '{new_name}' sudah ada.")
                         else:
                             supabase.table("personel").insert({"nama": new_name}).execute()
-                            st.cache_data.clear() # Clear cache untuk reload
+                            st.cache_data.clear()
                             st.success(f"Personel '{new_name}' berhasil ditambahkan.")
                             st.rerun()
                     except Exception as e:
@@ -854,13 +854,11 @@ elif menu == "Kelola Personel" and user_role == 'admin':
     
     st.markdown("---")
 
-    # --- Tabel Edit dan Hapus Personel ---
     st.subheader("✏️ Edit atau Hapus Personel")
     if df_personnel.empty:
         st.info("Belum ada data personel. Silakan tambahkan di atas.")
     else:
-        # Gunakan st.data_editor untuk memungkinkan edit nama
-        df_personnel['Hapus'] = False # Tambah kolom untuk checkbox hapus
+        df_personnel['Hapus'] = False
         
         edited_df_personnel = st.data_editor(
             df_personnel[['id', 'nama', 'Hapus']],
@@ -874,12 +872,10 @@ elif menu == "Kelola Personel" and user_role == 'admin':
             key="personnel_editor"
         )
 
-        # Tombol untuk menyimpan perubahan dan hapus
         col_save, col_delete = st.columns(2)
 
         with col_save:
             if st.button("💾 Simpan Perubahan Nama"):
-                # Logika untuk update nama
                 changes = st.session_state.personnel_editor.get("edited_rows", {})
                 if not changes:
                     st.info("Tidak ada perubahan nama untuk disimpan.")
@@ -901,7 +897,6 @@ elif menu == "Kelola Personel" and user_role == 'admin':
                             st.rerun()
 
         with col_delete:
-            # Logika untuk hapus
             rows_to_delete = edited_df_personnel[edited_df_personnel['Hapus']]
             if not rows_to_delete.empty:
                 ids_to_delete = rows_to_delete['id'].tolist()
