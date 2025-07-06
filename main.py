@@ -126,16 +126,23 @@ JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "Fi
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti']
 
 # ================== Fungsi-Fungsi Helper ==================
-def hash_password(password):
-    return hashlib.sha256(password.encode()).hexdigest()
 
-def verify_user(username, password):
+# --- PERBAIKAN: Menggunakan metode login standar Supabase ---
+def verify_user_and_get_role(email, password):
+    """Verifikasi pengguna menggunakan Supabase Auth dan dapatkan perannya."""
     try:
-        hashed_pass = hash_password(password)
-        result = supabase.table("users").select("*").eq("username", username).single().execute()
-        if result.data and result.data['hashed_password'] == hashed_pass:
-            return result.data
+        # Coba login menggunakan email dan password
+        session = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        # Jika berhasil, dapatkan detail pengguna termasuk metadata
+        if session.user:
+            # Ambil peran dari user_metadata
+            role = session.user.user_metadata.get('role', 'operator') # Default 'operator' jika tidak ada
+            return {"role": role, "email": session.user.email}
     except Exception as e:
+        # Tangani error jika login gagal (misal: password salah)
         print(f"Authentication error: {e}")
         return None
     return None
@@ -175,7 +182,7 @@ def load_personnel_data():
 
 def logout():
     for key in list(st.session_state.keys()):
-        if key not in ['logged_in', 'user']:
+        if key not in ['logged_in', 'user_role', 'user_email']:
             del st.session_state[key]
     st.session_state.logged_in = False
     st.rerun()
@@ -371,22 +378,26 @@ if not st.session_state.get("logged_in"):
         
         with st.form("login_form"):
             st.markdown('<h3 style="color: #FFFFFF; text-align: center; border-bottom: none;">User Login</h3>', unsafe_allow_html=True)
-            username = st.text_input("Username", placeholder="e.g., admin", key="login_username").lower()
+            email = st.text_input("Email", placeholder="e.g., admin@example.com", key="login_email").lower()
             password = st.text_input("Password", type="password", placeholder="••••••••", key="login_password")
             
             if st.form_submit_button("Login"):
                 with st.spinner("Memverifikasi..."):
-                    user_data = verify_user(username, password)
+                    user_data = verify_user_and_get_role(email, password)
                 
                 if user_data:
                     st.session_state.logged_in = True
-                    st.session_state.user = user_data['role']
+                    st.session_state.user_email = user_data['email']
+                    st.session_state.user_role = user_data['role']
                     st.session_state.last_activity = datetime.now()
                     st.rerun()
                 else:
-                    st.error("Username atau password salah.")
+                    st.error("Email atau password salah.")
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
+
+# --- PERBAIKAN: Menggunakan st.session_state.user_role untuk pengecekan ---
+user_role = st.session_state.get("user_role", "operator")
 
 if 'last_activity' not in st.session_state or datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
     logout()
@@ -401,11 +412,12 @@ if 'Nama Pelaksana' in df.columns:
 
 with st.sidebar:
     st.title("Menu Navigasi")
-    st.write(f"Selamat datang, **{st.session_state.user}**!")
+    st.write(f"Selamat datang, **{st.session_state.get('user_email', 'Guest')}**!")
+    st.write(f"Peran: **{user_role.capitalize()}**")
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
     menu_options = ["Input Data", "Report Data", "Analisis FLM", "Absensi Personel"]
-    if st.session_state.user == 'admin':
+    if user_role == 'admin':
         menu_options.append("Kelola Personel")
 
     menu = st.radio(
@@ -417,7 +429,7 @@ with st.sidebar:
     if st.button("Logout"): logout()
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-if st.session_state.get('user') == 'operator':
+if user_role == 'operator':
     st.markdown("""<style>#MainMenu, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
 # ================== Logika Halaman ==================
@@ -490,12 +502,12 @@ elif menu == "Report Data":
             "Hapus": st.column_config.CheckboxColumn("Hapus?", help="Centang untuk menghapus."), 
             "ID": st.column_config.TextColumn("ID", disabled=True),
             "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY", disabled=True),
-            "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES, disabled=False if st.session_state.user == 'admin' else True),
-            "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if st.session_state.user == 'admin' else True),
+            "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES, disabled=False if user_role == 'admin' else True),
+            "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if user_role == 'admin' else True),
             "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"], disabled=True),
             "Nomor SR": st.column_config.TextColumn("Nomor SR", disabled=True),
-            "Nama Personel": st.column_config.TextColumn("Nama Personel", disabled=False if st.session_state.user == 'admin' else True),
-            "Keterangan": st.column_config.TextColumn("Keterangan", width="large", disabled=False if st.session_state.user == 'admin' else True),
+            "Nama Personel": st.column_config.TextColumn("Nama Personel", disabled=False if user_role == 'admin' else True),
+            "Keterangan": st.column_config.TextColumn("Keterangan", width="large", disabled=False if user_role == 'admin' else True),
             "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat", disabled=True),
             "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat", disabled=True),
         }
@@ -508,7 +520,7 @@ elif menu == "Report Data":
             column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Personel", "Keterangan", "Evidance", "Evidance After"]
         )
         
-        if st.session_state.get("data_editor") and st.session_state["data_editor"]["edited_rows"] and st.session_state.user == 'admin':
+        if st.session_state.get("data_editor") and st.session_state["data_editor"]["edited_rows"] and user_role == 'admin':
             edited_rows_data = st.session_state["data_editor"]["edited_rows"]
             
             if st.button("💾 Simpan Perubahan Data", use_container_width=True):
@@ -539,7 +551,7 @@ elif menu == "Report Data":
                         st.warning("Beberapa perubahan mungkin tidak tersimpan karena error.")
         
         rows_to_delete = edited_df[edited_df['Hapus'] == True]
-        if not rows_to_delete.empty and st.session_state.user == 'admin':
+        if not rows_to_delete.empty and user_role == 'admin':
             st.markdown('<div class="delete-button">', unsafe_allow_html=True)
             ids_to_delete = rows_to_delete['ID'].tolist()
             if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Baris Terpilih", use_container_width=True):
@@ -761,52 +773,55 @@ elif menu == "Absensi Personel":
         if filtered_df_abs.empty:
                 st.warning("Tidak ada data absensi pada rentang tanggal yang dipilih.")
         else:
-            # Data Hadir dan Tidak Hadir
-            df_hadir = filtered_df_abs[filtered_df_abs['status_absensi'] == 'Hadir']
-            df_absen = filtered_df_abs[filtered_df_abs['status_absensi'] != 'Hadir']
+            if 'nama_personel' in filtered_df_abs.columns:
+                # Data Hadir dan Tidak Hadir
+                df_hadir = filtered_df_abs[filtered_df_abs['status_absensi'] == 'Hadir']
+                df_absen = filtered_df_abs[filtered_df_abs['status_absensi'] != 'Hadir']
 
-            # --- Visualisasi Peringkat ---
-            col1, col2 = st.columns(2)
+                # --- Visualisasi Peringkat ---
+                col1, col2 = st.columns(2)
 
-            with col1:
-                st.subheader("✅ Peringkat Kehadiran")
-                if df_hadir.empty:
-                    st.info("Tidak ada data kehadiran.")
-                else:
-                    hadir_counts = df_hadir['nama_personel'].value_counts().reset_index()
-                    hadir_counts.columns = ['Nama Personel', 'Jumlah Hari Hadir']
-                    fig_bar_hadir = px.bar(
-                        hadir_counts.sort_values('Jumlah Hari Hadir'), 
-                        x='Jumlah Hari Hadir', 
-                        y='Nama Personel', 
-                        orientation='h', 
-                        text='Jumlah Hari Hadir',
-                        color='Jumlah Hari Hadir',
-                        color_continuous_scale=px.colors.sequential.Greens,
-                        template='plotly_dark',
-                        title="Top Kehadiran Personel"
-                    )
-                    st.plotly_chart(fig_bar_hadir, use_container_width=True)
+                with col1:
+                    st.subheader("✅ Peringkat Kehadiran")
+                    if df_hadir.empty:
+                        st.info("Tidak ada data kehadiran.")
+                    else:
+                        hadir_counts = df_hadir['nama_personel'].value_counts().reset_index()
+                        hadir_counts.columns = ['Nama Personel', 'Jumlah Hari Hadir']
+                        fig_bar_hadir = px.bar(
+                            hadir_counts.sort_values('Jumlah Hari Hadir'), 
+                            x='Jumlah Hari Hadir', 
+                            y='Nama Personel', 
+                            orientation='h', 
+                            text='Jumlah Hari Hadir',
+                            color='Jumlah Hari Hadir',
+                            color_continuous_scale=px.colors.sequential.Greens,
+                            template='plotly_dark',
+                            title="Top Kehadiran Personel"
+                        )
+                        st.plotly_chart(fig_bar_hadir, use_container_width=True)
 
-            with col2:
-                st.subheader("❌ Peringkat Ketidakhadiran")
-                if df_absen.empty:
-                    st.success("Tidak ada data ketidakhadiran.")
-                else:
-                    absen_counts = df_absen['nama_personel'].value_counts().reset_index()
-                    absen_counts.columns = ['Nama Personel', 'Jumlah Hari Tidak Hadir']
-                    fig_bar_absen = px.bar(
-                        absen_counts.sort_values('Jumlah Hari Tidak Hadir'), 
-                        x='Jumlah Hari Tidak Hadir', 
-                        y='Nama Personel', 
-                        orientation='h', 
-                        text='Jumlah Hari Tidak Hadir',
-                        color='Jumlah Hari Tidak Hadir',
-                        color_continuous_scale=px.colors.sequential.Reds,
-                        template='plotly_dark',
-                        title="Top Ketidakhadiran Personel"
-                    )
-                    st.plotly_chart(fig_bar_absen, use_container_width=True)
+                with col2:
+                    st.subheader("❌ Peringkat Ketidakhadiran")
+                    if df_absen.empty:
+                        st.success("Tidak ada data ketidakhadiran.")
+                    else:
+                        absen_counts = df_absen['nama_personel'].value_counts().reset_index()
+                        absen_counts.columns = ['Nama Personel', 'Jumlah Hari Tidak Hadir']
+                        fig_bar_absen = px.bar(
+                            absen_counts.sort_values('Jumlah Hari Tidak Hadir'), 
+                            x='Jumlah Hari Tidak Hadir', 
+                            y='Nama Personel', 
+                            orientation='h', 
+                            text='Jumlah Hari Tidak Hadir',
+                            color='Jumlah Hari Tidak Hadir',
+                            color_continuous_scale=px.colors.sequential.Reds,
+                            template='plotly_dark',
+                            title="Top Ketidakhadiran Personel"
+                        )
+                        st.plotly_chart(fig_bar_absen, use_container_width=True)
+            else:
+                st.error("Kolom 'nama_personel' tidak ditemukan dalam data absensi. Mohon periksa nama kolom di tabel 'absensi' pada Supabase.")
 
             # Tabel Data Detail
             st.markdown("---")
@@ -825,8 +840,8 @@ elif menu == "Kelola Personel" and st.session_state.user == 'admin':
 
     # --- Form Tambah Personel Baru ---
     with st.expander("➕ Tambah Personel Baru"):
-        with st.form("add_personnel_form", clear_on_submit=True):
-            new_name = st.text_input("Nama Personel Baru")
+        with st.form("add_personnel_form"):
+            new_name = st.text_input("Nama Personel Baru", key="new_personnel_name")
             if st.form_submit_button("Simpan Personel"):
                 if new_name:
                     try:
