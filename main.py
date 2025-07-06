@@ -123,7 +123,6 @@ def init_connection():
     return create_client(url, key)
 supabase = init_connection()
 JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )", "Corrective Maintenance", "Preventive Maintenance"]
-# --- PERUBAHAN: Menambahkan "Tukar Dinas" ---
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'Tukar Dinas']
 
 # ================== Fungsi-Fungsi Helper ==================
@@ -816,7 +815,7 @@ elif menu == "Absensi Personel":
                                 'Sakit': '#E74C3C',
                                 'Izin': '#F39C12',
                                 'Cuti': '#9B59B6',
-                                'Tukar Dinas': '#85929E' # Warna baru
+                                'Tukar Dinas': '#85929E'
                             }
                         )
                         fig_bar_absen.update_layout(barmode='stack', yaxis={'categoryorder':'total ascending'})
