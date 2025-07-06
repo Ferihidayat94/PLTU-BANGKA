@@ -126,23 +126,13 @@ JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "Fi
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti']
 
 # ================== Fungsi-Fungsi Helper ==================
-
-# --- PERBAIKAN: Menggunakan metode login standar Supabase ---
 def verify_user_and_get_role(email, password):
-    """Verifikasi pengguna menggunakan Supabase Auth dan dapatkan perannya."""
     try:
-        # Coba login menggunakan email dan password
-        session = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
-        # Jika berhasil, dapatkan detail pengguna termasuk metadata
+        session = supabase.auth.sign_in_with_password({"email": email, "password": password})
         if session.user:
-            # Ambil peran dari user_metadata
-            role = session.user.user_metadata.get('role', 'operator') # Default 'operator' jika tidak ada
+            role = session.user.user_metadata.get('role', 'operator')
             return {"role": role, "email": session.user.email}
     except Exception as e:
-        # Tangani error jika login gagal (misal: password salah)
         print(f"Authentication error: {e}")
         return None
     return None
@@ -823,10 +813,70 @@ elif menu == "Absensi Personel":
 
             st.markdown("---")
             st.subheader("📋 Detail Data Absensi")
-            st.dataframe(
-                filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi', 'keterangan']].sort_values('tanggal', ascending=False),
-                use_container_width=True
-            )
+            
+            # --- PERUBAHAN: Mengganti st.dataframe dengan st.data_editor untuk Admin ---
+            if user_role == 'admin':
+                st.info("Anda dapat mengedit atau menghapus data absensi di bawah ini.")
+                # Tambahkan kolom 'Hapus'
+                filtered_df_abs['Hapus'] = False
+                
+                edited_abs_df = st.data_editor(
+                    filtered_df_abs[['id', 'tanggal', 'nama_personel', 'status_absensi', 'keterangan', 'Hapus']],
+                    column_config={
+                        "id": st.column_config.NumberColumn("ID", disabled=True),
+                        "tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY"),
+                        "nama_personel": st.column_config.SelectboxColumn("Nama Personel", options=load_personnel_data()['nama'].tolist()),
+                        "status_absensi": st.column_config.SelectboxColumn("Status", options=ABSENSI_STATUS),
+                        "keterangan": st.column_config.TextColumn("Keterangan"),
+                        "Hapus": st.column_config.CheckboxColumn("Hapus?")
+                    },
+                    use_container_width=True,
+                    hide_index=True,
+                    key="absensi_editor"
+                )
+
+                save_col, delete_col = st.columns(2)
+                with save_col:
+                    if st.button("💾 Simpan Perubahan Absensi"):
+                        changes = st.session_state.absensi_editor.get("edited_rows", {})
+                        if not changes:
+                            st.info("Tidak ada perubahan untuk disimpan.")
+                        else:
+                            with st.spinner("Menyimpan perubahan..."):
+                                success = True
+                                for row_idx, changed_data in changes.items():
+                                    absensi_id = edited_abs_df.iloc[row_idx]['id']
+                                    try:
+                                        supabase.table("absensi").update(changed_data).eq("id", absensi_id).execute()
+                                    except Exception as e:
+                                        st.error(f"Gagal update absensi ID {absensi_id}: {e}")
+                                        success = False
+                                if success:
+                                    st.cache_data.clear()
+                                    st.success("Perubahan absensi berhasil disimpan.")
+                                    st.rerun()
+                
+                with delete_col:
+                    rows_to_delete = edited_abs_df[edited_abs_df['Hapus']]
+                    if not rows_to_delete.empty:
+                        ids_to_delete = rows_to_delete['id'].tolist()
+                        st.markdown('<div class="delete-button">', unsafe_allow_html=True)
+                        if st.button(f"🗑️ Hapus ({len(ids_to_delete)}) Absensi Terpilih"):
+                            with st.spinner("Menghapus absensi..."):
+                                try:
+                                    supabase.table("absensi").delete().in_("id", ids_to_delete).execute()
+                                    st.cache_data.clear()
+                                    st.success("Data absensi terpilih berhasil dihapus.")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal menghapus absensi: {e}")
+                        st.markdown('</div>', unsafe_allow_html=True)
+
+            else: # Untuk operator, tetap tampilkan read-only
+                st.dataframe(
+                    filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi', 'keterangan']].sort_values('tanggal', ascending=False),
+                    use_container_width=True
+                )
 
 # === HALAMAN BARU: KELOLA PERSONEL (HANYA ADMIN) ===
 elif menu == "Kelola Personel" and user_role == 'admin':
