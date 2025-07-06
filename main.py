@@ -814,10 +814,8 @@ elif menu == "Absensi Personel":
             st.markdown("---")
             st.subheader("📋 Detail Data Absensi")
             
-            # --- PERUBAHAN: Mengganti st.dataframe dengan st.data_editor untuk Admin ---
             if user_role == 'admin':
                 st.info("Anda dapat mengedit atau menghapus data absensi di bawah ini.")
-                # Tambahkan kolom 'Hapus'
                 filtered_df_abs['Hapus'] = False
                 
                 edited_abs_df = st.data_editor(
@@ -872,9 +870,10 @@ elif menu == "Absensi Personel":
                                     st.error(f"Gagal menghapus absensi: {e}")
                         st.markdown('</div>', unsafe_allow_html=True)
 
-            else: # Untuk operator, tetap tampilkan read-only
+            else: 
+                # --- PERUBAHAN: Menyembunyikan kolom 'keterangan' untuk operator ---
                 st.dataframe(
-                    filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi', 'keterangan']].sort_values('tanggal', ascending=False),
+                    filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi']].sort_values('tanggal', ascending=False),
                     use_container_width=True
                 )
 
