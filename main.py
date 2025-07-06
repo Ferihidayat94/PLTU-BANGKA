@@ -705,8 +705,8 @@ elif menu == "Absensi Personel":
     st.header("🗓️ Input & Dashboard Absensi Personel")
 
     # --- Bagian Input Absensi ---
+    # --- PERBAIKAN: Menambahkan form input absensi massal ---
     if user_role == 'admin':
-        # --- PERUBAHAN: Menambahkan form input absensi massal ---
         with st.expander("✅ **Input Absensi Massal (Hadir)**", expanded=True):
             df_personnel = load_personnel_data()
             personnel_list = df_personnel['nama'].tolist() if not df_personnel.empty else []
