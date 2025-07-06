@@ -164,7 +164,6 @@ def load_absensi_data():
         st.error(f"Gagal mengambil data absensi dari database: {e}")
         return pd.DataFrame()
 
-# === FUNGSI BARU UNTUK MEMUAT DATA PERSONEL DARI TABEL 'personel' ===
 @st.cache_data(ttl=300)
 def load_personnel_data():
     try:
@@ -217,7 +216,6 @@ def upload_image_to_storage(uploaded_file):
         st.error(f"Gagal upload gambar: {e}")
         return ""
 
-# --- FUNGSI UNTUK EXCEL REPORT DENGAN GAMBAR ---
 def create_excel_report_with_images(filtered_data):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -394,7 +392,6 @@ if 'last_activity' not in st.session_state or datetime.now() - st.session_state.
     logout()
 st.session_state.last_activity = datetime.now()
 
-# Ganti nama kolom di DataFrame utama
 if 'data' not in st.session_state:
     st.session_state.data = load_data_from_db()
 df = st.session_state.data.copy()
@@ -407,10 +404,9 @@ with st.sidebar:
     st.write(f"Selamat datang, **{st.session_state.user}**!")
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
-    # === PERUBAHAN MENU SIDEBAR ===
     menu_options = ["Input Data", "Report Data", "Analisis FLM", "Absensi Personel"]
     if st.session_state.user == 'admin':
-        menu_options.append("Kelola Personel") # Menu Kelola Personel hanya untuk admin
+        menu_options.append("Kelola Personel")
 
     menu = st.radio(
         "Pilih Halaman:", 
@@ -421,7 +417,6 @@ with st.sidebar:
     if st.button("Logout"): logout()
     st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-# PERBAIKAN UNTUK OPERATOR: Hanya sembunyikan #MainMenu dan footer, BIARKAN header.
 if st.session_state.get('user') == 'operator':
     st.markdown("""<style>#MainMenu, footer {visibility: hidden;}</style>""", unsafe_allow_html=True)
 
@@ -436,7 +431,7 @@ if menu == "Input Data":
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
-            nama_personel = st.text_input("Nama Personel") # Ganti label
+            nama_personel = st.text_input("Nama Personel")
             status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
             keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
         
@@ -450,7 +445,6 @@ if menu == "Input Data":
                 st.error("Mohon isi semua field yang wajib.")
             else:
                 with st.spinner("Menyimpan data..."):
-                    # Ambil data pekerjaan untuk generate ID baru
                     job_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
                     new_id = generate_next_id(job_ids_df, jenis)
                     
@@ -459,7 +453,7 @@ if menu == "Input Data":
                     
                     new_job_data = {
                         "ID": new_id, "Tanggal": str(tanggal), "Jenis": jenis, "Area": area, "Nomor SR": nomor_sr, 
-                        "Nama Pelaksana": nama_personel, # Kolom di DB tetap 'Nama Pelaksana'
+                        "Nama Pelaksana": nama_personel,
                         "Keterangan": keterangan, "Status": status, 
                         "Evidance": evidance_url, "Evidance After": evidance_after_url
                     }
@@ -500,7 +494,7 @@ elif menu == "Report Data":
             "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if st.session_state.user == 'admin' else True),
             "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"], disabled=True),
             "Nomor SR": st.column_config.TextColumn("Nomor SR", disabled=True),
-            "Nama Personel": st.column_config.TextColumn("Nama Personel", disabled=False if st.session_state.user == 'admin' else True), # Ganti label
+            "Nama Personel": st.column_config.TextColumn("Nama Personel", disabled=False if st.session_state.user == 'admin' else True),
             "Keterangan": st.column_config.TextColumn("Keterangan", width="large", disabled=False if st.session_state.user == 'admin' else True),
             "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat", disabled=True),
             "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat", disabled=True),
@@ -524,7 +518,6 @@ elif menu == "Report Data":
                         original_id = data_to_display.loc[idx, 'ID']
                         update_payload = {}
                         for col_name, new_value in changes.items():
-                            # Ganti nama kolom kembali ke nama di DB sebelum mengirim
                             if col_name == 'Nama Personel':
                                 update_payload['Nama Pelaksana'] = new_value
                             else:
@@ -766,7 +759,7 @@ elif menu == "Absensi Personel":
         filtered_df_abs = df_absensi[mask_abs]
 
         if filtered_df_abs.empty:
-             st.warning("Tidak ada data absensi pada rentang tanggal yang dipilih.")
+                st.warning("Tidak ada data absensi pada rentang tanggal yang dipilih.")
         else:
             # Data Hadir dan Tidak Hadir
             df_hadir = filtered_df_abs[filtered_df_abs['status_absensi'] == 'Hadir']
