@@ -126,14 +126,9 @@ JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "Fi
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti']
 
 # ================== Fungsi-Fungsi Helper ==================
-
 def verify_user_and_get_role(email, password):
-    """Verifikasi pengguna menggunakan Supabase Auth dan dapatkan perannya."""
     try:
-        session = supabase.auth.sign_in_with_password({
-            "email": email,
-            "password": password
-        })
+        session = supabase.auth.sign_in_with_password({"email": email, "password": password})
         if session.user:
             role = session.user.user_metadata.get('role', 'operator')
             return {"role": role, "email": session.user.email}
@@ -752,20 +747,25 @@ elif menu == "Absensi Personel":
         st.info("Belum ada data absensi untuk ditampilkan.")
     else:
         df_absensi['tanggal'] = pd.to_datetime(df_absensi['tanggal']).dt.tz_localize(None)
-        min_date_abs, max_date_abs = df_absensi['tanggal'].min().date(), df_absensi['tanggal'].max().date()
         
-        # Filter
-        filter_col1, filter_col2 = st.columns(2)
-        with filter_col1:
-            start_date_abs = st.date_input("Dari Tanggal", min_date_abs, key="absensi_start_date")
-        with filter_col2:
-            end_date_abs = st.date_input("Sampai Tanggal", max_date_abs, key="absensi_end_date")
+        # --- PERBAIKAN: Filter berdasarkan Bulan dan Tahun ---
+        col1, col2 = st.columns(2)
+        with col1:
+            # Buat daftar tahun unik dari data
+            year_options = sorted(df_absensi['tanggal'].dt.year.unique(), reverse=True)
+            selected_year = st.selectbox("Pilih Tahun:", year_options)
+        with col2:
+            # Buat daftar bulan unik dari data
+            month_dict = {1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"}
+            month_options = sorted(df_absensi[df_absensi['tanggal'].dt.year == selected_year]['tanggal'].dt.month.unique())
+            selected_month_num = st.selectbox("Pilih Bulan:", month_options, format_func=lambda x: month_dict[x])
         
-        mask_abs = (df_absensi['tanggal'].dt.date >= start_date_abs) & (df_absensi['tanggal'].dt.date <= end_date_abs)
+        # Terapkan filter
+        mask_abs = (df_absensi['tanggal'].dt.year == selected_year) & (df_absensi['tanggal'].dt.month == selected_month_num)
         filtered_df_abs = df_absensi[mask_abs]
 
         if filtered_df_abs.empty:
-                st.warning("Tidak ada data absensi pada rentang tanggal yang dipilih.")
+                st.warning("Tidak ada data absensi pada bulan dan tahun yang dipilih.")
         else:
             if 'nama_personel' in filtered_df_abs.columns:
                 # Data Hadir dan Tidak Hadir
@@ -773,9 +773,9 @@ elif menu == "Absensi Personel":
                 df_absen = filtered_df_abs[filtered_df_abs['status_absensi'] != 'Hadir']
 
                 # --- Visualisasi Peringkat ---
-                col1, col2 = st.columns(2)
+                col1_chart, col2_chart = st.columns(2)
 
-                with col1:
+                with col1_chart:
                     st.subheader("✅ Peringkat Kehadiran")
                     if df_hadir.empty:
                         st.info("Tidak ada data kehadiran.")
@@ -791,11 +791,11 @@ elif menu == "Absensi Personel":
                             color='Jumlah Hari Hadir',
                             color_continuous_scale=px.colors.sequential.Greens,
                             template='plotly_dark',
-                            title="Top Kehadiran Personel"
+                            title=f"Top Kehadiran Personel - {month_dict[selected_month_num]} {selected_year}"
                         )
                         st.plotly_chart(fig_bar_hadir, use_container_width=True)
 
-                with col2:
+                with col2_chart:
                     st.subheader("❌ Peringkat Ketidakhadiran")
                     if df_absen.empty:
                         st.success("Tidak ada data ketidakhadiran.")
@@ -811,7 +811,7 @@ elif menu == "Absensi Personel":
                             color='Jumlah Hari Tidak Hadir',
                             color_continuous_scale=px.colors.sequential.Reds,
                             template='plotly_dark',
-                            title="Top Ketidakhadiran Personel"
+                            title=f"Top Ketidakhadiran Personel - {month_dict[selected_month_num]} {selected_year}"
                         )
                         st.plotly_chart(fig_bar_absen, use_container_width=True)
             else:
