@@ -706,36 +706,74 @@ elif menu == "Absensi Personel":
 
     # --- Bagian Input Absensi ---
     if user_role == 'admin':
-        with st.expander("📝 **Input Absensi Baru**", expanded=True):
+        # --- PERUBAHAN: Menambahkan form input absensi massal ---
+        with st.expander("✅ **Input Absensi Massal (Hadir)**", expanded=True):
             df_personnel = load_personnel_data()
             personnel_list = df_personnel['nama'].tolist() if not df_personnel.empty else []
-
+            
             if not personnel_list:
                 st.warning("Daftar personel kosong. Harap isi data di halaman 'Kelola Personel' terlebih dahulu.")
+            else:
+                with st.form("mass_absensi_form"):
+                    col1, col2 = st.columns([3, 1])
+                    with col1:
+                        selected_personnel = st.multiselect("Pilih Personel yang Hadir:", options=personnel_list, default=personnel_list)
+                    with col2:
+                        tanggal_massal = st.date_input("Untuk Tanggal", date.today())
+                    
+                    submitted_massal = st.form_submit_button("Simpan Kehadiran Massal")
+                    if submitted_massal:
+                        if not selected_personnel:
+                            st.warning("Mohon pilih setidaknya satu personel.")
+                        else:
+                            with st.spinner(f"Menyimpan {len(selected_personnel)} data kehadiran..."):
+                                records_to_insert = []
+                                for name in selected_personnel:
+                                    records_to_insert.append({
+                                        "tanggal": str(tanggal_massal),
+                                        "nama_personel": name,
+                                        "status_absensi": "Hadir",
+                                        "keterangan": ""
+                                    })
+                                try:
+                                    supabase.table("absensi").upsert(records_to_insert, on_conflict="tanggal,nama_personel").execute()
+                                    st.cache_data.clear()
+                                    st.success("Data kehadiran massal berhasil disimpan!")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal menyimpan data massal: {e}")
+
+        with st.expander("📝 Input Absensi Individual (Sakit, Izin, Cuti, dll)"):
+            if not personnel_list:
+                st.info("Daftar personel kosong.")
             else:
                 with st.form("absensi_form", clear_on_submit=True):
                     col1, col2 = st.columns(2)
                     with col1:
-                        tanggal_absensi = st.date_input("Tanggal Absensi", date.today())
-                        nama_personel_absensi = st.selectbox("Nama Personel", options=personnel_list)
+                        tanggal_absensi = st.date_input("Tanggal Absensi", date.today(), key="ind_date")
+                        nama_personel_absensi = st.selectbox("Nama Personel", options=personnel_list, key="ind_name")
                     with col2:
-                        status_absensi = st.selectbox("Status Kehadiran", options=ABSENSI_STATUS)
-                        keterangan_absensi = st.text_area("Keterangan (jika Izin/Sakit/Cuti)")
+                        status_absensi = st.selectbox("Status Kehadiran", options=[s for s in ABSENSI_STATUS if s != 'Hadir'], key="ind_status")
+                        keterangan_absensi = st.text_area("Keterangan (wajib diisi)", key="ind_ket")
 
-                    submitted = st.form_submit_button("Simpan Absensi")
+                    submitted = st.form_submit_button("Simpan Absensi Individual")
                     if submitted:
-                        with st.spinner("Menyimpan data absensi..."):
-                            try:
-                                supabase.table("absensi").insert({
-                                    "tanggal": str(tanggal_absensi),
-                                    "nama_personel": nama_personel_absensi,
-                                    "status_absensi": status_absensi,
-                                    "keterangan": keterangan_absensi
-                                }).execute()
-                                st.cache_data.clear()
-                                st.success(f"Absensi untuk '{nama_personel_absensi}' pada tanggal {tanggal_absensi.strftime('%d-%m-%Y')} berhasil disimpan.")
-                            except Exception as e:
-                                st.error(f"Gagal menyimpan absensi: {e}")
+                        if not keterangan_absensi:
+                            st.warning("Keterangan wajib diisi untuk status selain Hadir.")
+                        else:
+                            with st.spinner("Menyimpan data absensi..."):
+                                try:
+                                    supabase.table("absensi").upsert({
+                                        "tanggal": str(tanggal_absensi),
+                                        "nama_personel": nama_personel_absensi,
+                                        "status_absensi": status_absensi,
+                                        "keterangan": keterangan_absensi
+                                    }, on_conflict="tanggal,nama_personel").execute()
+                                    st.cache_data.clear()
+                                    st.success(f"Absensi untuk '{nama_personel_absensi}' berhasil disimpan.")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Gagal menyimpan absensi: {e}")
     
     st.markdown("---")
 
