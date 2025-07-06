@@ -748,20 +748,30 @@ elif menu == "Absensi Personel":
     else:
         df_absensi['tanggal'] = pd.to_datetime(df_absensi['tanggal']).dt.tz_localize(None)
         
+        # --- PERBAIKAN: Menambahkan opsi "Semua Bulan" ---
         col1, col2 = st.columns(2)
         with col1:
             year_options = sorted(df_absensi['tanggal'].dt.year.unique(), reverse=True)
             selected_year = st.selectbox("Pilih Tahun:", year_options)
         with col2:
             month_dict = {1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"}
-            month_options = sorted(df_absensi[df_absensi['tanggal'].dt.year == selected_year]['tanggal'].dt.month.unique())
-            selected_month_num = st.selectbox("Pilih Bulan:", month_options, format_func=lambda x: month_dict[x])
+            # Dapatkan bulan yang tersedia untuk tahun yang dipilih
+            available_months = sorted(df_absensi[df_absensi['tanggal'].dt.year == selected_year]['tanggal'].dt.month.unique())
+            # Buat opsi, tambahkan "Semua Bulan" di awal
+            month_options_display = ["Semua Bulan"] + [month_dict[m] for m in available_months]
+            selected_month_str = st.selectbox("Pilih Bulan:", month_options_display)
         
-        mask_abs = (df_absensi['tanggal'].dt.year == selected_year) & (df_absensi['tanggal'].dt.month == selected_month_num)
+        # Terapkan filter
+        mask_abs = (df_absensi['tanggal'].dt.year == selected_year)
+        if selected_month_str != "Semua Bulan":
+            # Cari nomor bulan dari nama bulan yang dipilih
+            selected_month_num = [k for k, v in month_dict.items() if v == selected_month_str][0]
+            mask_abs &= (df_absensi['tanggal'].dt.month == selected_month_num)
+        
         filtered_df_abs = df_absensi[mask_abs]
 
         if filtered_df_abs.empty:
-                st.warning("Tidak ada data absensi pada bulan dan tahun yang dipilih.")
+                st.warning("Tidak ada data absensi pada periode yang dipilih.")
         else:
             if 'nama_personel' in filtered_df_abs.columns:
                 df_hadir = filtered_df_abs[filtered_df_abs['status_absensi'] == 'Hadir']
@@ -785,7 +795,7 @@ elif menu == "Absensi Personel":
                             color='Jumlah Hari Hadir',
                             color_continuous_scale=px.colors.sequential.Greens,
                             template='plotly_dark',
-                            title=f"Top Kehadiran Personel - {month_dict[selected_month_num]} {selected_year}"
+                            title=f"Top Kehadiran - {selected_month_str} {selected_year}"
                         )
                         st.plotly_chart(fig_bar_hadir, use_container_width=True)
 
@@ -794,19 +804,25 @@ elif menu == "Absensi Personel":
                     if df_absen.empty:
                         st.success("Tidak ada data ketidakhadiran.")
                     else:
-                        absen_counts = df_absen['nama_personel'].value_counts().reset_index()
-                        absen_counts.columns = ['Nama Personel', 'Jumlah Hari Tidak Hadir']
+                        # --- PERBAIKAN: Membuat stacked bar chart ---
+                        absen_counts = df_absen.groupby(['nama_personel', 'status_absensi']).size().reset_index(name='Jumlah Hari')
+                        
                         fig_bar_absen = px.bar(
-                            absen_counts.sort_values('Jumlah Hari Tidak Hadir'), 
-                            x='Jumlah Hari Tidak Hadir', 
-                            y='Nama Personel', 
-                            orientation='h', 
-                            text='Jumlah Hari Tidak Hadir',
-                            color='Jumlah Hari Tidak Hadir',
-                            color_continuous_scale=px.colors.sequential.Reds,
+                            absen_counts, 
+                            x='Jumlah Hari', 
+                            y='nama_personel', 
+                            color='status_absensi',
+                            orientation='h',
+                            title=f"Detail Ketidakhadiran - {selected_month_str} {selected_year}",
+                            labels={'nama_personel': 'Nama Personel', 'Jumlah Hari': 'Jumlah Hari Tidak Hadir'},
                             template='plotly_dark',
-                            title=f"Top Ketidakhadiran Personel - {month_dict[selected_month_num]} {selected_year}"
+                            color_discrete_map={
+                                'Sakit': '#E74C3C',
+                                'Izin': '#F39C12',
+                                'Cuti': '#9B59B6'
+                            }
                         )
+                        fig_bar_absen.update_layout(barmode='stack', yaxis={'categoryorder':'total ascending'})
                         st.plotly_chart(fig_bar_absen, use_container_width=True)
             else:
                 st.error("Kolom 'nama_personel' tidak ditemukan dalam data absensi. Mohon periksa nama kolom di tabel 'absensi' pada Supabase.")
@@ -871,7 +887,6 @@ elif menu == "Absensi Personel":
                         st.markdown('</div>', unsafe_allow_html=True)
 
             else: 
-                # --- PERUBAHAN: Menyembunyikan kolom 'keterangan' untuk operator ---
                 st.dataframe(
                     filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi']].sort_values('tanggal', ascending=False),
                     use_container_width=True
