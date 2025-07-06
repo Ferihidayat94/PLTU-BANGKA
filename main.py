@@ -127,22 +127,17 @@ ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti']
 
 # ================== Fungsi-Fungsi Helper ==================
 
-# --- PERBAIKAN: Menggunakan metode login standar Supabase ---
 def verify_user_and_get_role(email, password):
     """Verifikasi pengguna menggunakan Supabase Auth dan dapatkan perannya."""
     try:
-        # Coba login menggunakan email dan password
         session = supabase.auth.sign_in_with_password({
             "email": email,
             "password": password
         })
-        # Jika berhasil, dapatkan detail pengguna termasuk metadata
         if session.user:
-            # Ambil peran dari user_metadata
-            role = session.user.user_metadata.get('role', 'operator') # Default 'operator' jika tidak ada
+            role = session.user.user_metadata.get('role', 'operator')
             return {"role": role, "email": session.user.email}
     except Exception as e:
-        # Tangani error jika login gagal (misal: password salah)
         print(f"Authentication error: {e}")
         return None
     return None
@@ -396,7 +391,6 @@ if not st.session_state.get("logged_in"):
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
-# --- PERBAIKAN: Menggunakan st.session_state.user_role untuk pengecekan ---
 user_role = st.session_state.get("user_role", "operator")
 
 if 'last_activity' not in st.session_state or datetime.now() - st.session_state.last_activity > timedelta(minutes=30):
@@ -832,7 +826,7 @@ elif menu == "Absensi Personel":
             )
 
 # === HALAMAN BARU: KELOLA PERSONEL (HANYA ADMIN) ===
-elif menu == "Kelola Personel" and st.session_state.user == 'admin':
+elif menu == "Kelola Personel" and user_role == 'admin':
     st.header("👥 Kelola Daftar Personel")
     
     # Muat data personel
