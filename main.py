@@ -34,7 +34,7 @@ st.markdown(
         .stApp {
             background-color: #021021;
             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
-                                linear-gradient(to top, #062b54, #021021);
+                              linear-gradient(to top, #062b54, #021021);
             background-attachment: fixed;
             color: #ECF0F1;
         }
@@ -140,7 +140,7 @@ def verify_user_and_get_role(email, password):
 @st.cache_data(ttl=600)
 def load_data_from_db():
     try:
-        response = supabase.table('jobs').select('*').order('created_at', desc=True).execute()
+        response = supabase.table('jobs').select('*').order('created_at', desc=True).limit(50000).execute() # --- PERBAIKAN ---
         df = pd.DataFrame(response.data)
         if 'Tanggal' in df.columns and not df.empty:
             df['Tanggal'] = pd.to_datetime(df['Tanggal'])
@@ -152,7 +152,7 @@ def load_data_from_db():
 @st.cache_data(ttl=300)
 def load_absensi_data():
     try:
-        response = supabase.table('absensi').select('*').order('tanggal', desc=True).execute()
+        response = supabase.table('absensi').select('*').order('tanggal', desc=True).limit(50000).execute() # --- PERBAIKAN ---
         df = pd.DataFrame(response.data)
         if 'tanggal' in df.columns and not df.empty:
             df['tanggal'] = pd.to_datetime(df['tanggal'])
@@ -792,9 +792,10 @@ elif menu == "Absensi Personel":
             selected_year = st.selectbox("Pilih Tahun:", year_options)
         with col2:
             month_dict = {1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"}
-            available_months = sorted(df_absensi[df_absensi['tanggal'].dt.year == selected_year]['tanggal'].dt.month.unique())
-            month_options_display = ["Semua Bulan"] + [month_dict[m] for m in available_months]
-            selected_month_str = st.selectbox("Pilih Bulan:", month_options_display)
+            
+            # Menggunakan daftar bulan yang statis agar semua bulan selalu tampil
+            all_month_options = ["Semua Bulan"] + list(month_dict.values())
+            selected_month_str = st.selectbox("Pilih Bulan:", all_month_options)
         
         mask_abs = (df_absensi['tanggal'].dt.year == selected_year)
         if selected_month_str != "Semua Bulan":
