@@ -140,7 +140,7 @@ def verify_user_and_get_role(email, password):
 @st.cache_data(ttl=600)
 def load_data_from_db():
     try:
-        response = supabase.table('jobs').select('*').order('created_at', desc=True).limit(50000).execute() # --- PERBAIKAN ---
+        response = supabase.table('jobs').select('*').order('created_at', desc=True).limit(50000).execute() # --- PERBAIKAN 1 ---
         df = pd.DataFrame(response.data)
         if 'Tanggal' in df.columns and not df.empty:
             df['Tanggal'] = pd.to_datetime(df['Tanggal'])
@@ -152,7 +152,7 @@ def load_data_from_db():
 @st.cache_data(ttl=300)
 def load_absensi_data():
     try:
-        response = supabase.table('absensi').select('*').order('tanggal', desc=True).limit(50000).execute() # --- PERBAIKAN ---
+        response = supabase.table('absensi').select('*').order('tanggal', desc=True).limit(50000).execute() # --- PERBAIKAN 1 ---
         df = pd.DataFrame(response.data)
         if 'tanggal' in df.columns and not df.empty:
             df['tanggal'] = pd.to_datetime(df['tanggal'])
@@ -705,7 +705,6 @@ elif menu == "Absensi Personel":
     st.header("🗓️ Input & Dashboard Absensi Personel")
 
     # --- Bagian Input Absensi ---
-    # --- PERBAIKAN: Menambahkan form input absensi massal ---
     if user_role == 'admin':
         with st.expander("✅ **Input Absensi Massal (Hadir)**", expanded=True):
             df_personnel = load_personnel_data()
@@ -792,8 +791,6 @@ elif menu == "Absensi Personel":
             selected_year = st.selectbox("Pilih Tahun:", year_options)
         with col2:
             month_dict = {1: "Januari", 2: "Februari", 3: "Maret", 4: "April", 5: "Mei", 6: "Juni", 7: "Juli", 8: "Agustus", 9: "September", 10: "Oktober", 11: "November", 12: "Desember"}
-            
-            # Menggunakan daftar bulan yang statis agar semua bulan selalu tampil
             all_month_options = ["Semua Bulan"] + list(month_dict.values())
             selected_month_str = st.selectbox("Pilih Bulan:", all_month_options)
         
@@ -831,7 +828,7 @@ elif menu == "Absensi Personel":
                             template='plotly_dark',
                             title=f"Top Kehadiran - {selected_month_str} {selected_year}"
                         )
-                        fig_bar_hadir.update_xaxes(dtick=1)
+                        # fig_bar_hadir.update_xaxes(dtick=1) # --- PERBAIKAN 2: Baris ini dihapus agar label tidak tumpang tindih ---
                         st.plotly_chart(fig_bar_hadir, use_container_width=True)
 
                 with col2_chart:
