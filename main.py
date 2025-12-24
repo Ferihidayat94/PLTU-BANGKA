@@ -20,7 +20,7 @@ import plotly.express as px
 # ================== Konfigurasi Halaman Streamlit ==================
 st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 
-# ================== CSS Kustom (Tetap Sesuai Versi Asli) ==================
+# ================== CSS Kustom ==================
 st.markdown(
     """
     <style>
@@ -88,7 +88,7 @@ supabase = init_connection()
 JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )", "Corrective Maintenance", "Preventive Maintenance"]
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'Tukar Dinas']
 
-# ================== Fungsi-Fungsi Helper (VERSI LENGKAP) ==================
+# ================== Fungsi-Fungsi Helper ==================
 def verify_user_and_get_role(email, password):
     try:
         session = supabase.auth.sign_in_with_password({"email": email, "password": password})
@@ -96,7 +96,6 @@ def verify_user_and_get_role(email, password):
             role = session.user.user_metadata.get('role', 'operator')
             return {"role": role, "email": session.user.email}
     except Exception as e:
-        print(f"Authentication error: {e}")
         return None
     return None
 
@@ -121,7 +120,6 @@ def load_absensi_data():
             df['tanggal'] = pd.to_datetime(df['tanggal'])
         return df
     except Exception as e:
-        st.error(f"Gagal mengambil data absensi: {e}")
         return pd.DataFrame()
 
 @st.cache_data(ttl=300)
@@ -129,8 +127,7 @@ def load_personnel_data():
     try:
         response = supabase.table('personel').select('id, nama').order('nama', desc=False).execute()
         return pd.DataFrame(response.data)
-    except Exception as e:
-        st.error(f"Gagal mengambil daftar personel: {e}")
+    except Exception:
         return pd.DataFrame(columns=['id', 'nama'])
 
 def logout():
@@ -168,9 +165,7 @@ def upload_image_to_storage(uploaded_file):
         file_name = f"{uuid.uuid4()}.jpeg"
         supabase.storage.from_("evidences").upload(file=output_buffer.getvalue(), path=file_name, file_options={"content-type": "image/jpeg"})
         return supabase.storage.from_("evidences").get_public_url(file_name)
-    except Exception as e:
-        st.error(f"Gagal upload gambar: {e}")
-        return ""
+    except Exception: return ""
 
 def create_excel_report_with_images(filtered_data):
     output = io.BytesIO()
@@ -213,8 +208,20 @@ def create_pdf_report(filtered_data, report_type):
     doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
     styles = getSampleStyleSheet()
     styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10, textColor=colors.HexColor('#2C3E50')))
+    styles.add(ParagraphStyle(name='Header', alignment=TA_LEFT, textColor=colors.HexColor('#2C3E50')))
     elements = []
     
+    # Logo di PDF
+    try:
+        logo_path = "logo.png"
+        if os.path.exists(logo_path):
+            header_text = "<b>PT PLN NUSANTARA POWER SERVICES</b><br/>Unit PLTU Bangka"
+            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch, hAlign='LEFT')
+            header_table = Table([[logo_img, Paragraph(header_text, styles['Header'])]], colWidths=[1*inch, 6*inch])
+            elements.append(header_table)
+            elements.append(Spacer(1, 20))
+    except Exception: pass
+
     title_text = f"<b>LAPORAN MONITORING {'SEMUA PEKERJAAN' if report_type == 'Semua' else report_type.upper()}</b>"
     elements.append(Paragraph(title_text, styles["TitleCenter"]))
     elements.append(Spacer(1, 12))
@@ -225,7 +232,6 @@ def create_pdf_report(filtered_data, report_type):
             ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%d-%m-%Y')],
             ["Jenis", str(row.get('Jenis', ''))],
             ["Area", str(row.get('Area', ''))],
-            ["Nomor SR", str(row.get('Nomor SR', ''))],
             ["Nama Personel", str(row.get('Nama Personel', ''))],
             ["Status", str(row.get('Status', ''))],
             ["Keterangan", Paragraph(str(row.get('Keterangan', '')).replace('\n', '<br/>'), styles['Normal'])],
@@ -236,7 +242,6 @@ def create_pdf_report(filtered_data, report_type):
         ])
         elements.append(table)
         
-        # Penanganan Gambar di PDF
         img1, img2 = None, None
         for img_url, pos in [(row.get("Evidance"), 1), (row.get("Evidance After"), 2)]:
             if img_url and isinstance(img_url, str):
@@ -250,7 +255,7 @@ def create_pdf_report(filtered_data, report_type):
         
         if img1 or img2:
             elements.append(Spacer(1, 5))
-            image_table = Table([[Paragraph("<b>Before:</b>", styles['Normal']), Paragraph("<b>After:</b>", styles['Normal'])], [img1, img2]], colWidths=[3.2*inch, 3.2*inch])
+            image_table = Table([[Paragraph("<b>Evidence Before:</b>", styles['Normal']), Paragraph("<b>Evidence After:</b>", styles['Normal'])], [img1, img2]], colWidths=[3.2*inch, 3.2*inch])
             elements.append(image_table)
         elements.append(PageBreak())
 
@@ -258,7 +263,7 @@ def create_pdf_report(filtered_data, report_type):
     pdf_buffer.seek(0)
     return pdf_buffer.getvalue()
 
-# ================== Logika Login (Sesuai Versi Asli) ==================
+# ================== Logika Login (LOGO DIKEMBALIKAN) ==================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 
 if not st.session_state.get("logged_in"):
@@ -266,9 +271,13 @@ if not st.session_state.get("logged_in"):
     with col2:
         st.markdown('<div class="login-container">', unsafe_allow_html=True)
         st.markdown('<h1 class="login-title">ARMOR</h1>', unsafe_allow_html=True)
+        # --- LOGO LOGIN ---
+        try: st.image("logo.png", width=150)
+        except FileNotFoundError: pass
+        
         with st.form("login_form"):
             st.markdown('<h3 style="color: #FFFFFF; text-align: center; border-bottom: none;">User Login</h3>', unsafe_allow_html=True)
-            email = st.text_input("Email", placeholder="admin@example.com").lower()
+            email = st.text_input("Email", placeholder="e.g., admin@example.com").lower()
             password = st.text_input("Password", type="password")
             if st.form_submit_button("Login"):
                 user_data = verify_user_and_get_role(email, password)
@@ -282,7 +291,7 @@ if not st.session_state.get("logged_in"):
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
-# ================== Sesi & Sidebar ==================
+# ================== Inisialisasi Data & Sidebar (LOGO DIKEMBALIKAN) ==================
 user_role = st.session_state.get("user_role", "operator")
 if 'last_activity' not in st.session_state or datetime.now() - st.session_state.last_activity > timedelta(minutes=30): logout()
 st.session_state.last_activity = datetime.now()
@@ -293,16 +302,21 @@ if 'Nama Pelaksana' in df.columns: df.rename(columns={'Nama Pelaksana': 'Nama Pe
 
 with st.sidebar:
     st.title("Menu Navigasi")
-    st.write(f"Halo, **{st.session_state.get('user_email', 'User')}**")
+    st.write(f"Selamat datang, **{st.session_state.get('user_email', 'Guest')}**!")
+    st.write(f"Peran: **{user_role.capitalize()}**")
+    # --- LOGO SIDEBAR ---
+    try: st.image("logo.png", use_container_width=True)
+    except FileNotFoundError: pass
+    
     menu_options = ["Input Data", "Report Data", "Analisis FLM", "Absensi Personel"]
     if user_role == 'admin': menu_options.append("Kelola Personel")
-    menu = st.radio("Halaman:", menu_options, label_visibility="collapsed")
+    menu = st.radio("Pilih Halaman:", menu_options, label_visibility="collapsed")
     if st.button("Logout"): logout()
-    st.markdown("---"); st.caption("Tim Operasi - PLTU Bangka 🛠️")
+    st.markdown("---"); st.caption("Dibuat oleh Tim Operasi - PLTU Bangka 🛠️")
 
-# ================== Halaman: Input Data ==================
+# ================== Logika Halaman ==================
 if menu == "Input Data":
-    st.header("Input Pekerjaan Baru")
+    st.header("Input Data Pekerjaan Baru")
     with st.form("input_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
@@ -313,50 +327,41 @@ if menu == "Input Data":
         with col2:
             nama_personel = st.text_input("Nama Personel")
             status = st.selectbox("Status", ["Finish", "On Progress", "Pending", "Open"])
-            keterangan = st.text_area("Uraian Pekerjaan")
+            keterangan = st.text_area("Keterangan / Uraian Pekerjaan")
         
-        c_ev1, c_ev2 = st.columns(2)
-        with c_ev1: ev_before = st.file_uploader("Evidence Before", type=["png", "jpg", "jpeg"])
-        with c_ev2: ev_after = st.file_uploader("Evidence After", type=["png", "jpg", "jpeg"])
+        st.subheader("Upload Bukti Pekerjaan (Evidence)")
+        col_ev1, col_ev2 = st.columns(2)
+        with col_ev1: evidance_file = st.file_uploader("Upload Evidence (Before)", type=["png", "jpg", "jpeg"])
+        with col_ev2: evidance_after_file = st.file_uploader("Upload Evidence (After)", type=["png", "jpg", "jpeg"])
         
         if st.form_submit_button("Simpan Data"):
-            if not all([nomor_sr, nama_personel, keterangan]): st.error("Mohon isi field wajib.")
+            if not all([nomor_sr, nama_personel, keterangan]): st.error("Mohon isi semua field.")
             else:
                 with st.spinner("Menyimpan..."):
                     new_id = generate_next_id(df, jenis)
-                    u1 = upload_image_to_storage(ev_before)
-                    u2 = upload_image_to_storage(ev_after)
+                    u1 = upload_image_to_storage(evidance_file)
+                    u2 = upload_image_to_storage(evidance_after_file)
                     payload = {"ID": new_id, "Tanggal": str(tanggal), "Jenis": jenis, "Area": area, "Nomor SR": nomor_sr, "Nama Pelaksana": nama_personel, "Keterangan": keterangan, "Status": status, "Evidance": u1, "Evidance After": u2}
                     supabase.table("jobs").insert(payload).execute()
                     st.cache_data.clear(); st.session_state.data = load_data_from_db()
-                    st.success(f"Tersimpan: {new_id}"); st.rerun()
+                    st.success(f"Data '{new_id}' tersimpan!"); st.rerun()
 
-# ================== Halaman: Report Data (LENGKAP DENGAN EDITOR) ==================
 elif menu == "Report Data":
     st.header("Integrated Data & Report")
     data_to_display = df.copy()
     if 'Hapus' not in data_to_display.columns: data_to_display['Hapus'] = False
     
-    # Filter
-    f_col1, f_col2 = st.columns(2)
-    with f_col1: f_jns = st.selectbox("Jenis:", ["Semua"] + sorted(list(df["Jenis"].unique())))
-    with f_col2: f_sts = st.selectbox("Status:", ["Semua"] + sorted(list(df["Status"].unique())))
-    
-    if f_jns != "Semua": data_to_display = data_to_display[data_to_display["Jenis"] == f_jns]
-    if f_sts != "Semua": data_to_display = data_to_display[data_to_display["Status"] == f_sts]
-    
-    col_config = {
+    col_config_dict = {
         "Hapus": st.column_config.CheckboxColumn("Hapus?"), 
         "ID": st.column_config.TextColumn("ID", disabled=True),
         "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY", disabled=True),
-        "Evidance": st.column_config.LinkColumn("Before", display_text="Lihat"),
-        "Evidance After": st.column_config.LinkColumn("After", display_text="Lihat")
+        "Evidance": st.column_config.LinkColumn("Evidence Before", display_text="Lihat"),
+        "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat"),
     }
     
-    edited_df = st.data_editor(data_to_display, key="data_editor", use_container_width=True, column_config=col_config)
+    edited_df = st.data_editor(data_to_display, key="data_editor", use_container_width=True, column_config=col_config_dict)
     
-    # Simpan Perubahan (Hanya Admin)
-    if user_role == 'admin' and st.button("💾 Simpan Perubahan"):
+    if st.button("💾 Simpan Perubahan Data") and user_role == 'admin':
         changes = st.session_state.data_editor.get("edited_rows", {})
         for idx, val in changes.items():
             orig_id = data_to_display.iloc[idx]['ID']
@@ -367,53 +372,48 @@ elif menu == "Report Data":
     # Laporan
     with st.container(border=True):
         st.subheader("📄 Unduh Laporan")
-        c_r1, c_r2 = st.columns(2)
-        with c_r1:
-            if st.button("📊 Siapkan Excel"):
-                st.session_state.ex_b = create_excel_report_with_images(data_to_display)
-            if 'ex_b' in st.session_state:
-                st.download_button("⬇️ Download Excel", st.session_state.ex_b, "laporan.xlsx")
-        with c_r2:
-            if st.button("📄 Siapkan PDF"):
-                st.session_state.pd_b = create_pdf_report(data_to_display, f_jns)
-            if 'pd_b' in st.session_state:
-                st.download_button("⬇️ Download PDF", st.session_state.pd_b, "laporan.pdf")
+        c_dl1, c_dl2 = st.columns(2)
+        with c_dl1:
+            if st.button("📊 Siapkan Excel"): st.session_state.ex_b = create_excel_report_with_images(data_to_display)
+            if 'ex_b' in st.session_state: st.download_button("⬇️ Download Excel", st.session_state.ex_b, "laporan.xlsx")
+        with c_dl2:
+            if st.button("📄 Siapkan PDF"): st.session_state.pd_b = create_pdf_report(data_to_display, "Report")
+            if 'pd_b' in st.session_state: st.download_button("⬇️ Download PDF", st.session_state.pd_b, "laporan.pdf")
 
-# ================== Halaman: Analisis FLM (DENGAN SCOREBOARD BARU) ==================
+# ================== Halaman: Analisis FLM (DENGAN SCOREBOARD AREA & CM) ==================
 elif menu == "Analisis FLM":
     st.header("📊 Analisis FLM (Scoreboard)")
-    if df.empty: st.info("Data kosong.")
+    if df.empty: st.info("Data tidak tersedia.")
     else:
         df['Tanggal'] = pd.to_datetime(df['Tanggal']).dt.tz_localize(None)
         st.sidebar.subheader("Filter Analisis")
-        start_d = st.sidebar.date_input("Mulai", df['Tanggal'].min().date())
-        end_d = st.sidebar.date_input("Selesai", date.today())
+        s_date = st.sidebar.date_input("Mulai", df['Tanggal'].min().date())
+        e_date = st.sidebar.date_input("Selesai", date.today())
         
-        # Filter Dasar FLM
-        mask_flm = (df['Tanggal'].dt.date >= start_d) & (df['Tanggal'].dt.date <= end_d) & (df['Jenis'].str.startswith('First Line', na=False))
+        mask_flm = (df['Tanggal'].dt.date >= s_date) & (df['Tanggal'].dt.date <= e_date) & (df['Jenis'].str.startswith('First Line', na=False))
         df_flm = df[mask_flm]
         
         if not df_flm.empty:
-            flm_counts = df_flm['Jenis'].value_counts().reset_index()
-            flm_counts.columns = ['Jenis', 'Jumlah']
+            flm_c = df_flm['Jenis'].value_counts().reset_index()
+            flm_c.columns = ['Jenis', 'Jumlah']
             
             # KPI
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Total FLM", f"{flm_counts['Jumlah'].sum()} Kali")
-            c2.metric("FLM Dominan", flm_counts.iloc[0]['Jenis'].split('(')[-1].replace(')',''))
-            c3.metric("Personel Aktif", df_flm['Nama Personel'].nunique())
-            
-            # Chart Eksisting
-            ch1, ch2 = st.columns(2)
-            with ch1: st.plotly_chart(px.pie(flm_counts, names='Jenis', values='Jumlah', hole=0.4, title="Proporsi FLM", template='plotly_dark'), use_container_width=True)
-            with ch2: st.plotly_chart(px.bar(flm_counts, x='Jumlah', y='Jenis', orientation='h', title="Peringkat FLM", template='plotly_dark'), use_container_width=True)
-            
-            # Leaderboard (Eksisting)
+            st.markdown("### Ringkasan Dominasi FLM")
+            ck1, ck2, ck3 = st.columns(3)
+            ck1.metric("Total Pelaksanaan", f"{flm_c['Jumlah'].sum()} Kali")
+            ck2.metric("FLM Dominan", flm_c.iloc[0]['Jenis'].replace("First Line Maintenance ", ""))
+            ck3.metric("Personel Terlibat", f"{df_flm['Nama Personel'].nunique()} Orang")
+
+            ch_col1, ch_col2 = st.columns(2)
+            with ch_col1: st.plotly_chart(px.pie(flm_c, names='Jenis', values='Jumlah', hole=0.4, title='Proporsi FLM', template='plotly_dark'), use_container_width=True)
+            with ch_col2: st.plotly_chart(px.bar(flm_c, x='Jumlah', y='Jenis', orientation='h', title='Peringkat FLM', template='plotly_dark'), use_container_width=True)
+
+            # Leaderboard
             st.markdown("---")
             st.header("🏆 Skor Personel FLM")
-            pers_cnt = df_flm['Nama Personel'].str.split(',').explode().str.strip().value_counts().reset_index()
-            pers_cnt.columns = ['Nama', 'Total']
-            st.plotly_chart(px.bar(pers_cnt.sort_values('Total'), x='Total', y='Nama', orientation='h', title="Leaderboard Personel", template='plotly_dark', color='Total'), use_container_width=True)
+            p_cnt = df_flm['Nama Personel'].str.split(',').explode().str.strip().value_counts().reset_index()
+            p_cnt.columns = ['Nama', 'Total']
+            st.plotly_chart(px.bar(p_cnt, x='Total', y='Nama', orientation='h', title='Leaderboard Personel', color='Total', template='plotly_dark'), use_container_width=True)
 
             # ==============================================================================
             # TAMBAHAN BARU: SCOREBOARD AREA & PERALATAN FLM
@@ -421,36 +421,33 @@ elif menu == "Analisis FLM":
             st.markdown("---")
             st.header("📍 Scoreboard Area & Peralatan (FLM)")
             col_area1, col_area2 = st.columns(2)
-            
             with col_area1:
                 st.subheader("Dominasi FLM per Area")
-                area_flm = df_flm['Area'].value_counts().reset_index()
-                area_flm.columns = ['Area', 'Kegiatan']
-                st.plotly_chart(px.bar(area_flm, x='Area', y='Kegiatan', color='Kegiatan', title='Frekuensi FLM per Area', template='plotly_dark', text_auto=True), use_container_width=True)
-                
+                area_cnt = df_flm['Area'].value_counts().reset_index()
+                area_cnt.columns = ['Area', 'Jumlah']
+                st.plotly_chart(px.bar(area_cnt, x='Area', y='Jumlah', color='Jumlah', title='Frekuensi per Area', template='plotly_dark', text_auto=True), use_container_width=True)
             with col_area2:
-                st.subheader("Top Peralatan Tersering di-FLM")
-                p_cnt = df_flm['Keterangan'].value_counts().nlargest(10).reset_index()
-                p_cnt.columns = ['Peralatan/Pekerjaan', 'Frekuensi']
-                st.plotly_chart(px.bar(p_cnt.sort_values('Frekuensi'), x='Frekuensi', y='Peralatan/Pekerjaan', orientation='h', title='10 Alat Paling Sering Dirawat', template='plotly_dark', color='Frekuensi'), use_container_width=True)
+                st.subheader("Top Peralatan Tersering (FLM)")
+                eq_cnt = df_flm['Keterangan'].value_counts().nlargest(10).reset_index()
+                eq_cnt.columns = ['Peralatan', 'Frekuensi']
+                st.plotly_chart(px.bar(eq_cnt, x='Frekuensi', y='Peralatan', orientation='h', title='10 Alat Sering Dirawat', template='plotly_dark', color='Frekuensi'), use_container_width=True)
 
             # ==============================================================================
             # TAMBAHAN BARU: SCOREBOARD KERUSAKAN (CM)
             # ==============================================================================
             st.markdown("---")
             st.header("🛠️ Analisis Kerusakan (Corrective Maintenance)")
-            df_cm = df[(df['Tanggal'].dt.date >= start_d) & (df['Tanggal'].dt.date <= end_d) & (df['Jenis'] == 'Corrective Maintenance')]
-            
+            df_cm = df[(df['Tanggal'].dt.date >= s_date) & (df['Tanggal'].dt.date <= e_date) & (df['Jenis'] == 'Corrective Maintenance')]
             if df_cm.empty: st.info("Tidak ada data CM pada periode ini.")
             else:
                 col_cm1, col_cm2 = st.columns([1, 2])
                 with col_cm1:
                     cm_area = df_cm['Area'].value_counts().reset_index()
                     cm_area.columns = ['Area', 'Kasus']
-                    st.metric("Total Kerusakan (CM)", f"{len(df_cm)} Kasus")
-                    st.plotly_chart(px.pie(cm_area, names='Area', values='Kasus', title='Proporsi Kerusakan', hole=0.3, template='plotly_dark', color_discrete_sequence=px.colors.sequential.Reds_r), use_container_width=True)
+                    st.metric("Total Kasus Kerusakan", f"{len(df_cm)} CM")
+                    st.plotly_chart(px.pie(cm_area, names='Area', values='Kasus', title='Proporsi Kasus CM', hole=0.3, template='plotly_dark', color_discrete_sequence=px.colors.sequential.Reds_r), use_container_width=True)
                 with col_cm2:
-                    st.plotly_chart(px.bar(cm_area.sort_values('Kasus'), x='Kasus', y='Area', orientation='h', title='Area Dominan Kerusakan', color='Kasus', color_continuous_scale='Reds', template='plotly_dark'), use_container_width=True)
+                    st.plotly_chart(px.bar(cm_area, x='Kasus', y='Area', orientation='h', title='Area Dominan Gangguan', color='Kasus', color_continuous_scale='Reds', template='plotly_dark'), use_container_width=True)
 
 # ================== Halaman: Absensi (VERSI LENGKAP) ==================
 elif menu == "Absensi Personel":
@@ -459,39 +456,39 @@ elif menu == "Absensi Personel":
     pers_list = df_personnel['nama'].tolist() if not df_personnel.empty else []
 
     if user_role == 'admin':
-        with st.expander("✅ Input Absensi Massal (Hadir)"):
+        with st.expander("✅ Input Absensi Massal (Hadir)", expanded=True):
             with st.form("mass_abs"):
-                c1, c2 = st.columns([3, 1])
-                with c1: sel_pers = st.multiselect("Pilih Personel:", pers_list, default=pers_list)
-                with c2: tgl_mass = st.date_input("Tanggal", date.today())
+                c_m1, c_m2 = st.columns([3, 1])
+                with c_m1: sel_pers = st.multiselect("Pilih Personel:", pers_list, default=pers_list)
+                with c_m2: tgl_m = st.date_input("Tanggal", date.today())
                 if st.form_submit_button("Simpan Massal"):
-                    recs = [{"tanggal": str(tgl_mass), "nama_personel": n, "status_absensi": "Hadir", "keterangan": ""} for n in sel_pers]
-                    supabase.table("absensi").upsert(recs, on_conflict="tanggal,nama_personel").execute()
-                    st.cache_data.clear(); st.success("Berhasil"); st.rerun()
+                    payload_abs = [{"tanggal": str(tgl_m), "nama_personel": n, "status_absensi": "Hadir", "keterangan": ""} for n in sel_pers]
+                    supabase.table("absensi").upsert(payload_abs, on_conflict="tanggal,nama_personel").execute()
+                    st.cache_data.clear(); st.success("Data Tersimpan"); st.rerun()
 
     st.markdown("---")
     df_absensi = load_absensi_data()
     if not df_absensi.empty:
-        st.subheader("📊 Grafik Kehadiran")
-        abs_cnt = df_absensi[df_absensi['status_absensi']=='Hadir']['nama_personel'].value_counts().reset_index()
-        abs_cnt.columns = ['Nama', 'Hadir']
-        st.plotly_chart(px.bar(abs_cnt, x='Hadir', y='Nama', orientation='h', template='plotly_dark', color='Hadir'), use_container_width=True)
+        st.subheader("📊 Laporan Kehadiran")
+        abs_count = df_absensi[df_absensi['status_absensi']=='Hadir']['nama_personel'].value_counts().reset_index()
+        abs_count.columns = ['Nama', 'Hadir']
+        st.plotly_chart(px.bar(abs_count, x='Hadir', y='Nama', orientation='h', title="Top Kehadiran", template='plotly_dark', color='Hadir'), use_container_width=True)
         st.dataframe(df_absensi, use_container_width=True)
 
 # ================== Halaman: Kelola Personel ==================
 elif menu == "Kelola Personel" and user_role == 'admin':
     st.header("👥 Kelola Personel")
     df_p = load_personnel_data()
-    with st.expander("Tambah Personel"):
+    with st.expander("Tambah Personel Baru"):
         with st.form("add_p"):
-            n_p = st.text_input("Nama")
+            new_name = st.text_input("Nama Lengkap")
             if st.form_submit_button("Simpan"):
-                supabase.table("personel").insert({"nama": n_p}).execute()
-                st.cache_data.clear(); st.rerun()
+                supabase.table("personel").insert({"nama": new_name}).execute()
+                st.cache_data.clear(); st.success("Personel ditambahkan"); st.rerun()
     
     df_p['Hapus'] = False
     ed_p = st.data_editor(df_p, use_container_width=True)
-    if st.button("Hapus Terpilih"):
-        to_del = ed_p[ed_p['Hapus']]['id'].tolist()
-        supabase.table("personel").delete().in_("id", to_del).execute()
+    if st.button("🗑️ Hapus Terpilih"):
+        ids_del = ed_p[ed_p['Hapus']]['id'].tolist()
+        supabase.table("personel").delete().in_("id", ids_del).execute()
         st.cache_data.clear(); st.rerun()
