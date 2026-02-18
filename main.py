@@ -395,6 +395,47 @@ def create_pdf_report(filtered_data, report_type):
     pdf_buffer.seek(0)
     return pdf_buffer.getvalue()
 
+#Tambahan ML
+# ================== FUNGSI PREDICTIVE ML & TELEGRAM ==================
+
+def send_predictive_alert(area, total_gangguan):
+    """Kirim notifikasi khusus prediksi ke Telegram"""
+    TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
+    CHAT_ID = "-1003701349665"
+    
+    pesan = (
+        f"🚨 *PREDIKTIF ALARM (ARMOR)* 🚨\n\n"
+        f"Perhatian! Area *{area}* terdeteksi sering mengalami gangguan.\n"
+        f"Total CM: *{total_gangguan} kali* dalam 30 hari terakhir.\n\n"
+        f"💡 *Rekomendasi:* Segera jadwalkan pengecekan menyeluruh pada area ini sebelum terjadi breakdown besar."
+    )
+    
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    try:
+        requests.post(url, json={"chat_id": CHAT_ID, "text": pesan, "parse_mode": "Markdown"}, timeout=10)
+    except Exception as e:
+        print(f"Gagal kirim alarm: {e}")
+
+def analyze_predictive_maintenance(df):
+    """Logika Prediktif: Mendeteksi lonjakan gangguan (CM)"""
+    if df.empty:
+        return
+
+    # Filter data CM
+    df_cm = df[df['Jenis'] == 'Corrective Maintenance'].copy()
+    if len(df_cm) < 3:
+        return
+
+    df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal'])
+    last_30_days = pd.Timestamp.now() - pd.Timedelta(days=30)
+    recent_data = df_cm[df_cm['Tanggal'] >= last_30_days]
+    
+    summary = recent_data.groupby('Area').size()
+    
+    for area, count in summary.items():
+        if count >= 3:
+            send_predictive_alert(area, count)
+
 # ================== Logika Utama Aplikasi ==================
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -446,7 +487,12 @@ with st.sidebar:
     st.write(f"Peran: **{user_role.capitalize()}**")
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
-    menu_options = ["Input Data", "Report Data", "Analisis FLM", "Absensi Personel"]
+
+
+
+# UBAH MENJADI SEPERTI INI:
+menu_options = ["Input Data", "Report Data", "Analisis FLM", "Predictive Maintenance", "Absensi Personel"]
+
     if user_role == 'admin':
         menu_options.append("Kelola Personel")
 
@@ -520,6 +566,8 @@ if menu == "Input Data":
                         st.cache_data.clear()
                         st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
+    # Tambahkan baris ini tepat di bawahnya:
+                        analyze_predictive_maintenance(st.session_state.data)
                         st.rerun()
                     except Exception as e:
                         st.error(f"Gagal menyimpan data ke database: {e}")
@@ -983,6 +1031,62 @@ elif menu == "Absensi Personel":
                 )
 
 # === HALAMAN BARU: KELOLA PERSONEL (HANYA ADMIN) ===
+
+# === HALAMAN BARU: PREDICTIVE MAINTENANCE (AI ANALYSIS) ===
+elif menu == "Predictive Maintenance":
+    st.header("🔮 AI Predictive Maintenance Dashboard")
+    st.markdown("Analisis Machine Learning untuk mendeteksi peralatan dengan frekuensi gangguan (CM) tidak wajar.")
+
+    if df.empty:
+        st.info("Data tidak tersedia untuk analisis.")
+    else:
+        # 1. Filter Data CM saja
+        df_cm = df[df['Jenis'] == 'Corrective Maintenance'].copy()
+        
+        if df_cm.empty:
+            st.warning("Belum ada data Corrective Maintenance (CM) yang tercatat.")
+        else:
+            # 2. Hitung Statistik Per Area
+            # Kita hitung gangguan dalam 30 hari terakhir
+            df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal'])
+            last_month = pd.Timestamp.now() - pd.Timedelta(days=30)
+            df_recent = df_cm[df_cm['Tanggal'] >= last_month]
+            
+            area_stats = df_recent.groupby('Area').size().reset_index(name='Jumlah_Gangguan')
+            area_stats = area_stats.sort_values('Jumlah_Gangguan', ascending=False)
+
+            # 3. Layout Dashboard
+            col_metric1, col_metric2 = st.columns(2)
+            
+            with col_metric1:
+                st.subheader("⚠️ Status Alert System")
+                for index, row in area_stats.iterrows():
+                    # Threshold: Jika gangguan >= 3 dalam sebulan
+                    if row['Jumlah_Gangguan'] >= 3:
+                        st.error(f"**{row['Area']}**: CRITICAL ({row['Jumlah_Gangguan']} Gangguan) - Butuh RCA")
+                    elif row['Jumlah_Gangguan'] == 2:
+                        st.warning(f"**{row['Area']}**: WATCHLIST ({row['Jumlah_Gangguan']} Gangguan) - Monitor Ketat")
+                    else:
+                        st.success(f"**{row['Area']}**: NORMAL ({row['Jumlah_Gangguan']} Gangguan)")
+
+            with col_metric2:
+                st.subheader("📊 Grafik Frekuensi Gangguan")
+                fig_pred = px.bar(
+                    area_stats, 
+                    x='Area', 
+                    y='Jumlah_Gangguan',
+                    color='Jumlah_Gangguan',
+                    color_continuous_scale='Reds',
+                    title="Jumlah CM per Area (30 Hari Terakhir)",
+                    template='plotly_dark'
+                )
+                st.plotly_chart(fig_pred, use_container_width=True)
+
+            st.markdown("---")
+            st.subheader("🔍 Detail Histori Gangguan Berulang")
+            st.dataframe(df_recent[['ID', 'Tanggal', 'Area', 'Nama Personel', 'Keterangan']], use_container_width=True)
+
+
 elif menu == "Kelola Personel" and user_role == 'admin':
     st.header("👥 Kelola Daftar Personel")
     
