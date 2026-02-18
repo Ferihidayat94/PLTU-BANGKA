@@ -127,20 +127,26 @@ ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'Tukar Dinas']
 
 # --- Tambahan Telegram ---
 def send_telegram_notification(ticket_id, area, description, personnel, sr_number, image_url=None):
-    """Mengirim notifikasi otomatis ke Telegram beserta foto, detail pekerjaan, dan Nomor SR"""
+    """Mengirim notifikasi otomatis ke Telegram dengan tambahan tanggal & waktu"""
     TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
     CHAT_ID = "-1003701349665"
     
-    # Membuat teks pesan
+    # --- Tambahan: Ambil Waktu Sekarang ---
+    waktu_sekarang = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+    
+    # Membuat teks pesan dengan baris Tanggal Laporan
     caption = (
-        f"🚨 *NOTIFIKASI SR BARU (ARMOR)* 🚨\n\n"
+        f"🚨 *NOTIFIKASI SR BARU (ARMOR-AI)* 🚨\n\n"
         f"*ID Tiket:* `{ticket_id}`\n"
         f"*Nomor SR:* `{sr_number}`\n"
+        f"*Tanggal Laporan:* `{waktu_sekarang}`\n"  # <--- Baris baru
         f"*Area:* {area}\n"
         f"*Pelaksana:* {personnel}\n"
         f"*Keterangan:* {description}\n\n"
         f"🛠️ _Mohon segera ditindaklanjuti. Terima kasih._"
     )
+    
+ 
     
     if image_url:
         # Jika ada foto, gunakan endpoint sendPhoto
