@@ -125,6 +125,30 @@ supabase = init_connection()
 JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )", "Corrective Maintenance", "Preventive Maintenance"]
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'Tukar Dinas']
 
+# --- Tambahan Telegram ---
+def send_telegram_notification(ticket_id, area, description, personnel):
+    """Mengirim notifikasi otomatis ke Telegram saat CM dibuat"""
+    TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
+    CHAT_ID = "6071661782"
+    
+    message = (
+        f"🚨 *NOTIFIKASI CM BARU (ARMOR)* 🚨\n\n"
+        f"*ID Tiket:* `{ticket_id}`\n"
+        f"*Area:* {area}\n"
+        f"*Pelaksana:* {personnel}\n"
+        f"*Keterangan:* {description}\n\n"
+        f"🛠️ _Mohon segera ditindaklanjuti. Terima kasih._"
+    )
+    
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as e:
+        print(f"Telegram Error: {e}")
+# ------------------------------------------
+
 # ================== Fungsi-Fungsi Helper ==================
 def verify_user_and_get_role(email, password):
     try:
@@ -460,6 +484,15 @@ if menu == "Input Data":
                     }
                     try:
                         supabase.table("jobs").insert(new_job_data).execute()
+                        try:
+                       
+                        
+                        # Tambahan telegram
+                        if jenis == "Corrective Maintenance":
+                            send_telegram_notification(new_id, area, keterangan, nama_personel)
+                            
+               
+                        # ... 
                         st.cache_data.clear()
                         st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
