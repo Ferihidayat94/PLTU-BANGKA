@@ -482,23 +482,21 @@ if menu == "Input Data":
                         "Keterangan": keterangan, "Status": status, 
                         "Evidance": evidance_url, "Evidance After": evidance_after_url
                     }
-                    try:
+                   try:
+                        # Simpan data ke database Telegram
                         supabase.table("jobs").insert(new_job_data).execute()
-                        try:
-                       
                         
-                        # Tambahan telegram
+                        # Kirim notifikasi Telegram otomatis jika jenisnya CM
                         if jenis == "Corrective Maintenance":
                             send_telegram_notification(new_id, area, keterangan, nama_personel)
                             
-               
-                        # ... 
+                        # Refresh data dan tampilkan pesan sukses
                         st.cache_data.clear()
                         st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Gagal menyimpan data: {e}")
+                        st.error(f"Gagal menyimpan data ke database: {e}")
 
 elif menu == "Report Data":
     st.header("Integrated Data & Report")
