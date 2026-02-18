@@ -490,8 +490,8 @@ with st.sidebar:
 
 
 
-# UBAH MENJADI SEPERTI INI:
-menu_options = ["Input Data", "Report Data", "Analisis FLM", "Predictive Maintenance", "Absensi Personel"]
+    # UBAH MENJADI SEPERTI INI:
+    menu_options = ["Input Data", "Report Data", "Analisis FLM", "Predictive Maintenance", "Absensi Personel"]
 
     if user_role == 'admin':
         menu_options.append("Kelola Personel")
