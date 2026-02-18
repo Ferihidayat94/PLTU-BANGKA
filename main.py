@@ -126,25 +126,42 @@ JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "Fi
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'Tukar Dinas']
 
 # --- Tambahan Telegram ---
-def send_telegram_notification(ticket_id, area, description, personnel):
-    """Mengirim notifikasi otomatis ke Telegram saat CM dibuat"""
+def send_telegram_notification(ticket_id, area, description, personnel, sr_number, image_url=None):
+    """Mengirim notifikasi otomatis ke Telegram beserta foto, detail pekerjaan, dan Nomor SR"""
     TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
     CHAT_ID = "6071661782"
     
-    message = (
+    # Membuat teks pesan
+    caption = (
         f"🚨 *NOTIFIKASI CM BARU (ARMOR)* 🚨\n\n"
         f"*ID Tiket:* `{ticket_id}`\n"
+        f"*Nomor SR:* `{sr_number}`\n"
         f"*Area:* {area}\n"
         f"*Pelaksana:* {personnel}\n"
         f"*Keterangan:* {description}\n\n"
         f"🛠️ _Mohon segera ditindaklanjuti. Terima kasih._"
     )
     
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": message, "parse_mode": "Markdown"}
+    if image_url:
+        # Jika ada foto, gunakan endpoint sendPhoto
+        url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
+        payload = {
+            "chat_id": CHAT_ID,
+            "photo": image_url,
+            "caption": caption,
+            "parse_mode": "Markdown"
+        }
+    else:
+        # Jika tidak ada foto, kirim pesan teks biasa
+        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+        payload = {
+            "chat_id": CHAT_ID,
+            "text": caption,
+            "parse_mode": "Markdown"
+        }
     
     try:
-        requests.post(url, json=payload, timeout=5)
+        requests.post(url, json=payload, timeout=10)
     except Exception as e:
         print(f"Telegram Error: {e}")
 # ------------------------------------------
@@ -482,15 +499,24 @@ if menu == "Input Data":
                         "Keterangan": keterangan, "Status": status, 
                         "Evidance": evidance_url, "Evidance After": evidance_after_url
                     }
+                    
                     try:
-                        # Simpan data ke database Telegram
+                        # Simpan ke Supabase
                         supabase.table("jobs").insert(new_job_data).execute()
                         
-                        # Kirim notifikasi Telegram otomatis jika jenisnya CM
+                        # --- NOTIFIKASI TELEGRAM ---
                         if jenis == "Corrective Maintenance":
-                            send_telegram_notification(new_id, area, keterangan, nama_personel)
-                            
-                        # Refresh data dan tampilkan pesan sukses
+                            # Pastikan menyertakan nomor_sr dan evidance_url
+                            send_telegram_notification(
+                                new_id, 
+                                area, 
+                                keterangan, 
+                                nama_personel, 
+                                nomor_sr, 
+                                evidance_url
+                            )
+                        # ---------------------------
+
                         st.cache_data.clear()
                         st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
