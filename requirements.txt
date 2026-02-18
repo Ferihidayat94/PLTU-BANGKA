@@ -1,10 +1,10 @@
-
 streamlit
 pandas
-openpyxl
-requests
+numpy
 Pillow
+reportlab
+requests
 supabase
 plotly
-reportlab
-xlsxwriter
+scikit-learn
+3.  **Simpan & Push**: Setelah Anda menyimpan perubahan tersebut ke GitHub, Streamlit Cloud akan mendeteksi file tersebut dan secara otomatis menginstal semua pustaka yang diperlukan (termasuk `scikit-learn`).
