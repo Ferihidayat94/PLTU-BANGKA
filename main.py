@@ -329,71 +329,6 @@ def create_excel_report_with_images(filtered_data):
     output.seek(0)
     return output.getvalue()
 
-
-def create_pdf_report(filtered_data, report_type):
-    pdf_buffer = io.BytesIO()
-    doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10, textColor=colors.HexColor('#2C3E50')))
-    styles.add(ParagraphStyle(name='Header', alignment=TA_LEFT, textColor=colors.HexColor('#2C3E50')))
-    elements = []
-    
-    try:
-        logo_path = "logo.png"
-        if os.path.exists(logo_path):
-            header_text = "<b>PT PLN NUSANTARA POWER SERVICES</b><br/>Unit PLTU Bangka"
-            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch, hAlign='LEFT')
-            header_table = Table([[logo_img, Paragraph(header_text, styles['Header'])]], colWidths=[1*inch, 6*inch], style=[('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)])
-            elements.append(header_table)
-            elements.append(Spacer(1, 20))
-    except Exception: pass
-
-    title_text = f"<b>LAPORAN MONITORING {'SEMUA PEKERJAAN' if report_type == 'Semua' else report_type.upper()}</b>"
-    elements.append(Paragraph(title_text, styles["TitleCenter"]))
-    elements.append(Spacer(1, 12))
-
-    for _, row in filtered_data.iterrows():
-        data = [
-            ["ID", str(row.get('ID', ''))],
-            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%d-%m-%Y')],
-            ["Jenis", str(row.get('Jenis', ''))],
-            ["Area", str(row.get('Area', ''))],
-            ["Peralatan", str(row.get('nama_peralatan', '-'))],
-            ["Nomor SR", str(row.get('Nomor SR', ''))],
-            ["Nama Personel", str(row.get('Nama Personel', ''))],
-            ["Status", str(row.get('Status', ''))],
-            ["Keterangan", Paragraph(str(row.get('Keterangan', '')).replace('\n', '<br/>'), styles['Normal'])],
-        ]
-        table = Table(data, colWidths=[100, 380], style=[
-            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ECF0F1')), ('TEXTCOLOR', (0,0), (0, -1), colors.HexColor('#2C3E50')),
-            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')), ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#BDC3C7')),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ])
-        elements.append(table)
-        
-        img1, img2 = None, None
-        for img_url, position in [(row.get("Evidance"), 1), (row.get("Evidance After"), 2)]:
-            if img_url and isinstance(img_url, str):
-                try:
-                    response = requests.get(img_url, stream=True, timeout=10)
-                    response.raise_for_status()
-                    img_data = io.BytesIO(response.content)
-                    image_element = RLImage(img_data, width=3*inch, height=2.25*inch, kind='bound')
-                    if position == 1: img1 = image_element
-                    else: img2 = image_element
-                except Exception as e: print(f"Gagal memuat gambar dari URL {img_url}: {e}")
-        
-        if img1 or img2:
-            elements.append(Spacer(1, 5))
-            image_table = Table([[Paragraph("<b>Evidence Before:</b>", styles['Normal']), Paragraph("<b>Evidence After:</b>", styles['Normal'])], [img1, img2]], colWidths=[3.2*inch, 3.2*inch], style=[('VALIGN', (0,0), (-1,-1), 'TOP')])
-            elements.append(image_table)
-        elements.append(PageBreak())
-
-    if elements and isinstance(elements[-1], PageBreak): elements.pop()
-    doc.build(elements)
-    pdf_buffer.seek(0)
-    return pdf_buffer.getvalue()
-
 #Tambahan ML
 # ================== FUNGSI PREDICTIVE ML & TELEGRAM (DIPERBARUI) ==================
 
@@ -830,28 +765,54 @@ elif menu == "Analisis FLM":
             st.plotly_chart(fig_bar, use_container_width=True)
         
         st.markdown("---") 
-        st.header("🏆 Skor Personel FLM (Leaderboard)") 
-        st.markdown("Menganalisis personel berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
-        if 'Nama Personel' in df_flm and not df_flm['Nama Personel'].dropna().empty:
-            personel_counts = df_flm['Nama Personel'].str.split(',').explode().str.strip().value_counts().reset_index()
-            personel_counts.columns = ['Nama Personel', 'Jumlah FLM Dikerjakan']
-            if not personel_counts.empty:
-                top_performer = personel_counts.iloc[0]
-                
-                st.markdown("#### Performa Terbaik")
-                col_kpi1, col_kpi2 = st.columns(2)
-                with col_kpi1: st.success(f"**Top Performer:** {top_performer['Nama Personel']}")
-                with col_kpi2: st.success(f"**Jumlah Pekerjaan:** {top_performer['Jumlah FLM Dikerjakan']} Kali")
-                st.markdown("---")
-                
-                st.subheader("Peringkat Semua Personel")
-                fig_leaderboard = px.bar(personel_counts.sort_values('Jumlah FLM Dikerjakan'), x='Jumlah FLM Dikerjakan', y='Nama Personel', orientation='h', title='Leaderboard Personel FLM', text='Jumlah FLM Dikerjakan', color='Jumlah FLM Dikerjakan', color_continuous_scale=px.colors.sequential.Greens_r, template='plotly_dark')
-                fig_leaderboard.update_yaxes(categoryorder="total ascending")
-                st.plotly_chart(fig_leaderboard, use_container_width=True)
-            else:
-                st.info("Tidak ada data personel untuk dianalisis sesuai filter.")
-        else:
-            st.info("Kolom 'Nama Personel' kosong pada data yang difilter.")
+        st.header("🏆 Skor Personel per Regu (Leaderboard)")
+        st.markdown("Peringkat personel dipisahkan berdasarkan regu (A, B, C, D).")
+
+        # Define targets
+        regu_targets = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "First Line Maintenance ( C )", "First Line Maintenance ( D )"]
+        regu_labels = ["Regu A", "Regu B", "Regu C", "Regu D"]
+
+        # Create tabs
+        tabs = st.tabs(regu_labels)
+
+        for i, target_jenis in enumerate(regu_targets):
+            with tabs[i]:
+                st.subheader(f"Leaderboard {regu_labels[i]}")
+
+                # Filter data specific to this FLM type from the main filtered FLM dataframe
+                df_regu = df_flm[df_flm['Jenis'] == target_jenis]
+
+                if df_regu.empty:
+                    st.info(f"Belum ada data pekerjaan untuk {target_jenis} pada periode ini.")
+                elif 'Nama Personel' in df_regu and not df_regu['Nama Personel'].dropna().empty:
+                    # Process personnel names
+                    personel_counts = df_regu['Nama Personel'].str.split(',').explode().str.strip().value_counts().reset_index()
+                    personel_counts.columns = ['Nama Personel', 'Jumlah FLM Dikerjakan']
+
+                    if not personel_counts.empty:
+                        # Top Performer logic
+                        top_performer = personel_counts.iloc[0]
+                        col_kpi1, col_kpi2 = st.columns(2)
+                        with col_kpi1: st.success(f"**MVP {regu_labels[i]}:** {top_performer['Nama Personel']}")
+                        with col_kpi2: st.metric("Total Kontribusi", f"{top_performer['Jumlah FLM Dikerjakan']} Job")
+
+                        # Chart
+                        fig_leaderboard = px.bar(
+                            personel_counts.sort_values('Jumlah FLM Dikerjakan'),
+                            x='Jumlah FLM Dikerjakan',
+                            y='Nama Personel',
+                            orientation='h',
+                            text='Jumlah FLM Dikerjakan',
+                            color='Jumlah FLM Dikerjakan',
+                            color_continuous_scale=px.colors.sequential.Viridis,
+                            template='plotly_dark'
+                        )
+                        fig_leaderboard.update_layout(xaxis_title="Jumlah Pekerjaan", yaxis_title="Personel")
+                        st.plotly_chart(fig_leaderboard, use_container_width=True)
+                    else:
+                        st.info("Data personel tidak valid.")
+                else:
+                    st.info("Kolom nama personel kosong.")
 
 # === HALAMAN BARU: ABSENSI PERSONEL ===
 elif menu == "Absensi Personel":
