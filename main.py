@@ -398,16 +398,20 @@ def create_pdf_report(filtered_data, report_type):
 #Tambahan ML
 # ================== FUNGSI PREDICTIVE ML & TELEGRAM ==================
 
-def send_predictive_alert(area, total_gangguan):
-    """Kirim notifikasi khusus prediksi ke Telegram"""
+def send_predictive_alert(area, total_gangguan, tanggal_terakhir):
+    """Kirim notifikasi prediksi ke Telegram dengan info tanggal terbaru"""
     TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
     CHAT_ID = "-1003701349665"
+    
+    # Format tanggal agar enak dibaca (contoh: 18-02-2026)
+    tgl_str = tanggal_terakhir.strftime('%d-%m-%Y')
     
     pesan = (
         f"🚨 *PREDIKTIF ALARM (ARMOR)* 🚨\n\n"
         f"Perhatian! Area *{area}* terdeteksi sering mengalami gangguan.\n"
-        f"Total CM: *{total_gangguan} kali* dalam 30 hari terakhir.\n\n"
-        f"💡 *Rekomendasi:* Segera jadwalkan pengecekan menyeluruh pada area ini sebelum terjadi breakdown besar."
+        f"Total CM: *{total_gangguan} kali* (30 hari terakhir).\n"
+        f"Update Terakhir: *{tgl_str}*\n\n"
+        f"💡 *Rekomendasi:* Segera lakukan pengecekan menyeluruh pada area ini untuk mencegah kerusakan lebih fatal."
     )
     
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -417,24 +421,28 @@ def send_predictive_alert(area, total_gangguan):
         print(f"Gagal kirim alarm: {e}")
 
 def analyze_predictive_maintenance(df):
-    """Logika Prediktif: Mendeteksi lonjakan gangguan (CM)"""
     if df.empty:
         return
 
-    # Filter data CM
     df_cm = df[df['Jenis'] == 'Corrective Maintenance'].copy()
     if len(df_cm) < 3:
         return
 
-    df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal'])
-    last_30_days = pd.Timestamp.now() - pd.Timedelta(days=30)
+    # Normalisasi waktu untuk menghindari error timezone
+    df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal']).dt.tz_localize(None)
+    last_30_days = datetime.now() - timedelta(days=30)
+    
+    # Ambil data 30 hari terakhir
     recent_data = df_cm[df_cm['Tanggal'] >= last_30_days]
     
-    summary = recent_data.groupby('Area').size()
-    
-    for area, count in summary.items():
-        if count >= 3:
-            send_predictive_alert(area, count)
+    if not recent_data.empty:
+        summary = recent_data.groupby('Area').size()
+        
+        for area, count in summary.items():
+            if count >= 3:
+                # Ambil tanggal terbaru dari area yang bermasalah tersebut
+                last_date = recent_data[recent_data['Area'] == area]['Tanggal'].max()
+                send_predictive_alert(area, count, last_date)
 
 # ================== Logika Utama Aplikasi ==================
 if "logged_in" not in st.session_state:
