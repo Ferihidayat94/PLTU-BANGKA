@@ -133,7 +133,7 @@ def send_telegram_notification(ticket_id, area, description, personnel, sr_numbe
     
     # Membuat teks pesan
     caption = (
-        f"🚨 *NOTIFIKASI CM BARU (ARMOR)* 🚨\n\n"
+        f"🚨 *NOTIFIKASI SR BARU (ARMOR)* 🚨\n\n"
         f"*ID Tiket:* `{ticket_id}`\n"
         f"*Nomor SR:* `{sr_number}`\n"
         f"*Area:* {area}\n"
