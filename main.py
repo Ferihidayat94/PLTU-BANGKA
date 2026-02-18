@@ -482,7 +482,7 @@ if menu == "Input Data":
                         "Keterangan": keterangan, "Status": status, 
                         "Evidance": evidance_url, "Evidance After": evidance_after_url
                     }
-                   try:
+                    try:
                         # Simpan data ke database Telegram
                         supabase.table("jobs").insert(new_job_data).execute()
                         
