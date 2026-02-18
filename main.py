@@ -1111,7 +1111,11 @@ elif menu == "Predictive Maintenance":
                 col_name = 'nama_peralatan'
                 
                 # Cek jika kolom nama_peralatan kosong, ganti dengan 'Unidentified' agar tetap terhitung
-                df_recent[col_name] = df_recent[col_name].replace('', 'Unidentified').fillna('Unidentified')
+                # Handle kolom nama_peralatan jika belum ada di database atau cache lama
+                if 'nama_peralatan' not in df_recent.columns:
+                    df_recent['nama_peralatan'] = 'Unknown'
+                else:
+                    df_recent[col_name] = df_recent[col_name].replace('', 'Unidentified').fillna('Unidentified')
 
                 area_stats = df_recent.groupby(['Area', col_name]).size().reset_index(name='Jumlah_Gangguan')
                 area_stats = area_stats.sort_values('Jumlah_Gangguan', ascending=False)
