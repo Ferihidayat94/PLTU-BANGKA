@@ -129,7 +129,7 @@ ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'Tukar Dinas']
 def send_telegram_notification(ticket_id, area, description, personnel, sr_number, image_url=None):
     """Mengirim notifikasi otomatis ke Telegram beserta foto, detail pekerjaan, dan Nomor SR"""
     TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
-    CHAT_ID = "6071661782"
+    CHAT_ID = "-3701349665"
     
     # Membuat teks pesan
     caption = (
