@@ -24,13 +24,6 @@ st.set_page_config(page_title="FLM & Corrective Maintenance", layout="wide")
 st.markdown(
     """
     <style>
-        /* BARIS INI TETAP DIKOMENTARI KARENA MENYEBABKAN MASALAH IKON */
-        /* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'); */
-        
-        /* BARIS INI TETAP DIKOMENTARI KARENA MENYEBABKAN MASALAH IKON */
-        /* html, body, [class*="st-"] { font-family: 'Inter', sans-serif; } */
-        
-        /* Background aplikasi */
         .stApp {
             background-color: #021021;
             background-image: radial-gradient(ellipse at bottom, rgba(52, 152, 219, 0.25) 0%, rgba(255,255,255,0) 50%),
@@ -72,27 +65,27 @@ st.markdown(
         div[data-baseweb="input"] > div, 
         div[data-baseweb="textarea"] > div, 
         div[data-baseweb="select"] > div {
-            background-color: rgba(236, 240, 241, 0.4) !important; /* Warna dasar transparan */
+            background-color: rgba(236, 240, 241, 0.4) !important;
             border-color: rgba(52, 152, 219, 0.4) !important;
             color: #FFFFFF !important;
-            transition: all 0.2s ease-in-out; /* Transisi halus untuk semua properti yang berubah */
+            transition: all 0.2s ease-in-out;
         }
 
         /* Efek HOVER */
         div[data-baseweb="input"] > div:hover,
         div[data-baseweb="textarea"] > div:hover,
         div[data-baseweb="select"] > div:hover {
-            background-color: rgba(236, 240, 241, 0.55) !important; /* Sedikit lebih padat */
-            border-color: rgba(52, 152, 219, 0.7) !important; /* Border lebih jelas */
+            background-color: rgba(236, 240, 241, 0.55) !important;
+            border-color: rgba(52, 152, 219, 0.7) !important;
         }
 
         /* Efek FOCUS (saat diklik/aktif) */
         div[data-baseweb="input"] > div:focus-within,
         div[data-baseweb="textarea"] > div:focus-within,
         div[data-baseweb="select"] > div:focus-within {
-            background-color: rgba(236, 240, 241, 0.7) !important; /* Lebih terang */
-            border-color: #3498DB !important; /* Biru solid */
-            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3) !important; /* Bayangan halus */
+            background-color: rgba(236, 240, 241, 0.7) !important;
+            border-color: #3498DB !important;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.3) !important;
         }
 
         label, div[data-testid="stWidgetLabel"] label, .st-emotion-cache-1kyxreq e1i5pmia1 {
@@ -126,7 +119,7 @@ JOB_TYPES = ["First Line Maintenance ( A )", "First Line Maintenance ( B )", "Fi
 ABSENSI_STATUS = ['Hadir', 'Sakit', 'Izin', 'Cuti', 'Tukar Dinas']
 
 # --- Tambahan Telegram ---
-def send_telegram_notification(ticket_id, area, description, personnel, sr_number, image_url=None):
+def send_telegram_notification(ticket_id, area, description, personnel, sr_number, image_url=None, nama_peralatan=None):
     """Mengirim notifikasi otomatis ke Telegram dengan tambahan tanggal & waktu"""
     TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
     CHAT_ID = "-1003701349665"
@@ -134,22 +127,22 @@ def send_telegram_notification(ticket_id, area, description, personnel, sr_numbe
     # --- Tambahan: Ambil Waktu Sekarang ---
     waktu_sekarang = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
     
+    alat_info = f"*Peralatan:* {nama_peralatan}\n" if nama_peralatan else ""
+
     # Membuat teks pesan dengan baris Tanggal Laporan
     caption = (
         f"🚨 *NOTIFIKASI SR BARU (ARMOR-AI)* 🚨\n\n"
         f"*ID Tiket:* `{ticket_id}`\n"
         f"*Nomor SR:* `{sr_number}`\n"
-        f"*Tanggal Laporan:* `{waktu_sekarang}`\n"  # <--- Baris baru
+        f"*Tanggal Laporan:* `{waktu_sekarang}`\n" 
         f"*Area:* {area}\n"
+        f"{alat_info}"
         f"*Pelaksana:* {personnel}\n"
         f"*Keterangan:* {description}\n\n"
         f"🛠️ _Mohon segera ditindaklanjuti. Terima kasih._"
     )
     
- 
-    
     if image_url:
-        # Jika ada foto, gunakan endpoint sendPhoto
         url = f"https://api.telegram.org/bot{TOKEN}/sendPhoto"
         payload = {
             "chat_id": CHAT_ID,
@@ -158,7 +151,6 @@ def send_telegram_notification(ticket_id, area, description, personnel, sr_numbe
             "parse_mode": "Markdown"
         }
     else:
-        # Jika tidak ada foto, kirim pesan teks biasa
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
         payload = {
             "chat_id": CHAT_ID,
@@ -187,7 +179,7 @@ def verify_user_and_get_role(email, password):
 @st.cache_data(ttl=600)
 def load_data_from_db():
     try:
-        response = supabase.table('jobs').select('*').order('created_at', desc=True).limit(50000).execute() # --- PERBAIKAN 1 ---
+        response = supabase.table('jobs').select('*').order('created_at', desc=True).limit(50000).execute()
         df = pd.DataFrame(response.data)
         if 'Tanggal' in df.columns and not df.empty:
             df['Tanggal'] = pd.to_datetime(df['Tanggal'])
@@ -199,7 +191,7 @@ def load_data_from_db():
 @st.cache_data(ttl=300)
 def load_absensi_data():
     try:
-        response = supabase.table('absensi').select('*').order('tanggal', desc=True).limit(50000).execute() # --- PERBAIKAN 1 ---
+        response = supabase.table('absensi').select('*').order('tanggal', desc=True).limit(50000).execute()
         df = pd.DataFrame(response.data)
         if 'tanggal' in df.columns and not df.empty:
             df['tanggal'] = pd.to_datetime(df['tanggal'])
@@ -366,8 +358,9 @@ def create_pdf_report(filtered_data, report_type):
             ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%d-%m-%Y')],
             ["Jenis", str(row.get('Jenis', ''))],
             ["Area", str(row.get('Area', ''))],
+            ["Peralatan", str(row.get('nama_peralatan', '-'))],
             ["Nomor SR", str(row.get('Nomor SR', ''))],
-            ["Nama Personel", str(row.get('Nama Personel', ''))], # Ganti label
+            ["Nama Personel", str(row.get('Nama Personel', ''))],
             ["Status", str(row.get('Status', ''))],
             ["Keterangan", Paragraph(str(row.get('Keterangan', '')).replace('\n', '<br/>'), styles['Normal'])],
         ]
@@ -402,22 +395,23 @@ def create_pdf_report(filtered_data, report_type):
     return pdf_buffer.getvalue()
 
 #Tambahan ML
-# ================== FUNGSI PREDICTIVE ML & TELEGRAM ==================
+# ================== FUNGSI PREDICTIVE ML & TELEGRAM (DIPERBARUI) ==================
 
-def send_predictive_alert(area, total_gangguan, tanggal_terakhir):
-    """Kirim notifikasi prediksi ke Telegram dengan info tanggal terbaru"""
+def send_predictive_alert(area, equipment, total_gangguan, tanggal_terakhir):
+    """Kirim notifikasi prediksi Kerusakan Berulang pada Peralatan Spesifik"""
     TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
     CHAT_ID = "-1003701349665"
     
-    # Format tanggal agar enak dibaca (contoh: 18-02-2026)
     tgl_str = tanggal_terakhir.strftime('%d-%m-%Y')
     
     pesan = (
-        f"🚨 *PREDIKTIF ALARM (ARMOR)* 🚨\n\n"
-        f"Perhatian! Area *{area}* terdeteksi sering mengalami gangguan.\n"
-        f"Total CM: *{total_gangguan} kali* (30 hari terakhir).\n"
-        f"Update Terakhir: *{tgl_str}*\n\n"
-        f"💡 *Rekomendasi:* Segera lakukan pengecekan menyeluruh pada area ini untuk mencegah kerusakan lebih fatal."
+        f"🚨 *PREDIKTIF ALARM (REPEATED FAILURE)* 🚨\n\n"
+        f"Terdeteksi kerusakan berulang pada peralatan berikut:\n"
+        f"🛠️ Peralatan: *{equipment}*\n"
+        f"📍 Area: *{area}*\n"
+        f"⚠️ Total Kerusakan: *{total_gangguan} kali* (30 hari terakhir).\n"
+        f"📅 Terakhir Rusak: *{tgl_str}*\n\n"
+        f"💡 *Rekomendasi:* Cek riwayat perbaikan alat ini. Mungkin diperlukan penggantian sparepart total atau Root Cause Analysis (RCA)."
     )
     
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -427,14 +421,26 @@ def send_predictive_alert(area, total_gangguan, tanggal_terakhir):
         print(f"Gagal kirim alarm: {e}")
 
 def analyze_predictive_maintenance(df):
+    """Analisis perbaikan berulang pada peralatan spesifik"""
     if df.empty:
         return
 
+    # Filter hanya Corrective Maintenance
     df_cm = df[df['Jenis'] == 'Corrective Maintenance'].copy()
-    if len(df_cm) < 3:
+    if len(df_cm) < 2:
         return
 
-    # Normalisasi waktu untuk menghindari error timezone
+    # Pastikan kolom 'nama_peralatan' ada (untuk kompatibilitas data lama)
+    col_name = 'nama_peralatan' if 'nama_peralatan' in df_cm.columns else 'Nama Peralatan'
+    
+    # Jika kolom belum ada di dataframe (data lama), skip dulu
+    if col_name not in df_cm.columns:
+        return
+
+    # Bersihkan data: Hapus yang nama peralatannya kosong
+    df_cm = df_cm[df_cm[col_name].notna() & (df_cm[col_name] != '')]
+
+    # Normalisasi waktu
     df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal']).dt.tz_localize(None)
     last_30_days = datetime.now() - timedelta(days=30)
     
@@ -442,13 +448,23 @@ def analyze_predictive_maintenance(df):
     recent_data = df_cm[df_cm['Tanggal'] >= last_30_days]
     
     if not recent_data.empty:
-        summary = recent_data.groupby('Area').size()
+        # LOGIKA BARU: Group by Area DAN Nama Peralatan
+        # Kita hitung berapa kali 'Pompa A' rusak di 'Boiler'
+        summary = recent_data.groupby(['Area', col_name]).size().reset_index(name='Jumlah')
         
-        for area, count in summary.items():
-            if count >= 5:
-                # Ambil tanggal terbaru dari area yang bermasalah tersebut
-                last_date = recent_data[recent_data['Area'] == area]['Tanggal'].max()
-                send_predictive_alert(area, count, last_date)
+        # Ambang batas kerusakan berulang (misal: 3x dalam sebulan dianggap sering)
+        THRESHOLD = 3 
+        
+        for index, row in summary.iterrows():
+            if row['Jumlah'] >= THRESHOLD:
+                # Ambil tanggal kejadian terakhir untuk alat tersebut
+                last_date = recent_data[
+                    (recent_data['Area'] == row['Area']) & 
+                    (recent_data[col_name] == row[col_name])
+                ]['Tanggal'].max()
+                
+                # Kirim Alert Spesifik Alat
+                send_predictive_alert(row['Area'], row[col_name], row['Jumlah'], last_date)
 
 # ================== Logika Utama Aplikasi ==================
 if "logged_in" not in st.session_state:
@@ -502,9 +518,6 @@ with st.sidebar:
     try: st.image("logo.png", use_container_width=True) 
     except FileNotFoundError: pass
 
-
-
-    # UBAH MENJADI SEPERTI INI:
     menu_options = ["Input Data", "Report Data", "Analisis FLM", "Predictive Maintenance", "Absensi Personel"]
 
     if user_role == 'admin':
@@ -531,6 +544,11 @@ if menu == "Input Data":
             tanggal = st.date_input("Tanggal", date.today())
             jenis = st.selectbox("Jenis Pekerjaan", JOB_TYPES)
             area = st.selectbox("Area", ["Boiler", "Turbine", "CHCB", "WTP", "Common"])
+            
+            # --- TAMBAHAN BARU ---
+            nama_peralatan = st.text_input("Nama Peralatan / Tag Number", placeholder="Contoh: BFP Pump A, Motor Conveyor 1")
+            # ---------------------
+
             nomor_sr = st.text_input("Nomor SR (Service Request)")
         with col2:
             nama_personel = st.text_input("Nama Personel")
@@ -545,6 +563,8 @@ if menu == "Input Data":
         if st.form_submit_button("Simpan Data"):
             if not all([nomor_sr, nama_personel, keterangan]):
                 st.error("Mohon isi semua field yang wajib.")
+            elif jenis == "Corrective Maintenance" and not nama_peralatan:
+                st.error("Untuk Corrective Maintenance, Nama Peralatan WAJIB diisi agar bisa dilacak.")
             else:
                 with st.spinner("Menyimpan data..."):
                     job_ids_df = pd.DataFrame(supabase.table('jobs').select('ID').execute().data)
@@ -554,7 +574,12 @@ if menu == "Input Data":
                     evidance_after_url = upload_image_to_storage(evidance_after_file)
                     
                     new_job_data = {
-                        "ID": new_id, "Tanggal": str(tanggal), "Jenis": jenis, "Area": area, "Nomor SR": nomor_sr, 
+                        "ID": new_id, 
+                        "Tanggal": str(tanggal), 
+                        "Jenis": jenis, 
+                        "Area": area, 
+                        "nama_peralatan": nama_peralatan,
+                        "Nomor SR": nomor_sr, 
                         "Nama Pelaksana": nama_personel,
                         "Keterangan": keterangan, "Status": status, 
                         "Evidance": evidance_url, "Evidance After": evidance_after_url
@@ -566,22 +591,24 @@ if menu == "Input Data":
                         
                         # --- NOTIFIKASI TELEGRAM ---
                         if jenis == "Corrective Maintenance":
-                            # Pastikan menyertakan nomor_sr dan evidance_url
                             send_telegram_notification(
                                 new_id, 
                                 area, 
                                 keterangan, 
                                 nama_personel, 
                                 nomor_sr, 
-                                evidance_url
+                                evidance_url,
+                                nama_peralatan
                             )
                         # ---------------------------
 
                         st.cache_data.clear()
                         st.session_state.data = load_data_from_db()
                         st.success(f"Data '{new_id}' berhasil disimpan!")
-    # Tambahkan baris ini tepat di bawahnya:
+                        
+                        # Trigger Analisis Prediktif
                         analyze_predictive_maintenance(st.session_state.data)
+                        
                         st.rerun()
                     except Exception as e:
                         st.error(f"Gagal menyimpan data ke database: {e}")
@@ -612,6 +639,7 @@ elif menu == "Report Data":
             "Tanggal": st.column_config.DateColumn("Tanggal", format="DD-MM-YYYY", disabled=True),
             "Jenis": st.column_config.SelectboxColumn("Jenis", options=JOB_TYPES, disabled=False if user_role == 'admin' else True),
             "Area": st.column_config.SelectboxColumn("Area", options=["Boiler", "Turbine", "CHCB", "WTP", "Common"], disabled=False if user_role == 'admin' else True),
+            "nama_peralatan": st.column_config.TextColumn("Nama Peralatan", disabled=False if user_role == 'admin' else True),
             "Status": st.column_config.SelectboxColumn("Status", options=["Finish", "On Progress", "Pending", "Open"], disabled=True),
             "Nomor SR": st.column_config.TextColumn("Nomor SR", disabled=True),
             "Nama Personel": st.column_config.TextColumn("Nama Personel", disabled=False if user_role == 'admin' else True),
@@ -620,12 +648,18 @@ elif menu == "Report Data":
             "Evidance After": st.column_config.LinkColumn("Evidence After", display_text="Lihat", disabled=True),
         }
         
+        # Cek kolom equipment di view
+        view_cols = ["Hapus", "ID", "Tanggal", "Jenis", "Area", "nama_peralatan", "Status", "Nomor SR", "Nama Personel", "Keterangan", "Evidance", "Evidance After"]
+        # Pastikan kolom ada di dataframe
+        if 'nama_peralatan' not in data_to_display.columns:
+            data_to_display['nama_peralatan'] = ""
+
         edited_df = st.data_editor(
             data_to_display, 
             key="data_editor",
             use_container_width=True,
             column_config=col_config_dict,
-            column_order=["Hapus", "ID", "Tanggal", "Jenis", "Area", "Status", "Nomor SR", "Nama Personel", "Keterangan", "Evidance", "Evidance After"]
+            column_order=view_cols
         )
         
         if st.session_state.get("data_editor") and st.session_state["data_editor"]["edited_rows"] and user_role == 'admin':
@@ -796,7 +830,7 @@ elif menu == "Analisis FLM":
             st.plotly_chart(fig_bar, use_container_width=True)
         
         st.markdown("---") 
-        st.header("🏆 Skor Personel FLM (Leaderboard)") # Ganti label
+        st.header("🏆 Skor Personel FLM (Leaderboard)") 
         st.markdown("Menganalisis personel berdasarkan jumlah pekerjaan FLM yang ditangani, **termasuk pekerjaan tim**.")
         if 'Nama Personel' in df_flm and not df_flm['Nama Personel'].dropna().empty:
             personel_counts = df_flm['Nama Personel'].str.split(',').explode().str.strip().value_counts().reset_index()
@@ -947,7 +981,6 @@ elif menu == "Absensi Personel":
                             template='plotly_dark',
                             title=f"Top Kehadiran - {selected_month_str} {selected_year}"
                         )
-                        # fig_bar_hadir.update_xaxes(dtick=1) # --- PERBAIKAN 2: Baris ini dihapus agar label tidak tumpang tindih ---
                         st.plotly_chart(fig_bar_hadir, use_container_width=True)
 
                 with col2_chart:
@@ -1044,9 +1077,6 @@ elif menu == "Absensi Personel":
                     use_container_width=True
                 )
 
-# === HALAMAN BARU: KELOLA PERSONEL (HANYA ADMIN) ===
-
-# === HALAMAN BARU: PREDICTIVE MAINTENANCE (AI ANALYSIS) ===
 # === HALAMAN BARU: PREDICTIVE MAINTENANCE (AI ANALYSIS) ===
 elif menu == "Predictive Maintenance":
     st.header("🔮 AI Predictive Maintenance Dashboard")
@@ -1061,20 +1091,33 @@ elif menu == "Predictive Maintenance":
         if df_cm.empty:
             st.warning("Belum ada data Corrective Maintenance (CM) yang tercatat.")
         else:
-            # Mengonversi tanggal ke datetime dan membuang zona waktu (tz-localize(None))
+            # Pastikan kolom nama_peralatan ada
+            if 'nama_peralatan' not in df_cm.columns:
+                df_cm['nama_peralatan'] = df_cm['nama_peralatan'].fillna('Unknown')
+            
+            # Mengonversi tanggal ke datetime dan membuang zona waktu
             df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal']).dt.tz_localize(None)
             
             # Hitung 30 hari terakhir tanpa zona waktu
             last_month = datetime.now() - timedelta(days=30)
             
-            # Sekarang perbandingan ini akan aman dari error
             df_recent = df_cm[df_cm['Tanggal'] >= last_month]
             
             if df_recent.empty:
                 st.info("Tidak ada gangguan CM dalam 30 hari terakhir.")
             else:
-                area_stats = df_recent.groupby('Area').size().reset_index(name='Jumlah_Gangguan')
+                # LOGIKA BARU: Group by Area DAN Nama Peralatan
+                # Kita hitung berapa kali 'Pompa A' rusak di 'Boiler'
+                col_name = 'nama_peralatan'
+                
+                # Cek jika kolom nama_peralatan kosong, ganti dengan 'Unidentified' agar tetap terhitung
+                df_recent[col_name] = df_recent[col_name].replace('', 'Unidentified').fillna('Unidentified')
+
+                area_stats = df_recent.groupby(['Area', col_name]).size().reset_index(name='Jumlah_Gangguan')
                 area_stats = area_stats.sort_values('Jumlah_Gangguan', ascending=False)
+                
+                # Buat label gabungan untuk chart
+                area_stats['Label'] = area_stats['Area'] + " - " + area_stats[col_name]
 
                 # 3. Layout Dashboard
                 col_metric1, col_metric2 = st.columns(2)
@@ -1083,27 +1126,28 @@ elif menu == "Predictive Maintenance":
                     st.subheader("⚠️ Status Alert System")
                     for index, row in area_stats.iterrows():
                         if row['Jumlah_Gangguan'] >= 3:
-                            st.error(f"**{row['Area']}**: CRITICAL ({row['Jumlah_Gangguan']} Gangguan)")
+                            st.error(f"**{row['Label']}**: CRITICAL ({row['Jumlah_Gangguan']} Gangguan)")
                         elif row['Jumlah_Gangguan'] == 2:
-                            st.warning(f"**{row['Area']}**: WATCHLIST ({row['Jumlah_Gangguan']} Gangguan)")
+                            st.warning(f"**{row['Label']}**: WATCHLIST ({row['Jumlah_Gangguan']} Gangguan)")
                         else:
-                            st.success(f"**{row['Area']}**: NORMAL ({row['Jumlah_Gangguan']} Gangguan)")
+                            st.success(f"**{row['Label']}**: NORMAL ({row['Jumlah_Gangguan']} Gangguan)")
 
                 with col_metric2:
                     st.subheader("📊 Grafik Frekuensi Gangguan")
                     fig_pred = px.bar(
                         area_stats, 
-                        x='Area', 
+                        x='Label', 
                         y='Jumlah_Gangguan',
                         color='Jumlah_Gangguan',
                         color_continuous_scale='Reds',
-                        template='plotly_dark'
+                        template='plotly_dark',
+                        labels={'Label': 'Area & Peralatan'}
                     )
                     st.plotly_chart(fig_pred, use_container_width=True)
 
                 st.markdown("---")
                 st.subheader("🔍 Detail Histori Gangguan 30 Hari Terakhir")
-                st.dataframe(df_recent[['ID', 'Tanggal', 'Area', 'Nama Personel', 'Keterangan']], use_container_width=True)
+                st.dataframe(df_recent[['ID', 'Tanggal', 'Area', 'nama_peralatan', 'Nama Personel', 'Keterangan']], use_container_width=True)
 
 
 elif menu == "Kelola Personel" and user_role == 'admin':
