@@ -445,7 +445,7 @@ def analyze_predictive_maintenance(df):
         summary = recent_data.groupby('Area').size()
         
         for area, count in summary.items():
-            if count >= 3:
+            if count >= 5:
                 # Ambil tanggal terbaru dari area yang bermasalah tersebut
                 last_date = recent_data[recent_data['Area'] == area]['Tanggal'].max()
                 send_predictive_alert(area, count, last_date)
