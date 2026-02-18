@@ -1033,6 +1033,7 @@ elif menu == "Absensi Personel":
 # === HALAMAN BARU: KELOLA PERSONEL (HANYA ADMIN) ===
 
 # === HALAMAN BARU: PREDICTIVE MAINTENANCE (AI ANALYSIS) ===
+# === HALAMAN BARU: PREDICTIVE MAINTENANCE (AI ANALYSIS) ===
 elif menu == "Predictive Maintenance":
     st.header("🔮 AI Predictive Maintenance Dashboard")
     st.markdown("Analisis Machine Learning untuk mendeteksi peralatan dengan frekuensi gangguan (CM) tidak wajar.")
@@ -1040,51 +1041,55 @@ elif menu == "Predictive Maintenance":
     if df.empty:
         st.info("Data tidak tersedia untuk analisis.")
     else:
-        # 1. Filter Data CM saja
+        # 1. Filter Data CM & Bersihkan Timezone (Penting untuk cegah error gambar 2)
         df_cm = df[df['Jenis'] == 'Corrective Maintenance'].copy()
         
         if df_cm.empty:
             st.warning("Belum ada data Corrective Maintenance (CM) yang tercatat.")
         else:
-            # 2. Hitung Statistik Per Area
-            # Kita hitung gangguan dalam 30 hari terakhir
-            df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal'])
-            last_month = pd.Timestamp.now() - pd.Timedelta(days=30)
+            # Mengonversi tanggal ke datetime dan membuang zona waktu (tz-localize(None))
+            df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal']).dt.tz_localize(None)
+            
+            # Hitung 30 hari terakhir tanpa zona waktu
+            last_month = datetime.now() - timedelta(days=30)
+            
+            # Sekarang perbandingan ini akan aman dari error
             df_recent = df_cm[df_cm['Tanggal'] >= last_month]
             
-            area_stats = df_recent.groupby('Area').size().reset_index(name='Jumlah_Gangguan')
-            area_stats = area_stats.sort_values('Jumlah_Gangguan', ascending=False)
+            if df_recent.empty:
+                st.info("Tidak ada gangguan CM dalam 30 hari terakhir.")
+            else:
+                area_stats = df_recent.groupby('Area').size().reset_index(name='Jumlah_Gangguan')
+                area_stats = area_stats.sort_values('Jumlah_Gangguan', ascending=False)
 
-            # 3. Layout Dashboard
-            col_metric1, col_metric2 = st.columns(2)
-            
-            with col_metric1:
-                st.subheader("⚠️ Status Alert System")
-                for index, row in area_stats.iterrows():
-                    # Threshold: Jika gangguan >= 3 dalam sebulan
-                    if row['Jumlah_Gangguan'] >= 3:
-                        st.error(f"**{row['Area']}**: CRITICAL ({row['Jumlah_Gangguan']} Gangguan) - Butuh RCA")
-                    elif row['Jumlah_Gangguan'] == 2:
-                        st.warning(f"**{row['Area']}**: WATCHLIST ({row['Jumlah_Gangguan']} Gangguan) - Monitor Ketat")
-                    else:
-                        st.success(f"**{row['Area']}**: NORMAL ({row['Jumlah_Gangguan']} Gangguan)")
+                # 3. Layout Dashboard
+                col_metric1, col_metric2 = st.columns(2)
+                
+                with col_metric1:
+                    st.subheader("⚠️ Status Alert System")
+                    for index, row in area_stats.iterrows():
+                        if row['Jumlah_Gangguan'] >= 3:
+                            st.error(f"**{row['Area']}**: CRITICAL ({row['Jumlah_Gangguan']} Gangguan)")
+                        elif row['Jumlah_Gangguan'] == 2:
+                            st.warning(f"**{row['Area']}**: WATCHLIST ({row['Jumlah_Gangguan']} Gangguan)")
+                        else:
+                            st.success(f"**{row['Area']}**: NORMAL ({row['Jumlah_Gangguan']} Gangguan)")
 
-            with col_metric2:
-                st.subheader("📊 Grafik Frekuensi Gangguan")
-                fig_pred = px.bar(
-                    area_stats, 
-                    x='Area', 
-                    y='Jumlah_Gangguan',
-                    color='Jumlah_Gangguan',
-                    color_continuous_scale='Reds',
-                    title="Jumlah CM per Area (30 Hari Terakhir)",
-                    template='plotly_dark'
-                )
-                st.plotly_chart(fig_pred, use_container_width=True)
+                with col_metric2:
+                    st.subheader("📊 Grafik Frekuensi Gangguan")
+                    fig_pred = px.bar(
+                        area_stats, 
+                        x='Area', 
+                        y='Jumlah_Gangguan',
+                        color='Jumlah_Gangguan',
+                        color_continuous_scale='Reds',
+                        template='plotly_dark'
+                    )
+                    st.plotly_chart(fig_pred, use_container_width=True)
 
-            st.markdown("---")
-            st.subheader("🔍 Detail Histori Gangguan Berulang")
-            st.dataframe(df_recent[['ID', 'Tanggal', 'Area', 'Nama Personel', 'Keterangan']], use_container_width=True)
+                st.markdown("---")
+                st.subheader("🔍 Detail Histori Gangguan 30 Hari Terakhir")
+                st.dataframe(df_recent[['ID', 'Tanggal', 'Area', 'Nama Personel', 'Keterangan']], use_container_width=True)
 
 
 elif menu == "Kelola Personel" and user_role == 'admin':
