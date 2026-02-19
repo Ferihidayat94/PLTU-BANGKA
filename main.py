@@ -1140,11 +1140,6 @@ elif menu == "Absensi Personel":
                     use_container_width=True
                 )
 
-            else: 
-                st.dataframe(
-                    filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi']].sort_values('tanggal', ascending=False),
-                    use_container_width=True
-                )
 
 # === HALAMAN BARU: PREDICTIVE MAINTENANCE (AI ANALYSIS) ===
 elif menu == "Predictive Maintenance":
