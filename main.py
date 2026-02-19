@@ -330,61 +330,84 @@ def create_excel_report_with_images(filtered_data):
     return output.getvalue()
 
 def create_pdf_report(filtered_data, report_type):
-    buffer = io.BytesIO()
-    # Menggunakan ukuran kertas A4
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=30)
+    pdf_buffer = io.BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=40, bottomMargin=30)
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='TitleCenter', alignment=TA_CENTER, fontSize=14, leading=20, spaceAfter=10, spaceBefore=10, textColor=colors.HexColor('#2C3E50')))
+    styles.add(ParagraphStyle(name='Header', alignment=TA_LEFT, textColor=colors.HexColor('#2C3E50')))
     elements = []
     
-    styles = getSampleStyleSheet()
-    title_style = styles['Heading1']
-    title_style.alignment = TA_CENTER
-    
-    # Judul Laporan
-    elements.append(Paragraph(f"Laporan Pekerjaan - {report_type}", title_style))
+    # 1. Menyiapkan Kop Surat (Logo dan Teks)
+    try:
+        logo_path = "logo.png"
+        if os.path.exists(logo_path):
+            header_text = "<b>PT PLN NUSANTARA POWER SERVICES</b><br/>Unit PLTU Bangka"
+            logo_img = RLImage(logo_path, width=0.9*inch, height=0.4*inch, hAlign='LEFT')
+            header_table = Table([[logo_img, Paragraph(header_text, styles['Header'])]], colWidths=[1*inch, 6*inch], style=[('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (1,0), (1,0), 0)])
+            elements.append(header_table)
+            elements.append(Spacer(1, 20))
+    except Exception: pass
+
+    # 2. Judul Dokumen
+    title_text = f"<b>LAPORAN MONITORING {'SEMUA PEKERJAAN' if report_type == 'Semua' else report_type.upper()}</b>"
+    elements.append(Paragraph(title_text, styles["TitleCenter"]))
     elements.append(Spacer(1, 12))
-    
-    # Menyiapkan Header Tabel
-    data = [['ID', 'Tanggal', 'Jenis', 'Area', 'Peralatan', 'Status', 'Personel']]
-    
-    # Mengisi baris data dari DataFrame
+
+    # 3. Looping untuk setiap baris pekerjaan (1 Pekerjaan = 1 Halaman)
     for _, row in filtered_data.iterrows():
-        # Memastikan tidak ada error jika nama_peralatan kosong
+        # Memastikan tidak ada error jika nama_peralatan kosong/nan
         alat = str(row.get('nama_peralatan', '-'))
         if pd.isna(row.get('nama_peralatan')) or alat == 'nan' or alat.strip() == '':
             alat = '-'
-            
-        # Format Tanggal
-        tgl = row['Tanggal'].strftime('%d-%m-%Y') if pd.notna(row['Tanggal']) else '-'
+
+        # Data Vertikal untuk 1 Pekerjaan
+        data = [
+            ["ID", str(row.get('ID', ''))],
+            ["Tanggal", pd.to_datetime(row.get('Tanggal')).strftime('%d-%m-%Y') if pd.notna(row.get('Tanggal')) else '-'],
+            ["Jenis", str(row.get('Jenis', ''))],
+            ["Area", str(row.get('Area', ''))],
+            ["Peralatan", alat],  # <--- INI TAMBAHAN KOLOM PERALATAN BARU ANDA
+            ["Nomor SR", str(row.get('Nomor SR', ''))],
+            ["Nama Personel", str(row.get('Nama Personel', row.get('Nama Pelaksana', '-')))], 
+            ["Status", str(row.get('Status', ''))],
+            ["Keterangan", Paragraph(str(row.get('Keterangan', '')).replace('\n', '<br/>'), styles['Normal'])],
+        ]
         
-        # Menambahkan data ke dalam tabel PDF
-        data.append([
-            str(row.get('ID', '-')),
-            tgl,
-            str(row.get('Jenis', '-')),
-            str(row.get('Area', '-')),
-            alat,
-            str(row.get('Status', '-')),
-            str(row.get('Nama Personel', row.get('Nama Pelaksana', '-')))
+        # Desain Tabel Vertikal
+        table = Table(data, colWidths=[100, 380], style=[
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#ECF0F1')), ('TEXTCOLOR', (0,0), (0, -1), colors.HexColor('#2C3E50')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#BDC3C7')), ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#BDC3C7')),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'), ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'), ('FONTSIZE', (0, 0), (-1, -1), 10),
         ])
+        elements.append(table)
+        
+        # 4. Menyisipkan Gambar Before & After
+        img1, img2 = None, None
+        for img_url, position in [(row.get("Evidance"), 1), (row.get("Evidance After"), 2)]:
+            if img_url and isinstance(img_url, str) and img_url.startswith('http'):
+                try:
+                    response = requests.get(img_url, stream=True, timeout=10)
+                    response.raise_for_status()
+                    img_data = io.BytesIO(response.content)
+                    image_element = RLImage(img_data, width=3*inch, height=2.25*inch, kind='bound')
+                    if position == 1: img1 = image_element
+                    else: img2 = image_element
+                except Exception as e: print(f"Gagal memuat gambar dari URL {img_url}: {e}")
+        
+        if img1 or img2:
+            elements.append(Spacer(1, 5))
+            image_table = Table([[Paragraph("<b>Evidence Before:</b>", styles['Normal']), Paragraph("<b>Evidence After:</b>", styles['Normal'])], [img1, img2]], colWidths=[3.2*inch, 3.2*inch], style=[('VALIGN', (0,0), (-1,-1), 'TOP')])
+            elements.append(image_table)
+            
+        # Pindah ke halaman baru untuk pekerjaan selanjutnya
+        elements.append(PageBreak())
+
+    # Menghapus PageBreak kosong di akhir dokumen
+    if elements and isinstance(elements[-1], PageBreak): elements.pop()
     
-    # Mengatur Desain (Styling) Tabel
-    table = Table(data, repeatRows=1)
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498DB')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
-        ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-        ('WORDWRAP', (0,0), (-1,-1), True)
-    ]))
-    
-    elements.append(table)
     doc.build(elements)
-    buffer.seek(0)
-    return buffer.getvalue()
+    pdf_buffer.seek(0)
+    return pdf_buffer.getvalue()
 
 #Tambahan ML
 # ================== FUNGSI PREDICTIVE ML & TELEGRAM (DIPERBARUI) ==================
