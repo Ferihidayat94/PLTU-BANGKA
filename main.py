@@ -203,11 +203,13 @@ def load_absensi_data():
 @st.cache_data(ttl=300)
 def load_personnel_data():
     try:
-        response = supabase.table('personel').select('id, nama').order('nama', desc=False).execute()
+        # Tambahan: Meminta kolom 'grup' dari Supabase
+        response = supabase.table('personel').select('id, nama, grup').order('nama', desc=False).execute()
         return pd.DataFrame(response.data)
     except Exception as e:
         st.error(f"Gagal mengambil daftar personel: {e}")
-        return pd.DataFrame(columns=['id', 'nama'])
+        # Tambahan: Default dataframe sekarang punya kolom 'grup'
+        return pd.DataFrame(columns=['id', 'nama', 'grup'])
 
 def logout():
     for key in list(st.session_state.keys()):
@@ -895,17 +897,31 @@ elif menu == "Analisis FLM":
                     st.info("Kolom nama personel kosong.")
 
 # === HALAMAN BARU: ABSENSI PERSONEL ===
+
+        # === HALAMAN BARU: ABSENSI PERSONEL ===
 elif menu == "Absensi Personel":
     st.header("🗓️ Input & Dashboard Absensi Personel")
+    
+    # --- TAMBAHAN: FILTER GRUP ---
+    pilihan_grup = ["Produksi A", "Produksi B", "Produksi C", "Produksi D"]
+    selected_grup_filter = st.selectbox("Pilih Grup untuk Dikelola / Dilihat:", ["Semua Grup"] + pilihan_grup)
+    st.markdown("---")
+
+    df_personnel = load_personnel_data()
+    
+    # Filter list personel berdasarkan grup yang dipilih
+    if selected_grup_filter != "Semua Grup" and not df_personnel.empty and 'grup' in df_personnel.columns:
+        df_personnel_filtered = df_personnel[df_personnel['grup'] == selected_grup_filter]
+    else:
+        df_personnel_filtered = df_personnel
+
+    personnel_list = df_personnel_filtered['nama'].tolist() if not df_personnel_filtered.empty else []
 
     # --- Bagian Input Absensi ---
     if user_role == 'admin':
-        with st.expander("✅ **Input Absensi Massal (Hadir)**", expanded=True):
-            df_personnel = load_personnel_data()
-            personnel_list = df_personnel['nama'].tolist() if not df_personnel.empty else []
-            
+        with st.expander(f"✅ **Input Absensi Massal (Hadir)** - {selected_grup_filter}", expanded=True):
             if not personnel_list:
-                st.warning("Daftar personel kosong. Harap isi data di halaman 'Kelola Personel' terlebih dahulu.")
+                st.warning("Daftar personel kosong di grup ini. Harap isi data di halaman 'Kelola Personel'.")
             else:
                 with st.form("mass_absensi_form"):
                     col1, col2 = st.columns([3, 1])
@@ -936,9 +952,9 @@ elif menu == "Absensi Personel":
                                 except Exception as e:
                                     st.error(f"Gagal menyimpan data massal: {e}")
 
-        with st.expander("📝 Input Absensi Individual (Sakit, Izin, Cuti, dll)"):
+        with st.expander(f"📝 Input Absensi Individual (Sakit, Izin, Cuti, dll) - {selected_grup_filter}"):
             if not personnel_list:
-                st.info("Daftar personel kosong.")
+                st.info("Daftar personel kosong di grup ini.")
             else:
                 with st.form("absensi_form", clear_on_submit=True):
                     col1, col2 = st.columns(2)
@@ -971,7 +987,7 @@ elif menu == "Absensi Personel":
     st.markdown("---")
 
     # --- Bagian Dashboard Absensi ---
-    st.subheader("📊 Laporan Kehadiran & Ketidakhadiran")
+    st.subheader(f"📊 Laporan Kehadiran & Ketidakhadiran - {selected_grup_filter}")
     df_absensi = load_absensi_data()
 
     if df_absensi.empty:
@@ -979,6 +995,10 @@ elif menu == "Absensi Personel":
     else:
         df_absensi['tanggal'] = pd.to_datetime(df_absensi['tanggal']).dt.tz_localize(None)
         
+        # Gabungkan data absensi dengan data personel untuk memfilter berdasarkan grup
+        if not df_personnel.empty and 'grup' in df_personnel.columns:
+            df_absensi = pd.merge(df_absensi, df_personnel[['nama', 'grup']], left_on='nama_personel', right_on='nama', how='left')
+
         col1, col2 = st.columns(2)
         with col1:
             year_options = sorted(df_absensi['tanggal'].dt.year.unique(), reverse=True)
@@ -992,11 +1012,15 @@ elif menu == "Absensi Personel":
         if selected_month_str != "Semua Bulan":
             selected_month_num = [k for k, v in month_dict.items() if v == selected_month_str][0]
             mask_abs &= (df_absensi['tanggal'].dt.month == selected_month_num)
+            
+        # Terapkan filter grup ke dashboard
+        if selected_grup_filter != "Semua Grup" and 'grup' in df_absensi.columns:
+            mask_abs &= (df_absensi['grup'] == selected_grup_filter)
         
         filtered_df_abs = df_absensi[mask_abs]
 
         if filtered_df_abs.empty:
-                st.warning("Tidak ada data absensi pada periode yang dipilih.")
+                st.warning("Tidak ada data absensi pada periode dan grup yang dipilih.")
         else:
             if 'nama_personel' in filtered_df_abs.columns:
                 df_hadir = filtered_df_abs[filtered_df_abs['status_absensi'] == 'Hadir']
@@ -1020,7 +1044,7 @@ elif menu == "Absensi Personel":
                             color='Jumlah Hari Hadir',
                             color_continuous_scale=px.colors.sequential.Greens,
                             template='plotly_dark',
-                            title=f"Top Kehadiran - {selected_month_str} {selected_year}"
+                            title=f"Top Kehadiran"
                         )
                         st.plotly_chart(fig_bar_hadir, use_container_width=True)
 
@@ -1037,7 +1061,7 @@ elif menu == "Absensi Personel":
                             y='nama_personel', 
                             color='status_absensi',
                             orientation='h',
-                            title=f"Detail Ketidakhadiran - {selected_month_str} {selected_year}",
+                            title=f"Detail Ketidakhadiran",
                             labels={'nama_personel': 'Nama Personel', 'Jumlah Hari': 'Jumlah Hari Tidak Hadir'},
                             template='plotly_dark',
                             color_discrete_map={
@@ -1050,8 +1074,6 @@ elif menu == "Absensi Personel":
                         fig_bar_absen.update_layout(barmode='stack', yaxis={'categoryorder':'total ascending'})
                         fig_bar_absen.update_xaxes(dtick=1)
                         st.plotly_chart(fig_bar_absen, use_container_width=True)
-            else:
-                st.error("Kolom 'nama_personel' tidak ditemukan dalam data absensi. Mohon periksa nama kolom di tabel 'absensi' pada Supabase.")
 
             st.markdown("---")
             st.subheader("📋 Detail Data Absensi")
@@ -1111,6 +1133,12 @@ elif menu == "Absensi Personel":
                                 except Exception as e:
                                     st.error(f"Gagal menghapus absensi: {e}")
                         st.markdown('</div>', unsafe_allow_html=True)
+
+            else: 
+                st.dataframe(
+                    filtered_df_abs[['tanggal', 'nama_personel', 'status_absensi', 'keterangan']].sort_values('tanggal', ascending=False),
+                    use_container_width=True
+                )
 
             else: 
                 st.dataframe(
@@ -1195,23 +1223,31 @@ elif menu == "Predictive Maintenance":
                 st.dataframe(df_recent[['ID', 'Tanggal', 'Area', 'nama_peralatan', 'Nama Personel', 'Keterangan']], use_container_width=True)
 
 
+# === HALAMAN BARU: KELOLA PERSONEL (HANYA ADMIN) ===
 elif menu == "Kelola Personel" and user_role == 'admin':
-    st.header("👥 Kelola Daftar Personel")
+    st.header("👥 Kelola Daftar Personel & Grup")
     
     df_personnel = load_personnel_data()
+    pilihan_grup = ["Produksi A", "Produksi B", "Produksi C", "Produksi D"]
 
     with st.expander("➕ Tambah Personel Baru"):
         with st.form("add_personnel_form"):
-            new_name = st.text_input("Nama Personel Baru", key="new_personnel_name")
+            col1, col2 = st.columns(2)
+            with col1:
+                new_name = st.text_input("Nama Personel Baru", key="new_personnel_name")
+            with col2:
+                new_grup = st.selectbox("Pilih Grup", options=pilihan_grup)
+                
             if st.form_submit_button("Simpan Personel"):
                 if new_name:
                     try:
                         if new_name in df_personnel['nama'].tolist():
                             st.error(f"Personel dengan nama '{new_name}' sudah ada.")
                         else:
-                            supabase.table("personel").insert({"nama": new_name}).execute()
+                            # Menyimpan nama beserta grupnya
+                            supabase.table("personel").insert({"nama": new_name, "grup": new_grup}).execute()
                             st.cache_data.clear()
-                            st.success(f"Personel '{new_name}' berhasil ditambahkan.")
+                            st.success(f"Personel '{new_name}' ({new_grup}) berhasil ditambahkan.")
                             st.rerun()
                     except Exception as e:
                         st.error(f"Gagal menambahkan personel: {e}")
@@ -1224,13 +1260,21 @@ elif menu == "Kelola Personel" and user_role == 'admin':
     if df_personnel.empty:
         st.info("Belum ada data personel. Silakan tambahkan di atas.")
     else:
-        df_personnel['Hapus'] = False
+        # Menambahkan fitur filter tabel berdasarkan grup agar admin mudah memantau
+        filter_grup_admin = st.selectbox("Filter Tabel berdasarkan Grup:", ["Semua Grup"] + pilihan_grup)
+        
+        df_display = df_personnel.copy()
+        if filter_grup_admin != "Semua Grup":
+            df_display = df_display[df_display['grup'] == filter_grup_admin]
+            
+        df_display['Hapus'] = False
         
         edited_df_personnel = st.data_editor(
-            df_personnel[['id', 'nama', 'Hapus']],
+            df_display[['id', 'nama', 'grup', 'Hapus']],
             column_config={
                 "id": st.column_config.NumberColumn("ID", disabled=True),
                 "nama": st.column_config.TextColumn("Nama Personel", required=True),
+                "grup": st.column_config.SelectboxColumn("Grup", options=pilihan_grup, required=True),
                 "Hapus": st.column_config.CheckboxColumn("Hapus?")
             },
             use_container_width=True,
@@ -1241,25 +1285,23 @@ elif menu == "Kelola Personel" and user_role == 'admin':
         col_save, col_delete = st.columns(2)
 
         with col_save:
-            if st.button("💾 Simpan Perubahan Nama"):
+            if st.button("💾 Simpan Perubahan"):
                 changes = st.session_state.personnel_editor.get("edited_rows", {})
                 if not changes:
-                    st.info("Tidak ada perubahan nama untuk disimpan.")
+                    st.info("Tidak ada perubahan untuk disimpan.")
                 else:
                     with st.spinner("Menyimpan perubahan..."):
                         success = True
                         for row_idx, changed_data in changes.items():
                             personnel_id = edited_df_personnel.iloc[row_idx]['id']
-                            new_name = changed_data.get('nama')
-                            if new_name:
-                                try:
-                                    supabase.table("personel").update({"nama": new_name}).eq("id", personnel_id).execute()
-                                except Exception as e:
-                                    st.error(f"Gagal update nama untuk ID {personnel_id}: {e}")
-                                    success = False
+                            try:
+                                supabase.table("personel").update(changed_data).eq("id", personnel_id).execute()
+                            except Exception as e:
+                                st.error(f"Gagal update data untuk ID {personnel_id}: {e}")
+                                success = False
                         if success:
                             st.cache_data.clear()
-                            st.success("Semua perubahan nama berhasil disimpan.")
+                            st.success("Semua perubahan berhasil disimpan.")
                             st.rerun()
 
         with col_delete:
