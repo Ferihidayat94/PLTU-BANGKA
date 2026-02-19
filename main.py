@@ -329,6 +329,63 @@ def create_excel_report_with_images(filtered_data):
     output.seek(0)
     return output.getvalue()
 
+def create_pdf_report(filtered_data, report_type):
+    buffer = io.BytesIO()
+    # Menggunakan ukuran kertas A4
+    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=30, bottomMargin=30)
+    elements = []
+    
+    styles = getSampleStyleSheet()
+    title_style = styles['Heading1']
+    title_style.alignment = TA_CENTER
+    
+    # Judul Laporan
+    elements.append(Paragraph(f"Laporan Pekerjaan - {report_type}", title_style))
+    elements.append(Spacer(1, 12))
+    
+    # Menyiapkan Header Tabel
+    data = [['ID', 'Tanggal', 'Jenis', 'Area', 'Peralatan', 'Status', 'Personel']]
+    
+    # Mengisi baris data dari DataFrame
+    for _, row in filtered_data.iterrows():
+        # Memastikan tidak ada error jika nama_peralatan kosong
+        alat = str(row.get('nama_peralatan', '-'))
+        if pd.isna(row.get('nama_peralatan')) or alat == 'nan' or alat.strip() == '':
+            alat = '-'
+            
+        # Format Tanggal
+        tgl = row['Tanggal'].strftime('%d-%m-%Y') if pd.notna(row['Tanggal']) else '-'
+        
+        # Menambahkan data ke dalam tabel PDF
+        data.append([
+            str(row.get('ID', '-')),
+            tgl,
+            str(row.get('Jenis', '-')),
+            str(row.get('Area', '-')),
+            alat,
+            str(row.get('Status', '-')),
+            str(row.get('Nama Personel', row.get('Nama Pelaksana', '-')))
+        ])
+    
+    # Mengatur Desain (Styling) Tabel
+    table = Table(data, repeatRows=1)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3498DB')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.whitesmoke),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('WORDWRAP', (0,0), (-1,-1), True)
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
 #Tambahan ML
 # ================== FUNGSI PREDICTIVE ML & TELEGRAM (DIPERBARUI) ==================
 
