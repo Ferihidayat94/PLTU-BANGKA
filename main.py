@@ -124,8 +124,9 @@ def send_telegram_notification(ticket_id, area, description, personnel, sr_numbe
     TOKEN = "8507107791:AAFd8BKfsMGZCzS7UctwNlWRiPipe45TkGE"
     CHAT_ID = "-1003701349665"
     
-    # --- Tambahan: Ambil Waktu Sekarang ---
-    waktu_sekarang = datetime.now().strftime('%d-%m-%Y %H:%M:%S')
+
+    # Menggunakan utcnow() dan menambah 7 jam agar menjadi waktu WIB
+    waktu_sekarang = (datetime.utcnow() + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S')
     
     alat_info = f"*Peralatan:* {nama_peralatan}\n" if nama_peralatan else ""
 
