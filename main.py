@@ -132,7 +132,7 @@ def send_telegram_notification(ticket_id, area, description, personnel, sr_numbe
 
     # Membuat teks pesan dengan baris Tanggal Laporan
     caption = (
-        f"🚨 *NOTIFIKASI SR BARU (ARMOR-AI)* 🚨\n\n"
+        f"🚨 *NOTIFIKASI SR BARU* 🚨\n\n"
         f"*ID Tiket:* `{ticket_id}`\n"
         f"*Nomor SR:* `{sr_number}`\n"
         f"*Tanggal Laporan:* `{waktu_sekarang}`\n" 
