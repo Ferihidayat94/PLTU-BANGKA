@@ -438,51 +438,61 @@ def send_predictive_alert(area, equipment, total_gangguan, tanggal_terakhir):
     except Exception as e:
         print(f"Gagal kirim alarm: {e}")
 
-def analyze_predictive_maintenance(df):
-    """Analisis perbaikan berulang pada peralatan spesifik"""
-    if df.empty:
+def analyze_predictive_maintenance(df, current_job_id=None):
+    """Analisis perbaikan berulang dengan fitur Cooldown 24 Jam"""
+    if df.empty or current_job_id is None:
         return
 
-    # Filter hanya Corrective Maintenance
+    # 1. Filter hanya Corrective Maintenance
     df_cm = df[df['Jenis'] == 'Corrective Maintenance'].copy()
-    if len(df_cm) < 2:
+    
+    # Minimal butuh 3 data untuk cek threshold
+    if len(df_cm) < 3: 
         return
 
-    # Pastikan kolom 'nama_peralatan' ada (untuk kompatibilitas data lama)
     col_name = 'nama_peralatan' if 'nama_peralatan' in df_cm.columns else 'Nama Peralatan'
-    
-    # Jika kolom belum ada di dataframe (data lama), skip dulu
     if col_name not in df_cm.columns:
         return
 
-    # Bersihkan data: Hapus yang nama peralatannya kosong
+    # 2. Bersihkan dan Standarisasi Tanggal & Urutkan (Paling Baru di Atas)
     df_cm = df_cm[df_cm[col_name].notna() & (df_cm[col_name] != '')]
-
-    # Normalisasi waktu
     df_cm['Tanggal'] = pd.to_datetime(df_cm['Tanggal']).dt.tz_localize(None)
-    last_30_days = datetime.now() - timedelta(days=30)
+    df_cm = df_cm.sort_values('Tanggal', ascending=False)
     
-    # Ambil data 30 hari terakhir
+    last_30_days = datetime.now() - timedelta(days=30)
     recent_data = df_cm[df_cm['Tanggal'] >= last_30_days]
     
     if not recent_data.empty:
-        # LOGIKA BARU: Group by Area DAN Nama Peralatan
-        # Kita hitung berapa kali 'Pompa A' rusak di 'Boiler'
+        # Grouping untuk cek jumlah total kerusakan per alat
         summary = recent_data.groupby(['Area', col_name]).size().reset_index(name='Jumlah')
         
-        # Ambang batas kerusakan berulang (misal: 3x dalam sebulan dianggap sering)
         THRESHOLD = 3 
         
         for index, row in summary.iterrows():
             if row['Jumlah'] >= THRESHOLD:
-                # Ambil tanggal kejadian terakhir untuk alat tersebut
-                last_date = recent_data[
-                    (recent_data['Area'] == row['Area']) & 
-                    (recent_data[col_name] == row[col_name])
-                ]['Tanggal'].max()
+                # Ambil histori spesifik alat ini
+                mask_alat = (recent_data['Area'] == row['Area']) & (recent_data[col_name] == row[col_name])
+                data_alat_ini = recent_data[mask_alat].copy()
                 
-                # Kirim Alert Spesifik Alat
-                send_predictive_alert(row['Area'], row[col_name], row['Jumlah'], last_date)
+                # Cek apakah Job yang baru saja diinput (current_job_id) adalah milik alat ini
+                ids_alat_ini = data_alat_ini['ID'].tolist()
+                
+                if current_job_id in ids_alat_ini:
+                    # --- LOGIKA COOLDOWN 24 JAM ---
+                    if len(data_alat_ini) >= 2:
+                        tgl_terbaru = data_alat_ini.iloc[0]['Tanggal'] # Baris pertama (terbaru)
+                        tgl_sebelumnya = data_alat_ini.iloc[1]['Tanggal'] # Baris kedua (sebelumnya)
+                        
+                        selisih_waktu = tgl_terbaru - tgl_sebelumnya
+                        
+                        # Jika selisih antar input kurang dari 24 jam, batalkan kirim Telegram
+                        if selisih_waktu < timedelta(hours=24):
+                            print(f"DEBUG: Cooldown Aktif untuk {row[col_name]}. Selisih: {selisih_waktu}")
+                            continue 
+                    # ------------------------------
+
+                    # Kirim notifikasi jika lolos pengecekan cooldown
+                    send_predictive_alert(row['Area'], row[col_name], row['Jumlah'], data_alat_ini.iloc[0]['Tanggal'])
 
 # ================== Logika Utama Aplikasi ==================
 if "logged_in" not in st.session_state:
@@ -625,7 +635,8 @@ if menu == "Input Data":
                         st.success(f"Data '{new_id}' berhasil disimpan!")
                         
                         # Trigger Analisis Prediktif
-                        analyze_predictive_maintenance(st.session_state.data)
+                        
+                        analyze_predictive_maintenance(st.session_state.data, current_job_id=new_id)
                         
                         st.rerun()
                     except Exception as e:
